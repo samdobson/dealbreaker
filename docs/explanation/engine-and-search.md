@@ -18,5 +18,3 @@ Dealbreaker is built in two halves that know nothing about specific games:
 * **Talon compression:** When a stock deals to a waste pile, runs of deals are folded into the move that plays the turned-up card (*"deal 3 times, then play waste → tableau 4"*). Dealing commutes with non-waste moves, collapsing depth dramatically; winning lines are expanded back into individual deals for display.
 * **Safe autoplay:** A card is played to an in-suit foundation automatically when the compiled build tables prove no remaining card could ever need to be built on it.
 * **Solution shortening:** Once a winning line is found, any detour (a later state reachable in one move from an earlier one) is snipped out.
-
-For full implementation notes, see [`DESIGN.md`](https://github.com/samdobson/dealbreaker/blob/main/DESIGN.md) in the repository.

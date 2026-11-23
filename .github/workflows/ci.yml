@@ -94,3 +94,24 @@ jobs:
           CARGO_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n1)"
           PY_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' crates/dealbreaker-py/pyproject.toml | head -n1)"
           test "$CARGO_VERSION" = "$PY_VERSION"
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: cargo build -p dealbreaker-cli
+      - name: Verify generated reference docs are up to date
+        run: |
+          ./scripts/gen-docs.sh
+          git diff --exit-code docs/reference/
+      - name: Build VitePress docs
+        run: |
+          npm --prefix docs ci
+          npm --prefix docs run build

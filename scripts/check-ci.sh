@@ -45,4 +45,11 @@ elif command -v npx >/dev/null 2>&1; then
     js/src/index.d.ts js/src/worker.d.ts
 fi
 
+if [ -d docs/node_modules ]; then
+  echo "[check-ci] reference docs freshness & VitePress build..."
+  ./scripts/gen-docs.sh
+  git diff --exit-code docs/reference/
+  npm --prefix docs run build
+fi
+
 echo "[check-ci] all checks passed!"

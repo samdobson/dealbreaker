@@ -10,8 +10,8 @@ Instead of hard-coding rules into a search engine, Dealbreaker models solitaire 
 
 ## Highlights
 
-* **39 built-in games** — Klondike, FreeCell, Spider, Yukon, TriPeaks, Poker Squares, and [33 more](docs/games.md).
-* **Custom games in JSON** — describe new variants without touching Rust; see the [rules format](docs/rules-format.md).
+* **39 built-in games** — Klondike, FreeCell, Spider, Yukon, TriPeaks, Poker Squares, and [33 more](docs/reference/presets.md).
+* **Custom games in JSON** — describe new variants without touching Rust; see the [custom game tutorial](docs/tutorials/custom-game.md) and [rules schema](docs/reference/rules-schema.md).
 * **Use it anywhere** — ships as a CLI, a Rust crate, Python wheels, a C ABI, and a ~600 KB dependency-free WebAssembly module ([docs](https://samdobson.github.io/dealbreaker/) · [live web demo](https://samdobson.github.io/dealbreaker/demo/)).
 * **Fast** — solves 31,980 of the 32,000 Microsoft FreeCell deals in 13.1 ms mean time (proving #11982 unsolvable in 0.26 s).
 
@@ -21,7 +21,7 @@ Open-source FreeCell solvers on Microsoft deals `#1..#100` (single-threaded, 10 
 
 ![Open-source FreeCell solvers on Microsoft deals #1–#100](docs/bench-freecell.svg)
 
-Across all **32,000 Microsoft FreeCell deals** (`--max-states 500000`), Dealbreaker solves **31,980** (99.94%) and proves `#11982` unsolvable in **0.26 s** at **13.1 ms** mean time per deal. See [benchmarks](docs/benchmarks.md) for methodology.
+Across all **32,000 Microsoft FreeCell deals** (`--max-states 500000`), Dealbreaker solves **31,980** (99.94%) and proves `#11982` unsolvable in **0.26 s** at **13.1 ms** mean time per deal. See [benchmarks](docs/explanation/benchmarks.md) for methodology.
 
 ## Quick start
 
@@ -84,18 +84,16 @@ const deal = solver.deal(42);
 const result = solver.solve(deal, { max_states: 500_000 });
 ```
 
-Works in browsers, bundlers, Node.js, and Web Workers (`dealbreaker/worker`). See the [library guide](docs/library.md) for Rust and JavaScript/TypeScript examples.
+Works in browsers, bundlers, Node.js, and Web Workers (`dealbreaker/worker`). See the [JavaScript/TypeScript reference](docs/reference/javascript.md) and [web app hints tutorial](docs/tutorials/web-app-hints.md).
 
 ## Documentation
 
-* [Built-in games](docs/games.md) — all 39 presets and how to customize them
-* [Command-line reference](docs/cli.md) — every command, flag, and replay option
-* [Rust & JavaScript/TypeScript guide](docs/library.md) — library APIs, WASM build, and SemVer stability
-* [What the answers mean](docs/outcomes.md) — verdicts, hidden cards, shuffles, and points games
-* [Custom rules format](docs/rules-format.md) — writing new games in JSON
-* [Benchmarks](docs/benchmarks.md) — FreeCell comparison methodology and 32,000 MS FreeCell deals
-* [Architecture & design](DESIGN.md) — how the engine works and what's next
-* [Changelog](CHANGELOG.md) — release history
+Read the full documentation at **[samdobson.github.io/dealbreaker](https://samdobson.github.io/dealbreaker/)**:
+
+* **Tutorials:** [Your first solve](docs/tutorials/first-solve.md) · [Build a custom game](docs/tutorials/custom-game.md) · [Add fair hints to a web app](docs/tutorials/web-app-hints.md)
+* **How-to Guides:** [CLI & scripting](docs/how-to/cli-and-scripting.md) · [Fair hints](docs/how-to/fair-hints.md) · [Points games](docs/how-to/points-games.md) · [Search tuning](docs/how-to/tune-search.md) · [C/Swift/Kotlin FFI](docs/how-to/mobile-and-native.md)
+* **Reference (auto-generated):** [39 built-in presets](docs/reference/presets.md) · [Rules JSON schema](docs/reference/rules-schema.md) · [CLI](docs/reference/cli.md) · [JS/TS](docs/reference/javascript.md) · [Python](docs/reference/python.md) · [C ABI](docs/reference/c-abi.md)
+* **Explanation:** [Verdicts & soundness](docs/explanation/verdicts-and-soundness.md) · [Hidden cards](docs/explanation/hidden-cards.md) · [Engine & search](docs/explanation/engine-and-search.md) · [Benchmarks](docs/explanation/benchmarks.md) · [Architecture (`DESIGN.md`)](DESIGN.md) · [Changelog](CHANGELOG.md)
 
 ## Licence
 

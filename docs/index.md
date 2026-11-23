@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /getting-started
+      link: /tutorials/first-solve
     - theme: alt
       text: Try Live Demo
       link: /demo/
@@ -21,22 +21,22 @@ hero:
       link: https://github.com/samdobson/dealbreaker
 
 features:
-  - title: 39 Built-in Games
-    details: Klondike, FreeCell, Spider, Yukon, TriPeaks, Poker Squares, and 33 more—ready out of the box.
-    link: /games
-    linkText: Browse games
-  - title: Custom Games in JSON
-    details: Describe new variants, layouts, and scoring rules in a small JSON file without touching Rust.
-    link: /rules-format
-    linkText: Rules format
-  - title: Blazing Fast
-    details: Solves 31,980 of 32,000 Microsoft FreeCell deals in 13.1 ms mean time and proves #11982 unsolvable in 0.26 s.
-    link: /benchmarks
-    linkText: See benchmarks
-  - title: Use It Anywhere
-    details: Ships as a CLI, a Rust crate, a ~600 KB dependency-free WebAssembly npm package, Python wheels, and a C ABI.
-    link: /library
-    linkText: Explore bindings
+  - title: Tutorials
+    details: Learn by doing—solve your first deal, build a custom game in JSON, or add fair hints to a web app.
+    link: /tutorials/
+    linkText: Start a tutorial
+  - title: How-to Guides
+    details: Practical recipes for CLI scripting, points games, search tuning, Rust hooks, and mobile/C embedding.
+    link: /how-to/
+    linkText: Browse guides
+  - title: Reference
+    details: Auto-generated specs for all 39 presets, Rules JSON Schema, CLI flags, JS/TS, Python, and C ABI.
+    link: /reference/
+    linkText: Explore reference
+  - title: Explanation
+    details: Understand verdicts, hidden-card sampling, bit-table search, branch-and-bound scoring, and benchmarks.
+    link: /explanation/
+    linkText: Read concepts
 ---
 
 ## A quick taste

@@ -29,37 +29,70 @@ export default defineConfig({
     siteTitle: 'Dealbreaker',
 
     nav: [
-      { text: 'Guide', link: '/getting-started' },
-      { text: 'Games', link: '/games' },
-      { text: 'Rules JSON', link: '/rules-format' },
-      { text: 'Benchmarks', link: '/benchmarks' },
+      { text: 'Tutorials', link: '/tutorials/', activeMatch: '/tutorials/' },
+      { text: 'How-to', link: '/how-to/', activeMatch: '/how-to/' },
+      { text: 'Reference', link: '/reference/', activeMatch: '/reference/' },
+      { text: 'Explanation', link: '/explanation/', activeMatch: '/explanation/' },
       { text: 'Live Demo', link: '/demo/', target: '_self' },
     ],
 
-    sidebar: [
-      {
-        text: 'Start Here',
-        items: [
-          { text: 'Getting Started', link: '/getting-started' },
-          { text: 'Built-in Games', link: '/games' },
-          { text: 'How Answers Work', link: '/outcomes' },
-        ],
-      },
-      {
-        text: 'Using Dealbreaker',
-        items: [
-          { text: 'Command-Line (CLI)', link: '/cli' },
-          { text: 'Libraries & Bindings', link: '/library' },
-        ],
-      },
-      {
-        text: 'Deep Dives',
-        items: [
-          { text: 'Custom Rules (JSON)', link: '/rules-format' },
-          { text: 'Benchmarks', link: '/benchmarks' },
-        ],
-      },
-    ],
+    sidebar: {
+      '/tutorials/': [
+        {
+          text: 'Tutorials',
+          items: [
+            { text: 'Overview', link: '/tutorials/' },
+            { text: 'Your First Solve', link: '/tutorials/first-solve' },
+            { text: 'Build a Custom Game', link: '/tutorials/custom-game' },
+            { text: 'Add Fair Hints to a Web App', link: '/tutorials/web-app-hints' },
+          ],
+        },
+      ],
+      '/how-to/': [
+        {
+          text: 'How-to Guides',
+          items: [
+            { text: 'Overview', link: '/how-to/' },
+            { text: 'CLI & Scripting', link: '/how-to/cli-and-scripting' },
+            { text: 'Fair Hints & Cancellation', link: '/how-to/fair-hints' },
+            { text: 'Solve Points Games', link: '/how-to/points-games' },
+            { text: 'Tune Search & Budgets', link: '/how-to/tune-search' },
+            { text: 'Custom Rust Hooks', link: '/how-to/custom-rust-hooks' },
+            { text: 'Embed in C, Swift, or Kotlin', link: '/how-to/mobile-and-native' },
+          ],
+        },
+      ],
+      '/reference/': [
+        {
+          text: 'Reference (Auto-generated)',
+          items: [
+            { text: 'Overview', link: '/reference/' },
+            { text: 'Built-in Presets (39)', link: '/reference/presets' },
+            { text: 'Rules Schema (JSON)', link: '/reference/rules-schema' },
+            { text: 'Data Formats', link: '/reference/data-formats' },
+            { text: 'CLI Reference', link: '/reference/cli' },
+            { text: 'JavaScript / TypeScript', link: '/reference/javascript' },
+            { text: 'Python', link: '/reference/python' },
+            { text: 'C ABI', link: '/reference/c-abi' },
+            { text: 'Rust API (docs.rs)', link: 'https://docs.rs/dealbreaker' },
+          ],
+        },
+      ],
+      '/explanation/': [
+        {
+          text: 'Explanation',
+          items: [
+            { text: 'Overview', link: '/explanation/' },
+            { text: 'Verdicts & Soundness', link: '/explanation/verdicts-and-soundness' },
+            { text: 'Hidden Cards & Fair Hints', link: '/explanation/hidden-cards' },
+            { text: 'Engine & Search Architecture', link: '/explanation/engine-and-search' },
+            { text: 'Scoring & Branch-and-Bound', link: '/explanation/scoring-and-bounds' },
+            { text: 'Benchmarks', link: '/explanation/benchmarks' },
+            { text: 'Stability & SemVer', link: '/explanation/stability' },
+          ],
+        },
+      ],
+    },
 
     socialLinks: [
       { icon: 'github', link: 'https://github.com/samdobson/dealbreaker' },

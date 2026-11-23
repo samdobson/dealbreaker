@@ -77,6 +77,29 @@ solver.terminate();
 ./scripts/build-wasm.sh  # raw wasm-bindgen output in pkg/<target>
 ```
 
+## Python
+
+Install from PyPI (Python 3.10+, pre-built wheels for Linux, macOS, and Windows):
+
+```sh
+pip install dealbreaker
+```
+
+```python
+from dealbreaker import Solver
+
+solver = Solver.from_preset("klondike")  # or Solver(rules_dict)
+state = solver.deal(42)
+result = solver.solve(state, max_states=500_000, timeout_ms=2_000)
+# {"outcome": "solved" | "unsolvable" | "gave-up", "states": ..., "steps": [...]}
+
+hint = solver.hint(state, samples=16)  # releases the GIL and uses rayon across cores
+if hint:
+    next_state = solver.play_step(state, hint["step"])
+```
+
+Long-running searches (`solve`, `best`, `hint`) release the Python GIL so `ThreadPoolExecutor` threads can solve deals concurrently.
+
 ## Stability (SemVer 1.x)
 
 * Rule types are `#[non_exhaustive]`: construct via `Rules::new`, `GroupRules::new`, `Build::new`, etc., or JSON, and include a wildcard arm when matching rule enums.

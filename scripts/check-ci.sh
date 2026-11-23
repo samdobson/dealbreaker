@@ -26,11 +26,12 @@ if rustup target list --installed | grep -qx wasm32-unknown-unknown; then
   cargo clippy -p dealbreaker-wasm --target wasm32-unknown-unknown -- -D warnings
 fi
 
-echo "[check-ci] version parity (Cargo.toml vs js/package.json)..."
+echo "[check-ci] version parity (Cargo.toml vs js/package.json vs pyproject.toml)..."
 CARGO_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n1)"
 JS_VERSION="$(node -p 'require("./js/package.json").version')"
-if [ "$CARGO_VERSION" != "$JS_VERSION" ]; then
-  echo "error: Cargo.toml ($CARGO_VERSION) != js/package.json ($JS_VERSION)" >&2
+PY_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' crates/dealbreaker-py/pyproject.toml | head -n1)"
+if [ "$CARGO_VERSION" != "$JS_VERSION" ] || [ "$CARGO_VERSION" != "$PY_VERSION" ]; then
+  echo "error: version mismatch: Cargo.toml=$CARGO_VERSION js=$JS_VERSION py=$PY_VERSION" >&2
   exit 1
 fi
 

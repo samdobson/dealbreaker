@@ -71,3 +71,26 @@ jobs:
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           package: dealbreaker
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/dealbreaker-py
+      - run: cargo clippy --manifest-path crates/dealbreaker-py/Cargo.toml -- -D warnings
+      - run: pip install maturin pytest
+      - run: maturin develop --release --manifest-path crates/dealbreaker-py/Cargo.toml
+      - run: pytest -v crates/dealbreaker-py/tests
+      - name: Verify pyproject.toml version matches Cargo.toml
+        run: |
+          CARGO_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n1)"
+          PY_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' crates/dealbreaker-py/pyproject.toml | head -n1)"
+          test "$CARGO_VERSION" = "$PY_VERSION"

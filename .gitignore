@@ -5,3 +5,7 @@ target/
 /js/LICENSE-MIT
 /js/LICENSE-APACHE
 /js/*.tgz
+__pycache__/
+*.so
+*.pyd
+.pytest_cache/

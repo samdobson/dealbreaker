@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/dealbreaker", "crates/dealbreaker-cli", "crates/dealbreaker-wasm"]
+exclude = ["crates/dealbreaker-py"]
 
 [workspace.package]
 version = "1.2.0"

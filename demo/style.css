@@ -52,6 +52,12 @@ body {
   font-size: 0.85rem;
 }
 
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .gh-link {
   color: var(--text);
   text-decoration: none;

@@ -1,6 +1,6 @@
 # Built-in Games
 
-Dealbreaker ships with 39 built-in patience (solitaire) presets:
+Dealbreaker ships with **39 built-in patience (solitaire) presets**—ready to play, solve, or customize.
 
 | Family | Presets |
 |---|---|
@@ -12,4 +12,13 @@ Dealbreaker ships with 39 built-in patience (solitaire) presets:
 | **Grid & Other** | `calculation`, `sir-tommy`, `gaps-single-deal`, `montana`, `accordion` |
 | **Points** | `poker-squares`, `cribbage-squares` |
 
-Run `dealbreaker list` for display names, or `dealbreaker rules <preset>` to inspect a preset's JSON definition as a starting point for a custom game (see the [rules format](rules-format.md)).
+## Inspect or Customize Any Preset
+
+Every built-in game is just a rules definition. Print one out to see how it works or use it as a template for your own variant:
+
+```sh
+dealbreaker list                # list all 39 presets with display names
+dealbreaker rules freecell      # dump FreeCell's JSON rules
+```
+
+Then tweak the JSON and pass the file path anywhere a preset name is accepted—see [Custom Rules (JSON)](rules-format.md).

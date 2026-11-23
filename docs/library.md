@@ -1,4 +1,6 @@
-# Using Dealbreaker as a Library
+# Libraries & Bindings
+
+Use Dealbreaker directly inside your own app or script—in Rust, JavaScript/TypeScript (WebAssembly), Python, or via the C ABI.
 
 ## Rust
 
@@ -102,7 +104,7 @@ Long-running searches (`solve`, `best`, `hint`) release the Python GIL so `Threa
 
 ## C / Swift / Kotlin (C ABI)
 
-`crates/dealbreaker-ffi` exposes a minimal JSON-in/JSON-out C ABI ([dealbreaker.h](../crates/dealbreaker-ffi/include/dealbreaker.h)) with thread-safe cooperative cancellation (`DealbreakerCancel`), suitable for C, C++, Swift (iOS/macOS), Kotlin/JNI (Android), Go, and Zig:
+`crates/dealbreaker-ffi` exposes a minimal JSON-in/JSON-out C ABI ([dealbreaker.h](https://github.com/samdobson/dealbreaker/blob/main/crates/dealbreaker-ffi/include/dealbreaker.h)) with thread-safe cooperative cancellation (`DealbreakerCancel`), suitable for C, C++, Swift (iOS/macOS), Kotlin/JNI (Android), Go, and Zig:
 
 ```sh
 cargo build --release -p dealbreaker-ffi   # produces libdealbreaker_ffi.{a,dylib,so,dll}
@@ -115,4 +117,4 @@ cargo build --release -p dealbreaker-ffi   # produces libdealbreaker_ffi.{a,dyli
 * 1.0 JSON rules remain compatible across all 1.x releases.
 * Heuristic/preset tuning may change solution paths or speed, never verdicts.
 
-See [CHANGELOG.md](../CHANGELOG.md) for release history.
+See [CHANGELOG.md](https://github.com/samdobson/dealbreaker/blob/main/CHANGELOG.md) for release history.

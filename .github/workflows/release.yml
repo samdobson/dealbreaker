@@ -49,14 +49,27 @@ jobs:
       - name: Publish dealbreaker to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
-        run: cargo publish -p dealbreaker
+        run: |
+          if ! out="$(cargo publish -p dealbreaker 2>&1)"; then
+            echo "$out"
+            echo "$out" | grep -q "already exists" || exit 1
+            echo "dealbreaker already published; continuing"
+          else
+            echo "$out"
+          fi
       - name: Wait for crates.io index and publish dealbreaker-cli
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
         run: |
           for attempt in 1 2 3 4 5; do
             sleep 20
-            if cargo publish -p dealbreaker-cli; then
+            if out="$(cargo publish -p dealbreaker-cli 2>&1)"; then
+              echo "$out"
+              exit 0
+            fi
+            echo "$out"
+            if echo "$out" | grep -q "already exists"; then
+              echo "dealbreaker-cli already published; continuing"
               exit 0
             fi
             echo "Attempt $attempt failed; retrying..."
@@ -152,7 +165,7 @@ jobs:
           path: dist/*
 
   github-release:
-    needs: [build-binaries, publish-crates, publish-npm]
+    needs: [build-binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: write

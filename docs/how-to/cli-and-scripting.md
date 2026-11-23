@@ -50,3 +50,32 @@ EOF
 ```
 
 Every request may include an optional `"id"` field that is echoed in the response. See the [CLI Reference](/reference/cli#jsonl-stdio-server-dealbreaker-serve) for all supported `serve` commands.
+
+## Run in Docker
+
+Pre-built multi-arch (`linux/amd64`, `linux/arm64`) `scratch` images are published to GitHub Container Registry on every release:
+
+```sh
+docker run --rm ghcr.io/samdobson/dealbreaker solve freecell --ms 1
+```
+
+Mount your working directory to pass custom rules or state JSON files:
+
+```sh
+docker run --rm -v "$PWD:/work" -w /work ghcr.io/samdobson/dealbreaker solve my-game.json --state pos.json --json
+```
+
+Pass `-i` to keep `stdin` open when driving `dealbreaker serve`:
+
+```sh
+docker run --rm -i ghcr.io/samdobson/dealbreaker serve freecell <<'EOF'
+{"id": 1, "cmd": "deal", "ms": 1}
+{"id": 2, "cmd": "quit"}
+EOF
+```
+
+To build the image locally from source:
+
+```sh
+docker build -t dealbreaker .
+```

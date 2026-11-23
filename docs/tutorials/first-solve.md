@@ -13,6 +13,11 @@ Pick whichever environment you're most comfortable with:
 cargo install dealbreaker-cli
 ```
 
+```sh [Docker]
+# Pulls the multi-arch image (linux/amd64 and linux/arm64) automatically on first run
+docker pull ghcr.io/samdobson/dealbreaker
+```
+
 ```sh [JavaScript / TS]
 npm install dealbreaker
 ```
@@ -35,6 +40,10 @@ Let's load the built-in `freecell` preset, deal Microsoft FreeCell `#1`, and ask
 
 ```sh [CLI]
 dealbreaker solve freecell --ms 1
+```
+
+```sh [Docker]
+docker run --rm ghcr.io/samdobson/dealbreaker solve freecell --ms 1
 ```
 
 ```ts [JavaScript / TS]
@@ -94,6 +103,10 @@ FreeCell has no face-down cards, so `solve` sees the whole board. In Klondike, m
 
 ```sh [CLI]
 dealbreaker hint klondike --seed 2
+```
+
+```sh [Docker]
+docker run --rm ghcr.io/samdobson/dealbreaker hint klondike --seed 2
 ```
 
 ```ts [JavaScript / TS]

@@ -254,3 +254,65 @@ jobs:
           path: dist
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-docker:
+    needs: [build-binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-x86_64-unknown-linux-musl
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-aarch64-unknown-linux-musl
+          path: dist
+      - name: Prepare Docker build context
+        shell: bash
+        run: |
+          mkdir -p docker-ctx/linux/amd64 docker-ctx/linux/arm64
+          tar -xzf "dist/dealbreaker-${GITHUB_REF_NAME}-x86_64-unknown-linux-musl.tar.gz" \
+            --strip-components=1 -C docker-ctx/linux/amd64 \
+            "dealbreaker-${GITHUB_REF_NAME}-x86_64-unknown-linux-musl/dealbreaker"
+          tar -xzf "dist/dealbreaker-${GITHUB_REF_NAME}-aarch64-unknown-linux-musl.tar.gz" \
+            --strip-components=1 -C docker-ctx/linux/arm64 \
+            "dealbreaker-${GITHUB_REF_NAME}-aarch64-unknown-linux-musl/dealbreaker"
+          cat <<'EOF' > docker-ctx/Dockerfile
+          FROM scratch
+          ARG TARGETOS
+          ARG TARGETARCH
+          COPY ${TARGETOS}/${TARGETARCH}/dealbreaker /dealbreaker
+          USER 65532:65532
+          ENTRYPOINT ["/dealbreaker"]
+          EOF
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Dealbreaker
+            org.opencontainers.image.description=A fast patience (solitaire) solver written in Rust, where every game is data.
+            org.opencontainers.image.url=https://samdobson.github.io/dealbreaker/
+            org.opencontainers.image.licenses=MIT OR Apache-2.0
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker-ctx
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

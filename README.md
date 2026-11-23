@@ -27,6 +27,12 @@ cargo install dealbreaker-cli
 dealbreaker solve freecell --ms 1
 ```
 
+Or run directly in Docker:
+
+```sh
+docker run --rm ghcr.io/samdobson/dealbreaker solve freecell --ms 1
+```
+
 See the **[documentation](https://samdobson.github.io/dealbreaker/)** for pre-built binaries, Rust, JavaScript/WASM, Python, and C usage, or try it directly in your browser with the **[live web demo](https://samdobson.github.io/dealbreaker/demo/)**.
 
 ## License

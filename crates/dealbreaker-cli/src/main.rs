@@ -1,11 +1,12 @@
 //! `dealbreaker`: solve patience games from the command line.
 
+use std::io::{self, BufRead, Write};
 use std::process::ExitCode;
 use std::time::Instant;
 
 use dealbreaker::{
-    hint, maximize, microsoft_deal, presets, solve, Game, HintOptions, Outcome, Rules, SearchHints,
-    SolveOptions, State, Strategy,
+    hint, maximize, microsoft_deal, presets, solve, Card, Game, HintOptions, Outcome, Rules,
+    SearchHints, SolveOptions, State, StateData, Step, Strategy,
 };
 
 const USAGE: &str = "\
@@ -20,11 +21,16 @@ USAGE:
     dealbreaker replay <GAME> [DEAL] --steps FILE [--legal] [--json]
     dealbreaker best  <GAME> [DEAL] [SEARCH] [--json]
     dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [SEARCH] [--json] [--verbose]
+    dealbreaker serve <GAME> [--search JSON]
 
 `replay` plays a list of steps (a JSON array, or `solve --json` output) from a deal and prints
 the position after each one; `--legal` adds every legal step at each position.
 
 `best` finds the highest score for games played for points; `bench --best` reports scores.
+
+`serve` loads GAME once, reads one JSON request per line from stdin (`deal`, `solve`, `best`,
+`hint`, `legal_steps`, `play_step`, `validate`, `is_won`, `score`, `rules`, `quit`), and writes
+one JSON response line per request to stdout.
 
 GAME is a preset id (see `list`) or a path to a rules JSON file.
 
@@ -471,10 +477,189 @@ fn run(argv: &[String]) -> Result<(), String> {
                 );
             }
         }
+        "serve" => {
+            let g = load_game(game_arg()?, &a)?;
+            let stdin = io::stdin();
+            let stdout = io::stdout();
+            serve_io(&g, stdin.lock(), stdout.lock())?;
+        }
         "help" | "--help" | "-h" => print!("{USAGE}"),
         other => return Err(format!("unknown command {other:?}\n\n{USAGE}")),
     }
     Ok(())
+}
+
+/// Long-lived JSONL stdio loop: one JSON request per line, one JSON response per line.
+fn serve_io<R: BufRead, W: Write>(game: &Game, reader: R, mut writer: W) -> Result<(), String> {
+    for line in reader.lines() {
+        let line = line.map_err(|e| format!("stdin read error: {e}"))?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let (resp, quit) = handle_serve_line(game, trimmed);
+        serde_json::to_writer(&mut writer, &resp)
+            .map_err(|e| format!("stdout write error: {e}"))?;
+        writer
+            .write_all(b"\n")
+            .and_then(|()| writer.flush())
+            .map_err(|e| format!("stdout write error: {e}"))?;
+        if quit {
+            break;
+        }
+    }
+    Ok(())
+}
+
+fn handle_serve_line(game: &Game, line: &str) -> (serde_json::Value, bool) {
+    let val: serde_json::Value = match serde_json::from_str(line) {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                serde_json::json!({ "ok": false, "error": format!("invalid JSON: {e}") }),
+                false,
+            );
+        }
+    };
+    let id = val.get("id").cloned();
+    let wrap_err = |msg: String| {
+        let mut out = serde_json::json!({ "ok": false, "error": msg });
+        if let Some(ref id) = id {
+            out["id"] = id.clone();
+        }
+        out
+    };
+    let Some(obj) = val.as_object() else {
+        return (wrap_err("request must be a JSON object".into()), false);
+    };
+    let Some(cmd) = obj.get("cmd").and_then(serde_json::Value::as_str) else {
+        return (wrap_err("missing string field \"cmd\"".into()), false);
+    };
+    let parse_state = |obj: &serde_json::Map<String, serde_json::Value>| -> Result<State, String> {
+        let v = obj
+            .get("state")
+            .ok_or_else(|| "missing \"state\"".to_string())?;
+        let data: StateData =
+            serde_json::from_value(v.clone()).map_err(|e| format!("invalid state: {e}"))?;
+        game.state_from_data(&data).map_err(|e| e.to_string())
+    };
+    let mut quit = false;
+    let res: Result<serde_json::Value, String> = match cmd {
+        "quit" => {
+            quit = true;
+            Ok(serde_json::json!({ "ok": true }))
+        }
+        "rules" => Ok(serde_json::json!({ "ok": true, "rules": game.rules() })),
+        "deal" => (|| {
+            let state = if let Some(ms) = obj.get("ms") {
+                let n = ms
+                    .as_u64()
+                    .and_then(|v| u32::try_from(v).ok())
+                    .ok_or_else(|| "\"ms\" must be a non-negative 32-bit integer".to_string())?;
+                game.deal_ordered(&microsoft_deal(n))
+                    .map_err(|e| e.to_string())?
+            } else if let Some(cards_val) = obj.get("cards") {
+                let names: Vec<String> = serde_json::from_value(cards_val.clone())
+                    .map_err(|e| format!("invalid \"cards\": {e}"))?;
+                let cards: Vec<Card> = names
+                    .iter()
+                    .map(|c| c.parse::<Card>().map_err(|e| e.to_string()))
+                    .collect::<Result<_, _>>()?;
+                game.deal_ordered(&cards).map_err(|e| e.to_string())?
+            } else {
+                let seed = match obj.get("seed") {
+                    Some(v) => v
+                        .as_u64()
+                        .ok_or_else(|| "\"seed\" must be a non-negative integer".to_string())?,
+                    None => 1,
+                };
+                game.deal(seed)
+            };
+            Ok(serde_json::json!({ "ok": true, "state": game.state_to_data(&state) }))
+        })(),
+        "validate" => parse_state(obj).map(|_| serde_json::json!({ "ok": true })),
+        "is_won" => {
+            parse_state(obj).map(|s| serde_json::json!({ "ok": true, "won": game.is_won(&s) }))
+        }
+        "score" => {
+            parse_state(obj).map(|s| serde_json::json!({ "ok": true, "score": game.score(&s) }))
+        }
+        "legal_steps" => parse_state(obj)
+            .map(|s| serde_json::json!({ "ok": true, "steps": game.legal_steps(&s) })),
+        "play_step" => (|| {
+            let mut s = parse_state(obj)?;
+            let step_val = obj
+                .get("step")
+                .ok_or_else(|| "missing \"step\"".to_string())?;
+            let step: Step = serde_json::from_value(step_val.clone())
+                .map_err(|e| format!("invalid step: {e}"))?;
+            game.play_step(&mut s, &step).map_err(|e| e.to_string())?;
+            let mut out = serde_json::json!({
+                "ok": true,
+                "state": game.state_to_data(&s),
+                "won": game.is_won(&s),
+            });
+            if let Some(sc) = game.score(&s) {
+                out["score"] = serde_json::json!(sc);
+            }
+            Ok(out)
+        })(),
+        "solve" => (|| {
+            let s = parse_state(obj)?;
+            let opts: SolveOptions = match obj.get("options") {
+                Some(v) => serde_json::from_value(v.clone())
+                    .map_err(|e| format!("invalid options: {e}"))?,
+                None => SolveOptions::default(),
+            };
+            let r = solve(game, &s, &opts);
+            let mut out = serde_json::json!({
+                "ok": true,
+                "outcome": r.outcome.label(),
+                "states": r.states,
+            });
+            if let Outcome::Solved(moves) = &r.outcome {
+                out["steps"] = serde_json::json!(game.steps(&s, moves));
+            }
+            Ok(out)
+        })(),
+        "best" => (|| {
+            if !game.is_scored() {
+                return Err(format!("{} isn't played for points", game.name()));
+            }
+            let s = parse_state(obj)?;
+            let opts: SolveOptions = match obj.get("options") {
+                Some(v) => serde_json::from_value(v.clone())
+                    .map_err(|e| format!("invalid options: {e}"))?,
+                None => SolveOptions::default(),
+            };
+            let r = maximize(game, &s, &opts);
+            Ok(serde_json::json!({
+                "ok": true,
+                "score": r.score,
+                "proven": r.proven,
+                "states": r.states,
+                "steps": game.steps(&s, &r.moves),
+            }))
+        })(),
+        "hint" => (|| {
+            let s = parse_state(obj)?;
+            let opts: HintOptions = match obj.get("options") {
+                Some(v) => serde_json::from_value(v.clone())
+                    .map_err(|e| format!("invalid options: {e}"))?,
+                None => HintOptions::default(),
+            };
+            Ok(serde_json::json!({ "ok": true, "hint": hint(game, &s, &opts) }))
+        })(),
+        other => Err(format!("unknown cmd {other:?}")),
+    };
+    let mut out = match res {
+        Ok(v) => v,
+        Err(e) => wrap_err(e),
+    };
+    if let Some(id) = id {
+        out["id"] = id;
+    }
+    (out, quit)
 }
 
 #[cfg(test)]
@@ -750,5 +935,75 @@ mod tests {
         assert!(run(&argv(&["bench", "freecell", "--seeds", "bad"]))
             .unwrap_err()
             .contains("A..B"));
+    }
+
+    #[test]
+    fn serve_io_handles_commands_and_errors() {
+        let fc = Game::new(presets::freecell()).unwrap();
+        let deal = fc.deal_ordered(&microsoft_deal(1)).unwrap();
+        let state_json = serde_json::to_string(&fc.state_to_data(&deal)).unwrap();
+        let legal = fc.legal_steps(&deal);
+        let step_json = serde_json::to_string(&legal[0]).unwrap();
+
+        let input = format!(
+            "\n\
+             not json\n\
+             {{\"id\":1,\"cmd\":\"rules\"}}\n\
+             {{\"id\":2,\"cmd\":\"deal\",\"ms\":1}}\n\
+             {{\"id\":3,\"cmd\":\"validate\",\"state\":{state_json}}}\n\
+             {{\"id\":4,\"cmd\":\"legal_steps\",\"state\":{state_json}}}\n\
+             {{\"id\":5,\"cmd\":\"play_step\",\"state\":{state_json},\"step\":{step_json}}}\n\
+             {{\"id\":6,\"cmd\":\"solve\",\"state\":{state_json},\"options\":{{\"max_states\":50000}}}}\n\
+             {{\"id\":7,\"cmd\":\"hint\",\"state\":{state_json},\"options\":{{\"samples\":1}}}}\n\
+             {{\"id\":8,\"cmd\":\"is_won\",\"state\":{state_json}}}\n\
+             {{\"id\":9,\"cmd\":\"score\",\"state\":{state_json}}}\n\
+             {{\"id\":10,\"cmd\":\"best\",\"state\":{state_json}}}\n\
+             {{\"id\":11,\"cmd\":\"bogus\"}}\n\
+             {{\"id\":12,\"cmd\":\"quit\"}}\n\
+             {{\"id\":13,\"cmd\":\"rules\"}}\n"
+        );
+        let mut out = Vec::new();
+        serve_io(&fc, input.as_bytes(), &mut out).unwrap();
+        let lines: Vec<serde_json::Value> = String::from_utf8(out)
+            .unwrap()
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        // 13 non-empty lines before quit (line 13 after quit is not processed).
+        assert_eq!(lines.len(), 13);
+        assert_eq!(lines[0]["ok"], false);
+        assert_eq!(lines[1]["id"], 1);
+        assert_eq!(lines[1]["ok"], true);
+        assert!(lines[1]["rules"]["name"].is_string());
+        assert_eq!(lines[2]["ok"], true);
+        assert!(lines[2]["state"]["piles"].is_object());
+        assert_eq!(lines[3]["ok"], true);
+        assert_eq!(lines[4]["ok"], true);
+        assert!(!lines[4]["steps"].as_array().unwrap().is_empty());
+        assert_eq!(lines[5]["ok"], true);
+        assert_eq!(lines[5]["won"], false);
+        assert_eq!(lines[6]["ok"], true);
+        assert_eq!(lines[6]["outcome"], "solved");
+        assert!(!lines[6]["steps"].as_array().unwrap().is_empty());
+        assert_eq!(lines[7]["ok"], true);
+        assert!(lines[7]["hint"].is_object());
+        assert_eq!(lines[8]["won"], false);
+        assert!(lines[9]["score"].is_null());
+        assert_eq!(lines[10]["ok"], false);
+        assert_eq!(lines[11]["ok"], false);
+        assert_eq!(lines[12]["id"], 12);
+        assert_eq!(lines[12]["ok"], true);
+
+        // Scored game: `best` works.
+        let ps = Game::new(presets::poker_squares()).unwrap();
+        let ps_state = serde_json::to_string(&ps.state_to_data(&ps.deal(1))).unwrap();
+        let ps_in = format!(
+            "{{\"cmd\":\"best\",\"state\":{ps_state},\"options\":{{\"max_states\":1000}}}}\n"
+        );
+        let mut ps_out = Vec::new();
+        serve_io(&ps, ps_in.as_bytes(), &mut ps_out).unwrap();
+        let ps_resp: serde_json::Value = serde_json::from_slice(&ps_out).unwrap();
+        assert_eq!(ps_resp["ok"], true);
+        assert!(ps_resp["score"].as_u64().unwrap() > 0);
     }
 }

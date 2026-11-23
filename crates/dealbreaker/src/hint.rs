@@ -149,6 +149,43 @@ fn hint_inner(
     let mut votes: HashMap<String, (Step, u32)> = HashMap::new();
     let mut order: Vec<String> = Vec::new();
     let mut tried = 0u32;
+    #[cfg(feature = "parallel")]
+    {
+        use rayon::prelude::*;
+        let guesses: Vec<State> = (0..samples).map(|_| guess(&mut rng)).collect();
+        let outcomes: Vec<Option<Option<Step>>> = guesses
+            .par_iter()
+            .map(|g| {
+                if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                    return None;
+                }
+                let r = match cancel {
+                    Some(c) => solve_with_cancel(game, g, &opts.solve, c),
+                    None => solve(game, g, &opts.solve),
+                };
+                let step = match r.outcome {
+                    Outcome::Solved(moves) => game.steps(g, &moves).into_iter().next(),
+                    _ => None,
+                };
+                Some(step)
+            })
+            .collect();
+        for item in outcomes {
+            let Some(step_opt) = item else {
+                continue;
+            };
+            tried += 1;
+            if let Some(step) = step_opt {
+                let key = format!("{step:?}");
+                let e = votes.entry(key.clone()).or_insert_with(|| {
+                    order.push(key);
+                    (step, 0)
+                });
+                e.1 += 1;
+            }
+        }
+    }
+    #[cfg(not(feature = "parallel"))]
     for _ in 0..samples {
         if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
             break;
@@ -215,36 +252,75 @@ fn scored_hint(
         ..opts.solve.clone()
     };
     let mut totals = vec![(0u64, 0u32); moves.len()];
-    let mut sample_scores = vec![(0u64, 0u32); moves.len()];
     let mut completed = 0u32;
-    'samples: for _ in 0..samples {
-        if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
-            break;
+    #[cfg(feature = "parallel")]
+    {
+        use rayon::prelude::*;
+        let guesses: Vec<State> = (0..samples).map(|_| guess()).collect();
+        let results: Vec<Option<Vec<(u64, u32)>>> = guesses
+            .par_iter()
+            .map(|g| {
+                let mut scores = vec![(0u64, 0u32); moves.len()];
+                for (i, &m) in moves.iter().enumerate() {
+                    if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                        return None;
+                    }
+                    let mut s = g.clone();
+                    if game.play(&mut s, m).is_err() {
+                        continue;
+                    }
+                    let r = match cancel {
+                        Some(c) => maximize_with_cancel(game, &s, &per, c),
+                        None => maximize(game, &s, &per),
+                    };
+                    scores[i].0 = r.score as u64;
+                    if game.target_score().is_some_and(|t| r.score >= t) {
+                        scores[i].1 = 1;
+                    }
+                }
+                Some(scores)
+            })
+            .collect();
+        for scores in results.into_iter().flatten() {
+            for (t, &(sc, w)) in totals.iter_mut().zip(&scores) {
+                t.0 += sc;
+                t.1 += w;
+            }
+            completed += 1;
         }
-        let g = guess();
-        sample_scores.fill((0, 0));
-        for (i, &m) in moves.iter().enumerate() {
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        let mut sample_scores = vec![(0u64, 0u32); moves.len()];
+        'samples: for _ in 0..samples {
             if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
-                break 'samples;
+                break;
             }
-            let mut s = g.clone();
-            if game.play(&mut s, m).is_err() {
-                continue;
+            let g = guess();
+            sample_scores.fill((0, 0));
+            for (i, &m) in moves.iter().enumerate() {
+                if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                    break 'samples;
+                }
+                let mut s = g.clone();
+                if game.play(&mut s, m).is_err() {
+                    continue;
+                }
+                let r = match cancel {
+                    Some(c) => maximize_with_cancel(game, &s, &per, c),
+                    None => maximize(game, &s, &per),
+                };
+                sample_scores[i].0 = r.score as u64;
+                if game.target_score().is_some_and(|t| r.score >= t) {
+                    sample_scores[i].1 = 1;
+                }
             }
-            let r = match cancel {
-                Some(c) => maximize_with_cancel(game, &s, &per, c),
-                None => maximize(game, &s, &per),
-            };
-            sample_scores[i].0 = r.score as u64;
-            if game.target_score().is_some_and(|t| r.score >= t) {
-                sample_scores[i].1 = 1;
+            for (t, &(sc, w)) in totals.iter_mut().zip(&sample_scores) {
+                t.0 += sc;
+                t.1 += w;
             }
+            completed += 1;
         }
-        for (t, &(sc, w)) in totals.iter_mut().zip(&sample_scores) {
-            t.0 += sc;
-            t.1 += w;
-        }
-        completed += 1;
     }
     if completed == 0 {
         return None;
@@ -326,5 +402,18 @@ mod tests {
         let ps = Game::new(presets::poker_squares()).unwrap();
         let pstate = ps.deal(1);
         assert!(hint_with_cancel(&ps, &pstate, &HintOptions::default(), &cancel).is_none());
+    }
+
+    #[test]
+    fn hint_is_deterministic_across_repeated_calls() {
+        let kl = Game::new(presets::klondike1()).unwrap();
+        let ks = kl.deal(2);
+        let opts = HintOptions::default()
+            .samples(4)
+            .seed(42)
+            .solve(SolveOptions::default().max_states(10_000));
+        let h1 = hint(&kl, &ks, &opts);
+        let h2 = hint(&kl, &ks, &opts);
+        assert_eq!(h1, h2);
     }
 }

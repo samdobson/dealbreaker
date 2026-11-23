@@ -20,7 +20,7 @@ USAGE:
     dealbreaker hint  <GAME> [DEAL] [SEARCH] [--samples N]
     dealbreaker replay <GAME> [DEAL] --steps FILE [--legal] [--json]
     dealbreaker best  <GAME> [DEAL] [SEARCH] [--json]
-    dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [SEARCH] [--json] [--verbose]
+    dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [--jobs N] [SEARCH] [--json] [--verbose]
     dealbreaker serve <GAME> [--search JSON]
 
 `replay` plays a list of steps (a JSON array, or `solve --json` output) from a deal and prints
@@ -75,6 +75,7 @@ impl Args {
             "--timeout-ms",
             "--strategy",
             "--seeds",
+            "--jobs",
             "--samples",
             "--search",
             "--steps",
@@ -370,25 +371,34 @@ fn run(argv: &[String]) -> Result<(), String> {
                 .and_then(|(l, h)| Some((l.parse::<u64>().ok()?, h.parse::<u64>().ok()?)))
                 .ok_or_else(|| format!("--seeds wants A..B, got {range}"))?;
             let o = search_opts(&a)?;
-            let (mut total, mut proven, mut states) = (0u64, 0u32, 0u64);
-            let (mut lowest, mut highest) = (u32::MAX, 0u32);
+            let jobs = a.num::<usize>("--jobs")?;
+            let seeds: Vec<u64> = (lo..=hi).collect();
             let t = Instant::now();
-            for seed in lo..=hi {
+            let run_one = |&seed: &u64| {
                 let s = g.deal(seed);
                 let t1 = Instant::now();
                 let r = maximize(&g, &s, &o);
-                total += r.score as u64;
-                proven += r.proven as u32;
-                states += r.states;
-                lowest = lowest.min(r.score);
-                highest = highest.max(r.score);
+                (
+                    seed,
+                    r.score,
+                    r.proven,
+                    r.states,
+                    t1.elapsed().as_secs_f64(),
+                )
+            };
+            let results: Vec<_> = run_bench(&seeds, jobs, run_one)?;
+            let (mut total, mut proven, mut states) = (0u64, 0u32, 0u64);
+            let (mut lowest, mut highest) = (u32::MAX, 0u32);
+            for (seed, score, is_proven, st, dt) in results {
+                total += score as u64;
+                proven += is_proven as u32;
+                states += st;
+                lowest = lowest.min(score);
+                highest = highest.max(score);
                 if a.has("--verbose") {
                     println!(
-                        "{seed}: {} points{} ({} states, {:.3}s)",
-                        r.score,
-                        if r.proven { " (proven)" } else { "" },
-                        r.states,
-                        t1.elapsed().as_secs_f64()
+                        "{seed}: {score} points{} ({st} states, {dt:.3}s)",
+                        if is_proven { " (proven)" } else { "" },
                     );
                 }
             }
@@ -419,13 +429,11 @@ fn run(argv: &[String]) -> Result<(), String> {
                 .and_then(|(l, h)| Some((l.parse::<u64>().ok()?, h.parse::<u64>().ok()?)))
                 .ok_or_else(|| format!("--seeds wants A..B, got {range}"))?;
             let o = search_opts(&a)?;
+            let jobs = a.num::<usize>("--jobs")?;
             let ms = a.has("--microsoft");
-            let (mut solved, mut unsolvable, mut gaveup) = (0, 0, 0);
-            let mut states = 0u64;
-            let mut steps_total = 0usize;
+            let seeds: Vec<u64> = (lo..=hi).collect();
             let t = Instant::now();
-            let mut worst = (0f64, 0u64);
-            for seed in lo..=hi {
+            let run_one = |&seed: &u64| -> Result<(u64, &'static str, u64, usize, f64), String> {
                 let s = if ms {
                     g.deal_ordered(&microsoft_deal(seed as u32))
                         .map_err(|e| e.to_string())?
@@ -435,24 +443,33 @@ fn run(argv: &[String]) -> Result<(), String> {
                 let t1 = Instant::now();
                 let r = solve(&g, &s, &o);
                 let dt = t1.elapsed().as_secs_f64();
+                let steps = match &r.outcome {
+                    Outcome::Solved(m) => g.steps(&s, m).len(),
+                    _ => 0,
+                };
+                Ok((seed, r.outcome.label(), r.states, steps, dt))
+            };
+            let raw: Vec<Result<_, String>> = run_bench(&seeds, jobs, run_one)?;
+            let (mut solved, mut unsolvable, mut gaveup) = (0, 0, 0);
+            let mut states = 0u64;
+            let mut steps_total = 0usize;
+            let mut worst = (0f64, 0u64);
+            for item in raw {
+                let (seed, label, st, steps, dt) = item?;
                 if dt > worst.0 {
                     worst = (dt, seed);
                 }
-                states += r.states;
-                match &r.outcome {
-                    Outcome::Solved(m) => {
+                states += st;
+                match label {
+                    "solved" => {
                         solved += 1;
-                        steps_total += g.steps(&s, m).len();
+                        steps_total += steps;
                     }
-                    Outcome::Unsolvable => unsolvable += 1,
-                    Outcome::GaveUp => gaveup += 1,
+                    "unsolvable" => unsolvable += 1,
+                    _ => gaveup += 1,
                 }
                 if a.has("--verbose") {
-                    println!(
-                        "{seed}: {} ({} states, {dt:.3}s)",
-                        r.outcome.label(),
-                        r.states
-                    );
+                    println!("{seed}: {label} ({st} states, {dt:.3}s)");
                 }
             }
             let n = hi - lo + 1;
@@ -487,6 +504,38 @@ fn run(argv: &[String]) -> Result<(), String> {
         other => return Err(format!("unknown command {other:?}\n\n{USAGE}")),
     }
     Ok(())
+}
+
+/// Run a benchmark closure over `seeds`, in parallel when the `parallel` feature is enabled
+/// (unless `--jobs 1` is passed). Results are returned in input seed order.
+fn run_bench<T, F>(seeds: &[u64], jobs: Option<usize>, f: F) -> Result<Vec<T>, String>
+where
+    T: Send,
+    F: Fn(&u64) -> T + Sync + Send,
+{
+    if jobs == Some(0) {
+        return Err("--jobs must be at least 1".into());
+    }
+    #[cfg(feature = "parallel")]
+    {
+        use rayon::prelude::*;
+        if jobs == Some(1) {
+            return Ok(seeds.iter().map(f).collect());
+        }
+        if let Some(n) = jobs {
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(n)
+                .build()
+                .map_err(|e| format!("failed to build thread pool: {e}"))?;
+            return Ok(pool.install(|| seeds.par_iter().map(f).collect()));
+        }
+        Ok(seeds.par_iter().map(f).collect())
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        let _ = jobs;
+        Ok(seeds.iter().map(f).collect())
+    }
 }
 
 /// Long-lived JSONL stdio loop: one JSON request per line, one JSON response per line.
@@ -935,6 +984,22 @@ mod tests {
         assert!(run(&argv(&["bench", "freecell", "--seeds", "bad"]))
             .unwrap_err()
             .contains("A..B"));
+        assert!(run(&argv(&[
+            "bench", "freecell", "--seeds", "1..2", "--jobs", "0"
+        ]))
+        .unwrap_err()
+        .contains("--jobs"));
+        run(&argv(&[
+            "bench",
+            "freecell",
+            "--seeds",
+            "1..2",
+            "--jobs",
+            "2",
+            "--max-states",
+            "5000",
+        ]))
+        .unwrap();
     }
 
     #[test]

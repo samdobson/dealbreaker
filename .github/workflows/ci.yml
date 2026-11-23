@@ -21,6 +21,7 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test -p dealbreaker --lib --no-default-features
       - run: cargo test -p dealbreaker --lib --features schema
+      - run: cargo test -p dealbreaker --lib --features parallel
       # Release mode: the solver tests search hundreds of thousands of positions.
       - run: cargo test --workspace --release
       - run: cargo doc --workspace --no-deps

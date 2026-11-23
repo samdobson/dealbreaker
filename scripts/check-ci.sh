@@ -15,6 +15,9 @@ cargo test -p dealbreaker --lib --no-default-features
 echo "[check-ci] test --lib --features schema..."
 cargo test -p dealbreaker --lib --features schema
 
+echo "[check-ci] test --lib --features parallel..."
+cargo test -p dealbreaker --lib --features parallel
+
 echo "[check-ci] rustdoc (-D warnings)..."
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 

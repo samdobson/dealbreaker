@@ -28,7 +28,7 @@ dealbreaker best poker-squares --seed 1    # highest score in a points game
 | `dealbreaker hint <GAME> [DEAL] [SEARCH] [--samples N]` | Suggest a move without peeking at hidden cards |
 | `dealbreaker replay <GAME> [DEAL] --steps FILE [--legal] [--json]` | Replay steps and print each resulting position (`--legal` includes all legal moves) |
 | `dealbreaker best <GAME> [DEAL] [SEARCH] [--json]` | Maximize score in a points game |
-| `dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [SEARCH] [--json] [--verbose]` | Benchmark a range of deals |
+| `dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [--jobs N] [SEARCH] [--json] [--verbose]` | Benchmark a range of deals (parallel across CPU cores by default; `--jobs 1` for single-threaded) |
 | `dealbreaker serve <GAME> [--search JSON]` | Long-lived JSONL stdio server (`stdin` requests -> `stdout` responses) |
 
 `<GAME>` is a [preset id](games.md) or a path to a [rules JSON file](rules-format.md).

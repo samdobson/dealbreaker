@@ -17,8 +17,11 @@ default = ["json"]
 json = ["dep:serde_json"]
 ## Generate JSON Schemas for rules, states, steps, and options.
 schema = ["json", "dep:schemars"]
+## Parallelize `hint()` rollouts across CPU cores via `rayon`.
+parallel = ["dep:rayon"]
 
 [dependencies]
+rayon = { version = "1", optional = true }
 schemars = { version = "0.8", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", optional = true }

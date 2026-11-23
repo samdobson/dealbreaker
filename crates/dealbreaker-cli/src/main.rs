@@ -35,6 +35,7 @@ DEAL (default: --seed 1):
 
 SEARCH:
     --max-states N    budget of distinct positions (default 2000000)
+    --timeout-ms N    wall-clock time limit in milliseconds
     --strategy S      auto | dfs | best-first (default auto)
     --no-autoplay     don't play safe foundation moves automatically
     --no-shorten      don't shorten winning lines (faster when only solvability matters)
@@ -65,6 +66,7 @@ impl Args {
             "--ms",
             "--state",
             "--max-states",
+            "--timeout-ms",
             "--strategy",
             "--seeds",
             "--samples",
@@ -171,6 +173,9 @@ fn search_opts(a: &Args) -> Result<SolveOptions, String> {
     let mut o = SolveOptions::default();
     if let Some(n) = a.num("--max-states")? {
         o.max_states = n;
+    }
+    if let Some(ms) = a.num("--timeout-ms")? {
+        o.timeout_ms = Some(ms);
     }
     if let Some(s) = a.get("--strategy") {
         o.strategy = match s {

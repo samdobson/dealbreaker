@@ -12,4 +12,23 @@ fn binary_exits_zero_on_list_and_two_on_bad_command() {
     assert_eq!(bad.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&bad.stderr);
     assert!(stderr.contains("unknown command"), "{stderr}");
+
+    let timed = Command::new(bin)
+        .args([
+            "solve",
+            "freecell",
+            "--ms",
+            "11982",
+            "--timeout-ms",
+            "0",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+    assert!(timed.status.success(), "timeout solve failed: {timed:?}");
+    let timed_out = String::from_utf8_lossy(&timed.stdout);
+    assert!(
+        timed_out.contains("\"outcome\": \"gave-up\""),
+        "{timed_out}"
+    );
 }

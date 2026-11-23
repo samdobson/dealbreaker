@@ -45,8 +45,11 @@ pub mod solver;
 
 pub use card::{Card, Color, Suit};
 pub use game::{Action, Game, IllegalMove, IllegalStep, Move, PileRef, RulesError, State, Step};
-pub use hint::{hint, Hint, HintOptions};
+pub use hint::{hint, hint_with_cancel, Hint, HintOptions};
 pub use hooks::Hooks;
 pub use io::{microsoft_deal, StateData, StateError};
 pub use rules::*;
-pub use solver::{maximize, solve, MaxResult, Outcome, SolveOptions, SolveResult, Strategy};
+pub use solver::{
+    maximize, maximize_with_cancel, solve, solve_with_cancel, MaxResult, Outcome, SolveOptions,
+    SolveResult, Strategy,
+};

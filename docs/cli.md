@@ -34,6 +34,6 @@ dealbreaker best poker-squares --seed 1    # highest score in a points game
 
 **Deal flags** (default `--seed 1`): `--seed N`, `--ms N` (Microsoft FreeCell numbering), or `--state FILE` (position JSON).
 
-**Search flags**: `--max-states N` (default `2,000,000`), `--strategy auto|dfs|best-first` (default `auto`), `--no-autoplay`, `--no-shorten`, `--search JSON`.
+**Search flags**: `--max-states N` (default `2,000,000`), `--timeout-ms N` (wall-clock limit), `--strategy auto|dfs|best-first` (default `auto`), `--no-autoplay`, `--no-shorten`, `--search JSON`.
 
 See [What the answers mean](outcomes.md) for verdicts, hidden-card handling, and points games.

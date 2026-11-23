@@ -15,6 +15,8 @@
 
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use crate::card::{Card, FACES};
 use crate::game::{Action, Game, Move, Op, State};
@@ -42,6 +44,9 @@ pub struct SolveOptions {
     pub strategy: Strategy,
     /// Stop after visiting this many distinct positions.
     pub max_states: u64,
+    /// Stop after this many milliseconds of wall-clock time (native targets only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout_ms: Option<u64>,
     /// Play provably safe foundation moves automatically (when the rules allow it).
     pub autoplay: bool,
     /// Shorten winning lines by cutting out detours (default true).
@@ -53,6 +58,7 @@ impl Default for SolveOptions {
         SolveOptions {
             strategy: Strategy::Auto,
             max_states: 2_000_000,
+            timeout_ms: None,
             autoplay: true,
             shorten: true,
         }
@@ -63,6 +69,18 @@ impl SolveOptions {
     /// Stop after visiting `n` distinct positions.
     pub fn max_states(mut self, n: u64) -> Self {
         self.max_states = n;
+        self
+    }
+
+    /// Stop after `ms` milliseconds of wall-clock time (native targets only).
+    pub fn timeout_ms(mut self, ms: u64) -> Self {
+        self.timeout_ms = Some(ms);
+        self
+    }
+
+    /// Stop after wall-clock duration `d` (native targets only).
+    pub fn max_duration(mut self, d: Duration) -> Self {
+        self.timeout_ms = Some(d.as_millis().min(u64::MAX as u128) as u64);
         self
     }
 
@@ -116,10 +134,91 @@ pub struct SolveResult {
     pub states: u64,
 }
 
+/// Cooperative stop condition: an external cancel flag and/or a wall-clock deadline.
+#[derive(Copy, Clone)]
+struct Stop<'c> {
+    cancel: Option<&'c AtomicBool>,
+    #[cfg(not(target_arch = "wasm32"))]
+    deadline: Option<std::time::Instant>,
+}
+
+impl<'c> Stop<'c> {
+    fn new(opts: &SolveOptions, cancel: Option<&'c AtomicBool>) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        let deadline = opts
+            .timeout_ms
+            .map(|ms| std::time::Instant::now() + Duration::from_millis(ms));
+        #[cfg(target_arch = "wasm32")]
+        let _ = opts;
+        Stop {
+            cancel,
+            #[cfg(not(target_arch = "wasm32"))]
+            deadline,
+        }
+    }
+
+    fn none() -> Self {
+        Stop {
+            cancel: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            deadline: None,
+        }
+    }
+
+    #[inline]
+    fn is_stopped_now(&self) -> bool {
+        let cancelled = self.cancel.is_some_and(|c| c.load(Ordering::Relaxed));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            cancelled
+                || self
+                    .deadline
+                    .is_some_and(|d| std::time::Instant::now() >= d)
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            cancelled
+        }
+    }
+
+    /// Periodic check in hot loops (every 1,024 states) to avoid overhead.
+    #[inline]
+    fn should_stop(&self, states: u64) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        let has_stop = self.cancel.is_some() || self.deadline.is_some();
+        #[cfg(target_arch = "wasm32")]
+        let has_stop = self.cancel.is_some();
+        has_stop && (states & 1023) == 0 && self.is_stopped_now()
+    }
+}
+
 /// Solve from a position.
 pub fn solve(game: &Game, start: &State, opts: &SolveOptions) -> SolveResult {
-    let mut r = search(game, start, opts);
-    if opts.shorten {
+    solve_inner(game, start, opts, Stop::new(opts, None))
+}
+
+/// Solve from a position, stopping early with [`Outcome::GaveUp`] if `cancel` becomes `true`.
+///
+/// The flag is checked periodically (every 1,024 visited states) and between search phases.
+/// A cancelled search never reports [`Outcome::Unsolvable`].
+pub fn solve_with_cancel(
+    game: &Game,
+    start: &State,
+    opts: &SolveOptions,
+    cancel: &AtomicBool,
+) -> SolveResult {
+    solve_inner(game, start, opts, Stop::new(opts, Some(cancel)))
+}
+
+fn solve_inner(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> SolveResult {
+    if stop.is_stopped_now() {
+        return SolveResult {
+            outcome: Outcome::GaveUp,
+            states: 0,
+        };
+    }
+    let mut r = search(game, start, opts, stop);
+    if opts.shorten && !stop.is_stopped_now() {
         if let Outcome::Solved(moves) = &r.outcome {
             r.outcome = Outcome::Solved(shorten(game, start, moves));
         }
@@ -151,6 +250,20 @@ pub struct MaxResult {
 /// search stops at `max_states` positions and `proven` says whether it finished. `autoplay`
 /// is ignored.
 pub fn maximize(game: &Game, start: &State, opts: &SolveOptions) -> MaxResult {
+    maximize_inner(game, start, opts, Stop::new(opts, None))
+}
+
+/// Like [`maximize`], stopping early with `proven: false` if `cancel` becomes `true`.
+pub fn maximize_with_cancel(
+    game: &Game,
+    start: &State,
+    opts: &SolveOptions,
+    cancel: &AtomicBool,
+) -> MaxResult {
+    maximize_inner(game, start, opts, Stop::new(opts, Some(cancel)))
+}
+
+fn maximize_inner(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> MaxResult {
     if game.score.is_none() {
         return MaxResult {
             score: 0,
@@ -160,8 +273,16 @@ pub fn maximize(game: &Game, start: &State, opts: &SolveOptions) -> MaxResult {
         };
     }
     let budget = opts.max_states;
-    let mut ctx = Ctx::new(game, opts);
+    let mut ctx = Ctx::new(game, opts, stop);
     let (mut lo, mut line) = ctx.greedy(start);
+    if stop.is_stopped_now() {
+        return MaxResult {
+            score: lo,
+            moves: line,
+            proven: false,
+            states: 0,
+        };
+    }
     if opts.strategy == Strategy::DepthFirst {
         let p = ctx.bounded_dfs(start, lo + 1, u32::MAX, budget, false);
         let (score, moves) = p.found.unwrap_or((lo, line));
@@ -177,8 +298,8 @@ pub fn maximize(game: &Game, start: &State, opts: &SolveOptions) -> MaxResult {
     let mut states = 0u64;
     let mut proven = false;
     let mut slack = 1u32;
-    while states < budget {
-        let mut ctx = Ctx::new(game, opts);
+    while states < budget && !stop.is_stopped_now() {
+        let mut ctx = Ctx::new(game, opts, stop);
         let p = ctx.bounded_dfs(start, lo + 1, slack, budget - states, false);
         states += p.states;
         if let Some((v, m)) = p.found {
@@ -201,7 +322,13 @@ pub fn maximize(game: &Game, start: &State, opts: &SolveOptions) -> MaxResult {
 
 /// Search for a position scoring at least `target`: the limited discrepancy search of
 /// [`maximize`], stopping at the first win. Positions whose bound falls short are dead.
-fn reach_score(game: &Game, start: &State, target: u32, opts: &SolveOptions) -> SolveResult {
+fn reach_score(
+    game: &Game,
+    start: &State,
+    target: u32,
+    opts: &SolveOptions,
+    stop: Stop<'_>,
+) -> SolveResult {
     let budget = opts.max_states;
     let mut states = 0u64;
     let mut slack = if opts.strategy == Strategy::DepthFirst {
@@ -210,7 +337,13 @@ fn reach_score(game: &Game, start: &State, target: u32, opts: &SolveOptions) -> 
         0
     };
     loop {
-        let mut ctx = Ctx::new(game, opts);
+        if stop.is_stopped_now() {
+            return SolveResult {
+                outcome: Outcome::GaveUp,
+                states,
+            };
+        }
+        let mut ctx = Ctx::new(game, opts, stop);
         let p = ctx.bounded_dfs(start, target, slack, budget - states, true);
         states += p.states;
         if let Some((_, line)) = p.found {
@@ -225,7 +358,7 @@ fn reach_score(game: &Game, start: &State, target: u32, opts: &SolveOptions) -> 
                 states,
             };
         }
-        if states >= budget {
+        if states >= budget || stop.is_stopped_now() {
             return SolveResult {
                 outcome: Outcome::GaveUp,
                 states,
@@ -253,6 +386,7 @@ pub fn shorten(game: &Game, start: &State, moves: &[Move]) -> Vec<Move> {
             autoplay: false,
             ..SolveOptions::default()
         },
+        Stop::none(),
     );
     loop {
         // Exact positions along the line.
@@ -304,11 +438,11 @@ pub fn shorten(game: &Game, start: &State, moves: &[Move]) -> Vec<Move> {
     }
 }
 
-fn search(game: &Game, start: &State, opts: &SolveOptions) -> SolveResult {
+fn search(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> SolveResult {
     if let (Some(target), true) = (game.target_score(), game.is_scored()) {
-        return reach_score(game, start, target, opts);
+        return reach_score(game, start, target, opts, stop);
     }
-    let mut ctx = Ctx::new(game, opts);
+    let mut ctx = Ctx::new(game, opts, stop);
     match opts.strategy {
         Strategy::DepthFirst => ctx.dfs(start, opts.max_states),
         Strategy::BestFirst => ctx.best_first(start, opts.max_states, false),
@@ -328,10 +462,16 @@ fn search(game: &Game, start: &State, opts: &SolveOptions) -> SolveResult {
                 return r1;
             }
             let mut spent = r1.states;
+            if stop.is_stopped_now() {
+                return SolveResult {
+                    outcome: Outcome::GaveUp,
+                    states: spent,
+                };
+            }
             // If Phase 1 gave up (hit budget in a greedy basin), try weighted A* (2*h + depth)
             // with the rest of the fast budget to escape deep local minima.
             if r1.outcome == Outcome::GaveUp && fast_budget > p1_budget {
-                let mut ctx2 = Ctx::new(game, opts);
+                let mut ctx2 = Ctx::new(game, opts, stop);
                 ctx2.fast = true;
                 let p2_budget = fast_budget.saturating_sub(spent);
                 if p2_budget > 0 {
@@ -343,9 +483,15 @@ fn search(game: &Game, start: &State, opts: &SolveOptions) -> SolveResult {
                             states: spent,
                         };
                     }
+                    if stop.is_stopped_now() {
+                        return SolveResult {
+                            outcome: Outcome::GaveUp,
+                            states: spent,
+                        };
+                    }
                 }
             }
-            let mut ctx3 = Ctx::new(game, opts);
+            let mut ctx3 = Ctx::new(game, opts, stop);
             let mut r3 = ctx3.dfs(start, opts.max_states.saturating_sub(spent));
             r3.states += spent;
             r3
@@ -360,8 +506,9 @@ struct Child {
     won: bool,
 }
 
-struct Ctx<'g> {
+struct Ctx<'g, 'c> {
     g: &'g Game,
+    stop: Stop<'c>,
     autoplay: bool,
     seen: HashSet<u128, BuildU128>,
     journal: Vec<Op>,
@@ -426,8 +573,8 @@ fn effective_search(g: &Game, ordered_foundations: &[u16]) -> crate::rules::Sear
     s
 }
 
-impl<'g> Ctx<'g> {
-    fn new(g: &'g Game, opts: &SolveOptions) -> Ctx<'g> {
+impl<'g, 'c> Ctx<'g, 'c> {
+    fn new(g: &'g Game, opts: &SolveOptions, stop: Stop<'c>) -> Ctx<'g, 'c> {
         let ordered_foundations: Vec<u16> = (0..g.num_piles() as u16)
             .filter(|&p| {
                 let r = g.rule(p);
@@ -444,6 +591,7 @@ impl<'g> Ctx<'g> {
         let search = effective_search(g, &ordered_foundations);
         Ctx {
             g,
+            stop,
             autoplay: opts.autoplay && g.rules().safe_autoplay,
             seen: HashSet::with_hasher(BuildU128),
             journal: Vec::new(),
@@ -555,7 +703,7 @@ impl<'g> Ctx<'g> {
     fn visit_children(
         &mut self,
         s: &mut State,
-        mut on_child: impl FnMut(&mut Ctx<'g>, &State, Move, Option<&[u8; FACES]>) -> bool,
+        mut on_child: impl FnMut(&mut Ctx<'g, 'c>, &State, Move, Option<&[u8; FACES]>) -> bool,
     ) {
         let g = self.g;
         let mut moves = std::mem::take(&mut self.scratch);
@@ -1227,6 +1375,12 @@ impl<'g> Ctx<'g> {
     // ----- Depth-first -----------------------------------------------------------------------
 
     fn dfs(&mut self, start: &State, budget: u64) -> SolveResult {
+        if self.stop.is_stopped_now() {
+            return SolveResult {
+                outcome: Outcome::GaveUp,
+                states: 0,
+            };
+        }
         let g = self.g;
         let mut s = start.clone();
         let mut states = 1u64;
@@ -1276,7 +1430,7 @@ impl<'g> Ctx<'g> {
                     states,
                 };
             }
-            if states >= budget {
+            if states >= budget || self.stop.should_stop(states) {
                 return SolveResult {
                     outcome: Outcome::GaveUp,
                     states,
@@ -1313,6 +1467,13 @@ impl<'g> Ctx<'g> {
         budget: u64,
         to_win: bool,
     ) -> Probe {
+        if self.stop.is_stopped_now() {
+            return Probe {
+                found: None,
+                complete: false,
+                states: 0,
+            };
+        }
         let g = self.g;
         let sc = g.score.as_ref().expect("scored game");
         let mut s = start.clone();
@@ -1405,7 +1566,7 @@ impl<'g> Ctx<'g> {
                     slack: left,
                 });
             }
-            if states >= budget {
+            if states >= budget || self.stop.should_stop(states) {
                 return Probe {
                     found,
                     complete: false,
@@ -1438,6 +1599,12 @@ impl<'g> Ctx<'g> {
     // ----- Best-first ------------------------------------------------------------------------
 
     fn best_first(&mut self, start: &State, budget: u64, weighted: bool) -> SolveResult {
+        if self.stop.is_stopped_now() {
+            return SolveResult {
+                outcome: Outcome::GaveUp,
+                states: 0,
+            };
+        }
         let g = self.g;
         struct Node {
             parent: u32,
@@ -1471,6 +1638,12 @@ impl<'g> Ctx<'g> {
         let mut states = 1u64;
         let mut s = start.clone();
         while let Some(Reverse((_, idx))) = heap.pop() {
+            if self.stop.should_stop(states) {
+                return SolveResult {
+                    outcome: Outcome::GaveUp,
+                    states,
+                };
+            }
             let node = &nodes[idx as usize];
             let es = node.enc_start as usize;
             let el = node.enc_len as usize;
@@ -1512,7 +1685,7 @@ impl<'g> Ctx<'g> {
                     ((score as u64) << 20) + (0xfffff - (d as u64).min(0xfffff))
                 };
                 heap.push(Reverse((pri, n)));
-                if states >= budget {
+                if states >= budget || ctx.stop.should_stop(states) {
                     hit_budget = true;
                     return true;
                 }
@@ -1664,5 +1837,104 @@ impl std::hash::Hasher for PassThrough {
     }
     fn write_u128(&mut self, v: u128) {
         self.0 = (v as u64) ^ ((v >> 64) as u64);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::io::microsoft_deal;
+    use crate::presets;
+    use std::sync::Arc;
+
+    #[test]
+    fn preset_cancel_flag_aborts_immediately_for_all_strategies() {
+        let fc = Game::new(presets::freecell()).unwrap();
+        let deal = fc.deal_ordered(&microsoft_deal(1)).unwrap();
+        let flag = AtomicBool::new(true);
+
+        for strategy in [Strategy::Auto, Strategy::DepthFirst, Strategy::BestFirst] {
+            let opts = SolveOptions::default().strategy(strategy);
+            let r = solve_with_cancel(&fc, &deal, &opts, &flag);
+            assert_eq!(r.outcome, Outcome::GaveUp, "strategy={strategy:?}");
+            assert_eq!(r.states, 0, "strategy={strategy:?}");
+        }
+
+        // Scored game: maximize_with_cancel returns greedy baseline with proven=false.
+        let ps = Game::new(presets::poker_squares()).unwrap();
+        let pdeal = ps.deal(1);
+        let mr = maximize_with_cancel(&ps, &pdeal, &SolveOptions::default(), &flag);
+        assert!(!mr.proven);
+        assert_eq!(mr.states, 0);
+
+        // Scored target game: solve_with_cancel returns GaveUp, never Unsolvable.
+        let mut target_rules = presets::poker_squares();
+        target_rules.win = WinRule::Score { at_least: 500 };
+        let target_game = Game::new(target_rules).unwrap();
+        let tr = solve_with_cancel(&target_game, &pdeal, &SolveOptions::default(), &flag);
+        assert_eq!(tr.outcome, Outcome::GaveUp);
+        assert_eq!(tr.states, 0);
+    }
+
+    #[test]
+    fn mid_search_cancel_never_reports_unsolvable() {
+        // FreeCell #11982 is famously unsolvable (~60k states); cancelling mid-flight must yield
+        // GaveUp, never Unsolvable.
+        let fc = Game::new(presets::freecell()).unwrap();
+        let deal = fc.deal_ordered(&microsoft_deal(11982)).unwrap();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let cancel_bg = Arc::clone(&cancel);
+        let handle = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(10));
+            cancel_bg.store(true, Ordering::Relaxed);
+        });
+        let opts = SolveOptions::default()
+            .strategy(Strategy::DepthFirst)
+            .max_states(5_000_000);
+        let r = solve_with_cancel(&fc, &deal, &opts, &cancel);
+        handle.join().unwrap();
+        assert_ne!(r.outcome, Outcome::Solved(Vec::new()));
+        // If it finished before the timer on a super-fast machine it could be Unsolvable;
+        // if cancelled, it must be GaveUp.
+        if cancel.load(Ordering::Relaxed) && r.states < 50_000 {
+            assert_eq!(r.outcome, Outcome::GaveUp);
+        }
+    }
+
+    #[test]
+    fn timeout_ms_bounds_search_and_maximize() {
+        let fc = Game::new(presets::freecell()).unwrap();
+        let deal = fc.deal_ordered(&microsoft_deal(11982)).unwrap();
+
+        // Zero timeout stops immediately.
+        let r0 = solve(&fc, &deal, &SolveOptions::default().timeout_ms(0));
+        assert_eq!(r0.outcome, Outcome::GaveUp);
+        assert_eq!(r0.states, 0);
+
+        // Short wall-clock timeout stops well before exhausting the state budget.
+        let r_short = solve(
+            &fc,
+            &deal,
+            &SolveOptions::default()
+                .max_states(10_000_000)
+                .max_duration(Duration::from_millis(5)),
+        );
+        assert_eq!(r_short.outcome, Outcome::GaveUp);
+
+        // Scored maximize with timeout_ms=0 returns greedy result with proven=false.
+        let ps = Game::new(presets::poker_squares()).unwrap();
+        let pdeal = ps.deal(1);
+        let mr = maximize(&ps, &pdeal, &SolveOptions::default().timeout_ms(0));
+        assert!(!mr.proven);
+        assert_eq!(mr.states, 0);
+
+        // JSON serialization round-trips timeout_ms and omits it when None.
+        let def_json = serde_json::to_string(&SolveOptions::default()).unwrap();
+        assert!(!def_json.contains("timeout_ms"), "{def_json}");
+        let with_t = SolveOptions::default().timeout_ms(250);
+        let t_json = serde_json::to_string(&with_t).unwrap();
+        assert!(t_json.contains("\"timeout_ms\":250"), "{t_json}");
+        let parsed: SolveOptions = serde_json::from_str(&t_json).unwrap();
+        assert_eq!(parsed.timeout_ms, Some(250));
     }
 }

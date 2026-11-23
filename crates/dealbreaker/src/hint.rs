@@ -9,10 +9,13 @@
 //! the step with the highest average best score is recommended.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::game::{Game, State, Step};
 use crate::rng::Rng;
-use crate::solver::{maximize, solve, Outcome, SolveOptions};
+use crate::solver::{
+    maximize, maximize_with_cancel, solve, solve_with_cancel, Outcome, SolveOptions,
+};
 
 /// Hint settings.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -75,6 +78,32 @@ pub struct Hint {
 /// Recommend a next step without looking at face-down cards. `None` if no guess could be won
 /// within the budget.
 pub fn hint(game: &Game, state: &State, opts: &HintOptions) -> Option<Hint> {
+    hint_inner(game, state, opts, None)
+}
+
+/// Like [`hint`], stopping early if `cancel` becomes `true`.
+///
+/// Checked between samples and periodically inside each underlying search. If cancelled after
+/// some samples have already completed, returns the best recommendation from completed samples
+/// (or `None` if none succeeded).
+pub fn hint_with_cancel(
+    game: &Game,
+    state: &State,
+    opts: &HintOptions,
+    cancel: &AtomicBool,
+) -> Option<Hint> {
+    hint_inner(game, state, opts, Some(cancel))
+}
+
+fn hint_inner(
+    game: &Game,
+    state: &State,
+    opts: &HintOptions,
+    cancel: Option<&AtomicBool>,
+) -> Option<Hint> {
+    if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+        return None;
+    }
     let hidden: Vec<(usize, usize)> = state
         .piles
         .iter()
@@ -113,13 +142,22 @@ pub fn hint(game: &Game, state: &State, opts: &HintOptions) -> Option<Hint> {
         guess
     };
     if game.is_scored() {
-        return scored_hint(game, state, opts, samples, || guess(&mut rng));
+        return scored_hint(game, state, opts, samples, cancel, || guess(&mut rng));
     }
     let mut votes: HashMap<String, (Step, u32)> = HashMap::new();
     let mut order: Vec<String> = Vec::new();
+    let mut tried = 0u32;
     for _ in 0..samples {
+        if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+            break;
+        }
         let guess = guess(&mut rng);
-        if let Outcome::Solved(moves) = solve(game, &guess, &opts.solve).outcome {
+        let r = match cancel {
+            Some(c) => solve_with_cancel(game, &guess, &opts.solve, c),
+            None => solve(game, &guess, &opts.solve),
+        };
+        tried += 1;
+        if let Outcome::Solved(moves) = r.outcome {
             if let Some(step) = game.steps(&guess, &moves).into_iter().next() {
                 let key = format!("{step:?}");
                 let e = votes.entry(key.clone()).or_insert_with(|| {
@@ -141,7 +179,7 @@ pub fn hint(game: &Game, state: &State, opts: &HintOptions) -> Option<Hint> {
     Some(Hint {
         step,
         wins,
-        samples,
+        samples: tried,
         score: None,
     })
 }
@@ -153,6 +191,7 @@ fn scored_hint(
     state: &State,
     opts: &HintOptions,
     samples: u32,
+    cancel: Option<&AtomicBool>,
     mut guess: impl FnMut() -> State,
 ) -> Option<Hint> {
     let moves = game.distinct_moves(state);
@@ -174,19 +213,39 @@ fn scored_hint(
         ..opts.solve.clone()
     };
     let mut totals = vec![(0u64, 0u32); moves.len()];
-    for _ in 0..samples {
+    let mut sample_scores = vec![(0u64, 0u32); moves.len()];
+    let mut completed = 0u32;
+    'samples: for _ in 0..samples {
+        if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+            break;
+        }
         let g = guess();
+        sample_scores.fill((0, 0));
         for (i, &m) in moves.iter().enumerate() {
+            if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                break 'samples;
+            }
             let mut s = g.clone();
             if game.play(&mut s, m).is_err() {
                 continue;
             }
-            let r = maximize(game, &s, &per);
-            totals[i].0 += r.score as u64;
+            let r = match cancel {
+                Some(c) => maximize_with_cancel(game, &s, &per, c),
+                None => maximize(game, &s, &per),
+            };
+            sample_scores[i].0 = r.score as u64;
             if game.target_score().is_some_and(|t| r.score >= t) {
-                totals[i].1 += 1;
+                sample_scores[i].1 = 1;
             }
         }
+        for (t, &(sc, w)) in totals.iter_mut().zip(&sample_scores) {
+            t.0 += sc;
+            t.1 += w;
+        }
+        completed += 1;
+    }
+    if completed == 0 {
+        return None;
     }
     // Highest total; the earliest step breaks ties.
     let (i, &(total, wins)) = totals
@@ -197,8 +256,8 @@ fn scored_hint(
     Some(Hint {
         step,
         wins,
-        samples,
-        score: Some(total as f64 / samples as f64),
+        samples: completed,
+        score: Some(total as f64 / completed as f64),
     })
 }
 
@@ -253,5 +312,17 @@ mod tests {
         let h = hint(&g, &s24, &HintOptions::default()).expect("single forced move");
         assert_eq!(h.samples, 0);
         assert_eq!(h.score, None);
+    }
+
+    #[test]
+    fn hint_with_cancel_stops_immediately() {
+        let cancel = AtomicBool::new(true);
+        let kl = Game::new(presets::klondike1()).unwrap();
+        let ks = kl.deal(1);
+        assert!(hint_with_cancel(&kl, &ks, &HintOptions::default(), &cancel).is_none());
+
+        let ps = Game::new(presets::poker_squares()).unwrap();
+        let pstate = ps.deal(1);
+        assert!(hint_with_cancel(&ps, &pstate, &HintOptions::default(), &cancel).is_none());
     }
 }

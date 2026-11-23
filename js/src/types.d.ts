@@ -258,6 +258,8 @@ export type Strategy = "auto" | "depth_first" | "best_first";
 export interface SolveOptions {
   strategy?: Strategy;
   max_states?: number;
+  /** Wall-clock timeout in milliseconds (enforced on native targets). */
+  timeout_ms?: number;
   autoplay?: boolean;
   shorten?: boolean;
 }

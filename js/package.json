@@ -1,0 +1,54 @@
+{
+  "name": "dealbreaker",
+  "version": "1.1.0",
+  "description": "Fast data-driven patience (solitaire) solver powered by Rust and WebAssembly.",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samdobson/dealbreaker.git",
+    "directory": "js"
+  },
+  "homepage": "https://github.com/samdobson/dealbreaker",
+  "keywords": [
+    "solitaire",
+    "patience",
+    "solver",
+    "freecell",
+    "klondike",
+    "spider",
+    "wasm",
+    "webassembly"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/node.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./src/index.d.ts",
+        "import": "./src/node.js"
+      },
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./worker": {
+      "types": "./src/worker.d.ts",
+      "default": "./src/worker.js"
+    },
+    "./wasm": "./wasm/dealbreaker_bg.wasm"
+  },
+  "files": [
+    "src/",
+    "wasm/",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/smoke.mjs"
+  }
+}

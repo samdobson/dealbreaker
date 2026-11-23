@@ -1,2 +1,7 @@
 target/
 /pkg/
+/js/wasm/
+/js/README.md
+/js/LICENSE-MIT
+/js/LICENSE-APACHE
+/js/*.tgz

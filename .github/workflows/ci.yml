@@ -50,6 +50,15 @@ jobs:
           node-version: 22
       - run: ./scripts/build-wasm.sh nodejs
       - run: node scripts/smoke.mjs
+      - run: ./scripts/build-npm.sh
+      - run: npm test --prefix js
+      - name: Verify js/package.json version matches Cargo.toml
+        run: |
+          CARGO_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n1)"
+          JS_VERSION="$(node -p 'require("./js/package.json").version')"
+          test "$CARGO_VERSION" = "$JS_VERSION"
+      - name: Type-check JS/TS declarations
+        run: npx --yes -p typescript tsc --noEmit --strict --module nodenext --moduleResolution nodenext --target es2022 js/src/index.d.ts js/src/worker.d.ts
 
   semver:
     runs-on: ubuntu-latest

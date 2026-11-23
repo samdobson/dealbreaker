@@ -67,7 +67,24 @@ if let Outcome::Solved(moves) = result.outcome {
 }
 ```
 
-Dealbreaker also runs in browsers, Node, Deno, and edge workers via WebAssembly. See the [library guide](docs/library.md) for Rust and JavaScript/TypeScript examples.
+## Use it from JavaScript / TypeScript
+
+Install from npm:
+
+```sh
+npm install dealbreaker
+```
+
+```ts
+import { init, Solver } from "dealbreaker";
+
+await init(); // optional in Node.js
+const solver = Solver.fromPreset("klondike");
+const deal = solver.deal(42);
+const result = solver.solve(deal, { max_states: 500_000 });
+```
+
+Works in browsers, bundlers, Node.js, and Web Workers (`dealbreaker/worker`). See the [library guide](docs/library.md) for Rust and JavaScript/TypeScript examples.
 
 ## Documentation
 

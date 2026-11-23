@@ -26,29 +26,56 @@ Other entry points: `Game::legal_steps` / `Game::play_step` (interactive play), 
 
 ## JavaScript / TypeScript (WebAssembly)
 
-Build the ~600 KB dependency-free WASM package:
+Install from npm:
 
 ```sh
-./scripts/build-wasm.sh # bundler target; also `web` or `nodejs`
+npm install dealbreaker
 ```
 
-```ts
-import { Solver } from "./pkg/bundler/dealbreaker.js";
+Use in browsers, bundlers (Vite, webpack, esbuild), or Node.js (v18+):
 
-const solver = Solver.fromPreset("klondike"); // or new Solver(rulesJson)
+```ts
+import { init, Solver } from "dealbreaker";
+
+await init(); // optional in Node.js (auto-initialized on import)
+
+const solver = Solver.fromPreset("klondike"); // or new Solver(rules)
 const state = solver.deal(42);
-const result = JSON.parse(solver.solve(state, JSON.stringify({ max_states: 500_000 })));
+const result = solver.solve(state, { max_states: 500_000 });
 // { outcome: "solved" | "unsolvable" | "gave-up", states, steps?: [...] }
 
-const hint = JSON.parse(solver.hint(state)); // { step, wins, samples } | null
-const next = solver.playStep(state, JSON.stringify(hint.step));
+const hint = solver.hint(state); // { step, wins, samples } | null
+if (hint) {
+  const next = solver.playStep(state, hint.step);
+}
 
 // Points games:
 const squares = Solver.fromPreset("poker-squares");
-const best = JSON.parse(squares.best(squares.deal(1))); // { score, proven, states, steps }
+const best = squares.best(squares.deal(1)); // { score, proven, states, steps }
+
+solver.free();
+squares.free();
 ```
 
-Searches are synchronous; run long searches in a Web Worker.
+### Running searches in a Web Worker (browsers)
+
+`Solver` searches synchronously; for browser UIs, use `WorkerSolver` to keep the main thread responsive and cancel in-flight searches via `terminate()`:
+
+```ts
+import { WorkerSolver } from "dealbreaker/worker";
+
+const solver = await WorkerSolver.fromPreset("klondike");
+const state = await solver.deal(42);
+const result = await solver.solve(state, { max_states: 500_000 });
+solver.terminate();
+```
+
+### Building the WASM package from source
+
+```sh
+./scripts/build-npm.sh   # builds the npm package in js/
+./scripts/build-wasm.sh  # raw wasm-bindgen output in pkg/<target>
+```
 
 ## Stability (SemVer 1.x)
 

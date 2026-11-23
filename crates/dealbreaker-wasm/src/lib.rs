@@ -12,7 +12,7 @@
 //! Positions and steps use the formats documented in the core crate (`StateData`, `Step`).
 
 use dealbreaker::{
-    hint, maximize, microsoft_deal, presets, solve, Game, HintOptions, Outcome, Rules,
+    hint, maximize, microsoft_deal, presets, solve, Card, Game, HintOptions, Outcome, Rules,
     SolveOptions, State, Step,
 };
 use serde::Serialize;
@@ -85,6 +85,25 @@ impl Solver {
     pub fn deal_microsoft(&self, n: u32) -> Result<String, JsError> {
         let s = self.game.deal_ordered(&microsoft_deal(n)).map_err(js_err)?;
         Ok(self.game.state_to_json(&s))
+    }
+
+    /// Deal an explicit card order from a JSON array of card strings (e.g. `["AS", "2S", ...]`).
+    /// `cards[0]` is dealt first. Returns position JSON.
+    #[wasm_bindgen(js_name = dealOrdered)]
+    pub fn deal_ordered(&self, cards_json: &str) -> Result<String, JsError> {
+        let names: Vec<String> = serde_json::from_str(cards_json).map_err(js_err)?;
+        let cards: Vec<Card> = names
+            .iter()
+            .map(|c| c.parse::<Card>().map_err(js_err))
+            .collect::<Result<_, _>>()?;
+        let s = self.game.deal_ordered(&cards).map_err(js_err)?;
+        Ok(self.game.state_to_json(&s))
+    }
+
+    /// Validate a position JSON against this game's pack and pile capacities. Throws if invalid.
+    pub fn validate(&self, state_json: &str) -> Result<(), JsError> {
+        self.state(state_json)?;
+        Ok(())
     }
 
     /// Solve a position. `options_json` is optional: `{ "max_states": 2000000, "strategy":

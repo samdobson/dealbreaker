@@ -12,6 +12,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 echo "[check-ci] test --lib --no-default-features..."
 cargo test -p dealbreaker --lib --no-default-features
 
+echo "[check-ci] test --lib --features schema..."
+cargo test -p dealbreaker --lib --features schema
+
 echo "[check-ci] rustdoc (-D warnings)..."
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 

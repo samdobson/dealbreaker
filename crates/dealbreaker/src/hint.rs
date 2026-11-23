@@ -19,6 +19,7 @@ use crate::solver::{
 
 /// Hint settings.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 #[non_exhaustive]
 pub struct HintOptions {
@@ -63,6 +64,7 @@ impl HintOptions {
 
 /// A recommended next step.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[non_exhaustive]
 pub struct Hint {
     pub step: Step,

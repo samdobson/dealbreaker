@@ -12,11 +12,43 @@ use serde::{Deserialize, Serialize};
 
 use crate::card::{Color, Suit};
 
+/// Accepts an optional `"$schema"` metadata string in JSON files and ignores it.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+struct IgnoredSchema;
+
+impl Serialize for IgnoredSchema {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_none()
+    }
+}
+
+impl<'de> Deserialize<'de> for IgnoredSchema {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let _: Option<String> = Option::deserialize(d)?;
+        Ok(IgnoredSchema)
+    }
+}
+
+#[cfg(feature = "schema")]
+impl schemars::JsonSchema for IgnoredSchema {
+    fn schema_name() -> String {
+        "SchemaUri".to_string()
+    }
+
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        <Option<String>>::json_schema(gen)
+    }
+}
+
 /// A complete description of one solitaire game.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Rules {
+    /// Optional JSON Schema URI for editor validation (ignored by the solver).
+    #[serde(rename = "$schema", default, skip_serializing)]
+    _schema: IgnoredSchema,
     /// Human-readable name, e.g. "FreeCell".
     pub name: String,
     #[serde(default)]
@@ -64,6 +96,7 @@ pub struct Rules {
 /// soon it gives up), never whether a position is judged winnable. Every field has a neutral
 /// default.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields, default)]
 #[non_exhaustive]
 pub struct SearchHints {
@@ -105,6 +138,7 @@ impl Rules {
     /// fields directly.
     pub fn new(name: &str, pack: Pack, groups: Vec<GroupRules>, deal: Vec<DealStep>) -> Rules {
         Rules {
+            _schema: IgnoredSchema,
             name: name.to_string(),
             pack,
             groups,
@@ -137,6 +171,7 @@ fn one() -> u16 {
 
 /// The cards in play.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Pack {
@@ -226,6 +261,7 @@ impl Pack {
 
 /// What a group of piles is for. The kind sets defaults and tells the solver how to treat it.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PileKind {
@@ -245,6 +281,7 @@ pub enum PileKind {
 
 /// One group of identical piles.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct GroupRules {
@@ -354,6 +391,7 @@ pub struct GroupRules {
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
 /// group's value.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct PileOverride {
@@ -578,6 +616,7 @@ impl GroupRules {
 
 /// How cards are built on one another.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Build {
@@ -635,6 +674,7 @@ impl Default for Build {
 
 /// The suit or colour relation between a card and the card placed on it.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum BuildBy {
@@ -656,6 +696,7 @@ pub enum BuildBy {
 
 /// Rank direction from a card to the card placed on it.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Dir {
@@ -672,6 +713,7 @@ pub enum Dir {
 
 /// What an empty pile accepts.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum EmptyRule {
@@ -696,6 +738,7 @@ pub enum EmptyRule {
 
 /// Which cards may leave a pile together.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum MoveUnit {
@@ -720,6 +763,7 @@ pub enum MoveUnit {
 
 /// Overlapping piles: a pile is playable only once every pile covering it is empty.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Layout {
@@ -737,6 +781,7 @@ pub enum Layout {
 
 /// How the stock deals.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct StockRules {
@@ -796,6 +841,7 @@ impl StockRules {
 
 /// Gathering a group's cards and dealing them out again.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct RedealRules {
@@ -824,6 +870,7 @@ impl RedealRules {
 
 /// How a redeal deals the gathered cards.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum RedealHow {
@@ -851,6 +898,7 @@ pub enum RedealHow {
 /// Cards come off the shuffled pack in order. With `count` or `counts`, they are dealt in rows:
 /// one card to each selected pile, then the next row, as a person would deal them.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct DealStep {
@@ -957,6 +1005,7 @@ impl DealStep {
 
 /// Card-removal mechanics.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct RemovalRules {
@@ -984,6 +1033,7 @@ impl RemovalRules {
 
 /// Which grid positions count as neighbours.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Adjacency {
@@ -996,6 +1046,7 @@ pub enum Adjacency {
 /// Jokers are wild in removals: a joker pairs with any card (another joker too) and stands for
 /// any one rank of a set. `lower_of_suit` ignores them.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum RemovalKind {
@@ -1017,6 +1068,7 @@ pub enum RemovalKind {
 
 /// When the game is won.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum WinRule {
@@ -1043,6 +1095,7 @@ pub enum WinRule {
 
 /// How a position is scored.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct ScoreRules {
@@ -1067,6 +1120,7 @@ impl ScoreRules {
 /// own, so a joker shared by a row and a column (or a joker starter) may stand for different
 /// cards in each.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Hands {
@@ -1081,6 +1135,7 @@ pub enum Hands {
 /// starter joins every hand as a fifth card. Fifteens, pairs and runs count in a line of any
 /// length; a flush needs a full line of at least four cards.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct CribbageRules {
@@ -1114,6 +1169,7 @@ impl Default for CribbageRules {
 
 /// Points for each cribbage combination. Defaults are the standard values.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields, default)]
 #[non_exhaustive]
 pub struct CribbagePoints {
@@ -1156,6 +1212,7 @@ impl CribbagePoints {
 
 /// Points for each poker hand: a named table or explicit points.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum PokerTable {
@@ -1194,6 +1251,7 @@ impl PokerTable {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PokerScoring {
@@ -1208,6 +1266,7 @@ pub enum PokerScoring {
 /// Points per poker hand. A hand counts as its highest-ranking combination (in the usual poker
 /// order), whatever the points.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields, default)]
 #[non_exhaustive]
 pub struct PokerPoints {

@@ -40,6 +40,8 @@ pub mod io;
 pub mod presets;
 pub mod rng;
 pub mod rules;
+#[cfg(feature = "schema")]
+pub mod schema;
 mod score;
 pub mod solver;
 

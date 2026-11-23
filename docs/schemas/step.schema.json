@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Step",
+  "description": "One step of a solution, as a player would make it. Automatic actions (turning up exposed cards, refilling from a reserve) follow each step and aren't listed.",
+  "oneOf": [
+    {
+      "description": "Deal from the stock.",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "deal"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Turn the waste back over to form a new stock.",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "redeal"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Move `count` cards from the top of `from` onto `to`.",
+      "type": "object",
+      "required": [
+        "count",
+        "from",
+        "to",
+        "type"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "from": {
+          "$ref": "#/definitions/PileRef"
+        },
+        "to": {
+          "$ref": "#/definitions/PileRef"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "move"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Remove the top cards of these piles.",
+      "type": "object",
+      "required": [
+        "piles",
+        "type"
+      ],
+      "properties": {
+        "piles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PileRef"
+          }
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "remove"
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "PileRef": {
+      "description": "A pile, named by its group and its index within the group (from 0).",
+      "type": "object",
+      "required": [
+        "group",
+        "index"
+      ],
+      "properties": {
+        "group": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}

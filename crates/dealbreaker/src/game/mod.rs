@@ -491,6 +491,7 @@ impl std::error::Error for IllegalStep {}
 
 /// A pile, named by its group and its index within the group (from 0).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct PileRef {
     pub group: String,
     pub index: u16,
@@ -505,6 +506,7 @@ impl fmt::Display for PileRef {
 /// One step of a solution, as a player would make it. Automatic actions (turning up exposed
 /// cards, refilling from a reserve) follow each step and aren't listed.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Step {

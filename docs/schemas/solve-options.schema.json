@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SolveOptions",
+  "description": "Search limits and knobs.",
+  "type": "object",
+  "properties": {
+    "autoplay": {
+      "description": "Play provably safe foundation moves automatically (when the rules allow it).",
+      "default": true,
+      "type": "boolean"
+    },
+    "max_states": {
+      "description": "Stop after visiting this many distinct positions.",
+      "default": 2000000,
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "shorten": {
+      "description": "Shorten winning lines by cutting out detours (default true).",
+      "default": true,
+      "type": "boolean"
+    },
+    "strategy": {
+      "default": "auto",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Strategy"
+        }
+      ]
+    },
+    "timeout_ms": {
+      "description": "Stop after this many milliseconds of wall-clock time (native targets only).",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "Strategy": {
+      "description": "Search strategy.",
+      "oneOf": [
+        {
+          "description": "Depth-first, heuristic ordering. Can prove unsolvability.",
+          "type": "string",
+          "enum": [
+            "depth_first"
+          ]
+        },
+        {
+          "description": "Best-first by heuristic. Can also prove unsolvability, at a higher memory cost.",
+          "type": "string",
+          "enum": [
+            "best_first"
+          ]
+        },
+        {
+          "description": "Best-first for a share of the budget, then depth-first with the rest.",
+          "type": "string",
+          "enum": [
+            "auto"
+          ]
+        }
+      ]
+    }
+  }
+}

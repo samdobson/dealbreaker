@@ -24,6 +24,7 @@ use crate::rules::{BuildBy, PileKind, WinRule};
 
 /// Search strategy.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Strategy {
@@ -38,6 +39,7 @@ pub enum Strategy {
 
 /// Search limits and knobs.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default)]
 #[non_exhaustive]
 pub struct SolveOptions {

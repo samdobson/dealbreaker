@@ -17,6 +17,7 @@ use crate::game::{Game, State};
 ///
 /// Groups left out are empty.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct StateData {

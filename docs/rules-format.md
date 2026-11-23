@@ -2,8 +2,11 @@
 
 Games are defined as JSON (or via the Rust types in `rules.rs`). Run `dealbreaker rules <preset>` to inspect any built-in game.
 
+For live autocomplete and inline validation in VS Code or JetBrains, add `"$schema"` at the top of your game JSON (the solver ignores it):
+
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/samdobson/dealbreaker/main/docs/schemas/rules.schema.json",
   "name": "FreeCell",
   "groups": [
     { "name": "cell", "kind": "cell", "count": 4 },

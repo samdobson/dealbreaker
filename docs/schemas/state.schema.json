@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StateData",
+  "description": "A position keyed by group name. Each group is a list of piles, each pile a list of cards bottom first, written like `\"AS\"`, `\"10H\"` or `\"~KC\"` (face down).\n\n```json { \"piles\": { \"tableau\": [[\"~5H\", \"KS\"], [\"QD\"]], \"foundation\": [[], [], [], []] } } ```\n\nGroups left out are empty.",
+  "type": "object",
+  "required": [
+    "piles"
+  ],
+  "properties": {
+    "base_rank": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint8",
+      "minimum": 0.0
+    },
+    "piles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "redeals_used": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "seed": {
+      "description": "Seed for shuffles during play (shuffling redeals). Part of the deal.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

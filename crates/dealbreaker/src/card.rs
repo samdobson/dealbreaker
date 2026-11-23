@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 /// A suit of the French pack.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Suit {
     Clubs = 0,
@@ -56,6 +57,7 @@ impl Suit {
 
 /// Red or black.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Color {
     Red,

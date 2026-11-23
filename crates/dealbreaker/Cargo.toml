@@ -15,7 +15,14 @@ repository.workspace = true
 default = ["json"]
 ## Load and save rules, states and solutions as JSON.
 json = ["dep:serde_json"]
+## Generate JSON Schemas for rules, states, steps, and options.
+schema = ["json", "dep:schemars"]
 
 [dependencies]
+schemars = { version = "0.8", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", optional = true }
+
+[[example]]
+name = "generate_schemas"
+required-features = ["schema"]

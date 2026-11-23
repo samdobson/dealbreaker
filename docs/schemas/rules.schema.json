@@ -1,0 +1,1768 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Rules",
+  "description": "A complete description of one solitaire game.",
+  "type": "object",
+  "required": [
+    "$schema",
+    "groups",
+    "name"
+  ],
+  "properties": {
+    "$schema": {
+      "description": "Optional JSON Schema URI for editor validation (ignored by the solver).",
+      "writeOnly": true,
+      "allOf": [
+        {
+          "$ref": "#/definitions/SchemaUri"
+        }
+      ]
+    },
+    "auto_flip": {
+      "description": "Turn up a face-down card when it becomes the top of an uncovered pile. Default true.",
+      "default": true,
+      "type": "boolean"
+    },
+    "deal": {
+      "description": "The opening deal, step by step. Cards come off a shuffled pack.",
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/DealStep"
+      }
+    },
+    "groups": {
+      "description": "The piles on the table, in groups of identical piles.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GroupRules"
+      }
+    },
+    "name": {
+      "description": "Human-readable name, e.g. \"FreeCell\".",
+      "type": "string"
+    },
+    "pack": {
+      "default": {
+        "copies": 1,
+        "ranks": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        "suits": [
+          "clubs",
+          "diamonds",
+          "hearts",
+          "spades"
+        ]
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/Pack"
+        }
+      ]
+    },
+    "redeal": {
+      "description": "Gathering the tableau and dealing it out again, as a player action (Cruel, La Belle Lucie, Montana). Can't be combined with `stock`.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RedealRules"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "removal": {
+      "description": "Card-removal mechanics, for games that discard cards instead of (or as well as) building. One object or a list.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RemovalRules"
+      }
+    },
+    "safe_autoplay": {
+      "description": "Let the solver play cards to foundations automatically when it can prove nothing could ever need to be built on them. Sound for in-suit foundations; default true.",
+      "default": true,
+      "type": "boolean"
+    },
+    "score": {
+      "description": "Points for the position, for games played for a score (Poker Squares).",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ScoreRules"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "search": {
+      "description": "Tuning for the solver's heuristic. Changes how fast a win is found, never whether a position is judged winnable.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/SearchHints"
+        }
+      ]
+    },
+    "stock": {
+      "description": "How the stock deals. Needs a group of kind `stock`. A stock without these rules only feeds refills (`refill_from`).",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/StockRules"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "win": {
+      "default": "all_on_foundations",
+      "allOf": [
+        {
+          "$ref": "#/definitions/WinRule"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "Adjacency": {
+      "description": "Which grid positions count as neighbours.",
+      "oneOf": [
+        {
+          "description": "Horizontally, vertically or diagonally next to each other (Monte Carlo).",
+          "type": "string",
+          "enum": [
+            "eight"
+          ]
+        },
+        {
+          "description": "Horizontally or vertically next to each other.",
+          "type": "string",
+          "enum": [
+            "four"
+          ]
+        }
+      ]
+    },
+    "Build": {
+      "description": "How cards are built on one another.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "properties": {
+        "blocked_ranks": {
+          "description": "Nothing may be built on cards of these ranks (Golf: kings).",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "by": {
+          "$ref": "#/definitions/BuildBy"
+        },
+        "dir": {
+          "default": "down",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Dir"
+            }
+          ]
+        },
+        "step": {
+          "description": "Ranks between consecutive cards (default 1).",
+          "default": 1,
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "wrap": {
+          "description": "The sequence wraps: king to ace and ace to king.",
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "BuildBy": {
+      "description": "The suit or colour relation between a card and the card placed on it.",
+      "oneOf": [
+        {
+          "description": "Nothing may be built.",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        {
+          "description": "Any suit.",
+          "type": "string",
+          "enum": [
+            "any"
+          ]
+        },
+        {
+          "description": "Same suit.",
+          "type": "string",
+          "enum": [
+            "suit"
+          ]
+        },
+        {
+          "description": "Alternate colours.",
+          "type": "string",
+          "enum": [
+            "alternate"
+          ]
+        },
+        {
+          "description": "Same colour.",
+          "type": "string",
+          "enum": [
+            "same_color"
+          ]
+        },
+        {
+          "description": "Any suit but the same one.",
+          "type": "string",
+          "enum": [
+            "other_suit"
+          ]
+        },
+        {
+          "description": "The same suit or the same rank (Accordion; pair with `dir: any`).",
+          "type": "string",
+          "enum": [
+            "suit_or_rank"
+          ]
+        }
+      ]
+    },
+    "Color": {
+      "description": "Red or black.",
+      "type": "string",
+      "enum": [
+        "red",
+        "black"
+      ]
+    },
+    "CribbagePoints": {
+      "description": "Points for each cribbage combination. Defaults are the standard values.",
+      "type": "object",
+      "properties": {
+        "fifteen": {
+          "description": "Each different set of cards adding up to 15 (court cards count 10, aces 1).",
+          "default": 2,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "flush": {
+          "description": "A full line all of one suit.",
+          "default": 4,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "flush_starter": {
+          "description": "More when the starter is that suit too.",
+          "default": 1,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "heels": {
+          "description": "Once, if the starter is a jack (\"two for his heels\").",
+          "default": 2,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "nobs": {
+          "description": "For each hand holding the jack of the starter's suit (\"one for his nob\").",
+          "default": 1,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "pair": {
+          "description": "Each pair of cards of the same rank.",
+          "default": 2,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "run_card": {
+          "description": "Each card of each run of three or more ranks in sequence (ace low), counted once per different set of cards making the run.",
+          "default": 1,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "CribbageRules": {
+      "description": "Cribbage scoring. Each line is a hand; once every pile of the grid holds a card, the starter joins every hand as a fifth card. Fifteens, pairs and runs count in a line of any length; a flush needs a full line of at least four cards.",
+      "type": "object",
+      "properties": {
+        "points": {
+          "$ref": "#/definitions/CribbagePoints"
+        },
+        "starter": {
+          "description": "Group whose first pile's top card is the starter, read when the grid is full. Usually the waste: the card turned after the grid is filled. No starter if left out or empty.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DealStep": {
+      "description": "One step of the opening deal.\n\nCards come off the shuffled pack in order. With `count` or `counts`, they are dealt in rows: one card to each selected pile, then the next row, as a person would deal them.",
+      "type": "object",
+      "required": [
+        "to"
+      ],
+      "properties": {
+        "collect": {
+          "description": "After this step, take every card of these ranks off the table and put them on this step's group (Montana: deal all 52, then remove the aces to leave gaps).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "count": {
+          "description": "Cards to each selected pile.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "counts": {
+          "description": "Cards to each selected pile, per pile.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0.0
+          }
+        },
+        "face_up": {
+          "description": "Face up (default) or face down.",
+          "default": true,
+          "type": "boolean"
+        },
+        "kings_to_bottom": {
+          "description": "After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen).",
+          "default": false,
+          "type": "boolean"
+        },
+        "of_base": {
+          "description": "Take every remaining card of the dealt base rank out of the pack and put one on each selected pile in turn (requires an earlier step with `set_base`).",
+          "default": false,
+          "type": "boolean"
+        },
+        "one_each": {
+          "description": "With `ranks`: take only the first card of each listed rank, in the listed order (Calculation's A, 2, 3, 4).",
+          "default": false,
+          "type": "boolean"
+        },
+        "piles": {
+          "description": "Piles of the group to deal to (indices). Default: all.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0.0
+          }
+        },
+        "ranks": {
+          "description": "Take every card of these ranks out of the pack and put one on each selected pile in turn (Beleaguered Castle's aces).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "rest": {
+          "description": "Deal every remaining card, round-robin over the selected piles.",
+          "default": false,
+          "type": "boolean"
+        },
+        "set_base": {
+          "description": "The first card this step deals sets the base rank for [`EmptyRule::DealtBase`].",
+          "default": false,
+          "type": "boolean"
+        },
+        "to": {
+          "description": "Target group.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Dir": {
+      "description": "Rank direction from a card to the card placed on it.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "down",
+            "up"
+          ]
+        },
+        {
+          "description": "Up or down.",
+          "type": "string",
+          "enum": [
+            "either"
+          ]
+        },
+        {
+          "description": "Same rank.",
+          "type": "string",
+          "enum": [
+            "same"
+          ]
+        },
+        {
+          "description": "Any rank at all (a pile that takes anything, subject to `by`).",
+          "type": "string",
+          "enum": [
+            "any"
+          ]
+        }
+      ]
+    },
+    "EmptyRule": {
+      "description": "What an empty pile accepts.",
+      "oneOf": [
+        {
+          "description": "Nothing.",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        {
+          "description": "Any card (or any movable unit).",
+          "type": "string",
+          "enum": [
+            "any"
+          ]
+        },
+        {
+          "description": "Only a card of this rank (13 for \"kings only\").",
+          "type": "object",
+          "required": [
+            "rank"
+          ],
+          "properties": {
+            "rank": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Only a card whose rank is in this list (e.g. `[1, 13]` for Ace or King).",
+          "type": "object",
+          "required": [
+            "ranks"
+          ],
+          "properties": {
+            "ranks": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Only a card of the rank turned up by the deal (Canfield). See [`DealStep::set_base`].",
+          "type": "string",
+          "enum": [
+            "dealt_base"
+          ]
+        },
+        {
+          "description": "Only the card this many places after the rank turned up by the deal, going round the pack's ranks: `-1` is the rank below the base (Penguin's columns, which take the card that would sit under the foundations' base). See [`DealStep::set_base`].",
+          "type": "object",
+          "required": [
+            "dealt_base_offset"
+          ],
+          "properties": {
+            "dealt_base_offset": {
+              "type": "integer",
+              "format": "int8"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "In a grid: a card that could be built (by this pile's build rule) on the top card of the pile to the left; in the first column, a card of rank `first` (Montana's gaps).",
+          "type": "object",
+          "required": [
+            "after_left"
+          ],
+          "properties": {
+            "after_left": {
+              "type": "object",
+              "required": [
+                "first"
+              ],
+              "properties": {
+                "first": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "GroupRules": {
+      "description": "One group of identical piles.",
+      "type": "object",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "properties": {
+        "accept_only_when_empty": {
+          "description": "Accept cards only when the destination pile is empty (even if `build` is set for moving runs).",
+          "default": false,
+          "type": "boolean"
+        },
+        "accept_when_stock_empty": {
+          "description": "Accept cards only when the stock pile is empty.",
+          "default": false,
+          "type": "boolean"
+        },
+        "accepts_from": {
+          "description": "Only cards coming from these groups are accepted (default: any group).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "build": {
+          "description": "What may be placed on a pile's top card. Default: foundations build up in suit; every other kind accepts nothing on a non-empty pile.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Build"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "color": {
+          "description": "Piles accept only cards of this colour.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Color"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "compact": {
+          "description": "Keep the group packed: whenever a pile empties, the piles after it slide forward.",
+          "default": false,
+          "type": "boolean"
+        },
+        "compact_face_up": {
+          "description": "When a pile in this group becomes empty, shift the movable face-up run from the next pile into it, leaving any face-down cards behind.",
+          "default": false,
+          "type": "boolean"
+        },
+        "complete_runs": {
+          "description": "Foundation only accepts a whole suit sequence at once, moved together (Spider).",
+          "default": false,
+          "type": "boolean"
+        },
+        "count": {
+          "default": 1,
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "empty": {
+          "description": "What an empty pile accepts. Default: foundations take the pack's first rank; tableaux and cells take any card; reserves, stock and waste take none.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EmptyRule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "empty_max_accept": {
+          "description": "Most cards that may be placed onto an empty pile in one move. Default: same as `max_accept`.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "empty_suit": {
+          "description": "Empty piles accept only cards of this suit (non-empty piles follow `build` as usual).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Suit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/definitions/PileKind"
+        },
+        "layout": {
+          "description": "For piles that overlap (Pyramid, TriPeaks): which piles cover which.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Layout"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "match_longest_rank": {
+          "description": "A pile with fewer cards than the longest pile in this group only accepts a card whose rank matches the card at the same index in the longest pile.",
+          "default": false,
+          "type": "boolean"
+        },
+        "max_accept": {
+          "description": "Most cards the pile accepts in one move. Default: 1 for foundations (a whole suit for `complete_runs`), unlimited otherwise.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "max_cards": {
+          "description": "Most cards the pile may hold. Default: 1 for cells, unlimited otherwise.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "moves": {
+          "description": "Which cards may leave a pile. Default: one card for tableaux, cells, reserves and the waste; none for foundations and the stock.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MoveUnit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "description": "Name used in deal steps, solutions and states, e.g. \"tableau\".",
+          "type": "string"
+        },
+        "piles": {
+          "description": "Different rules for particular piles of the group (Calculation's foundations, each building by a different step from a different base).",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PileOverride"
+          }
+        },
+        "reach": {
+          "description": "A pile accepts cards only from piles of its own group exactly this many places after it (Accordion: 1 and 3).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0.0
+          }
+        },
+        "refill_from": {
+          "description": "When a pile in this group empties, refill it automatically with the top card of the first non-empty pile of these groups, tried in order (Canfield's tableau from its reserve; many games from the waste, then the stock). Stock cards are turned face up. Groups to try in order; a group name or a list.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "refill_largest": {
+          "description": "When refilling from a multi-pile group in `refill_from`, take from the pile with the most cards (ties broken by lowest index) rather than the first non-empty pile.",
+          "default": false,
+          "type": "boolean"
+        },
+        "refill_on_empty": {
+          "description": "Refill a pile in this group only when a move just emptied it, rather than also filling pre-existing empty piles when a refill source later receives a card.",
+          "default": false,
+          "type": "boolean"
+        },
+        "requires_rank_on_prev": {
+          "description": "Each pile after the first only accepts a card whose rank is already present on the previous pile in the group (when empty, it must match the previous pile's bottom card).",
+          "default": false,
+          "type": "boolean"
+        },
+        "suit": {
+          "description": "Piles accept only cards of this suit.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Suit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wild": {
+          "description": "Jokers are wild on these piles: a joker stands for any card that would be legal where it lies. It may be placed wherever some card could be (by the build rule, or the empty rule on an empty pile), and a card may be built on it if it could be built on some card the joker could stand for, given the cards beneath it. The joker's stand-in is never fixed: it is whatever keeps the pile legal. Where jokers aren't wild, a joker can only go to an empty pile that takes any card, and nothing is built on it. Default: wild everywhere but foundations.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Hands": {
+      "description": "How a hand (the cards in one row or column) scores.\n\nA joker in a hand counts as whichever card scores that hand best. Each hand is valued on its own, so a joker shared by a row and a column (or a joker starter) may stand for different cards in each.",
+      "oneOf": [
+        {
+          "description": "As a poker hand: its best five-card poker combination. Straights and flushes need five cards; pairs and sets count in a line of any length.",
+          "type": "object",
+          "required": [
+            "poker"
+          ],
+          "properties": {
+            "poker": {
+              "$ref": "#/definitions/PokerTable"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "As a cribbage hand, together with a shared starter card (Cribbage Squares).",
+          "type": "object",
+          "required": [
+            "cribbage"
+          ],
+          "properties": {
+            "cribbage": {
+              "$ref": "#/definitions/CribbageRules"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Layout": {
+      "description": "Overlapping piles: a pile is playable only once every pile covering it is empty.",
+      "oneOf": [
+        {
+          "description": "A triangle with `rows` rows (row r has r + 1 piles); each pile is covered by the two below it. Group count must be rows × (rows + 1) / 2.",
+          "type": "object",
+          "required": [
+            "pyramid"
+          ],
+          "properties": {
+            "pyramid": {
+              "type": "object",
+              "required": [
+                "rows"
+              ],
+              "properties": {
+                "rows": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Three peaks of 3 rows each over a base row of 10 (28 piles).",
+          "type": "string",
+          "enum": [
+            "tri_peaks"
+          ]
+        },
+        {
+          "description": "Explicit: `covered_by[i]` lists the piles (indices within the group) covering pile i.",
+          "type": "object",
+          "required": [
+            "covers"
+          ],
+          "properties": {
+            "covers": {
+              "type": "object",
+              "required": [
+                "covered_by"
+              ],
+              "properties": {
+                "covered_by": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "format": "uint16",
+                      "minimum": 0.0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Rows of `columns` piles, read left to right (gap games: Montana). Nothing covers anything; the layout gives each pile a left neighbour.",
+          "type": "object",
+          "required": [
+            "grid"
+          ],
+          "properties": {
+            "grid": {
+              "type": "object",
+              "required": [
+                "columns"
+              ],
+              "properties": {
+                "columns": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "MoveUnit": {
+      "description": "Which cards may leave a pile together.",
+      "oneOf": [
+        {
+          "description": "No card may leave.",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        {
+          "description": "The top card only.",
+          "type": "string",
+          "enum": [
+            "top"
+          ]
+        },
+        {
+          "description": "Any built sequence (by this group's build rule) from the top.",
+          "type": "string",
+          "enum": [
+            "run"
+          ]
+        },
+        {
+          "description": "Any built sequence from the top whose cards are all one suit (Spider).",
+          "type": "string",
+          "enum": [
+            "suit_run"
+          ]
+        },
+        {
+          "description": "Any number of face-up cards from the top, built or not (Yukon).",
+          "type": "string",
+          "enum": [
+            "any_face_up"
+          ]
+        },
+        {
+          "description": "A built sequence, as long as free cells and empty piles would allow moving it one card at a time (FreeCell's \"supermove\"): (empty cells + 1) × 2^(empty piles).",
+          "type": "string",
+          "enum": [
+            "supermove"
+          ]
+        },
+        {
+          "description": "Only the whole pile, all face up.",
+          "type": "string",
+          "enum": [
+            "whole"
+          ]
+        },
+        {
+          "description": "Either the top card alone, or the whole pile when all face up and built in sequence.",
+          "type": "string",
+          "enum": [
+            "top_or_whole"
+          ]
+        }
+      ]
+    },
+    "Pack": {
+      "description": "The cards in play.",
+      "type": "object",
+      "properties": {
+        "copies": {
+          "description": "Copies of each (suit, rank) card. Two-pack games use 2; one-suit Spider uses 8.",
+          "default": 1,
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "jokers": {
+          "description": "Jokers in play, in all (not per copy). Jokers are wild: see [`GroupRules::wild`], [`RemovalKind`] and [`Hands`] for what they stand for where.",
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "ranks": {
+          "description": "Ranks in use, in sequence order: building goes from each rank to the next one in this list. Default `[1..=13]` (ace low). Aces high is `[2, 3, …, 13, 1]`; a stripped pack leaves ranks out.",
+          "default": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13
+          ],
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "suits": {
+          "description": "Suits in use. Default: all four.",
+          "default": [
+            "clubs",
+            "diamonds",
+            "hearts",
+            "spades"
+          ],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Suit"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "PileKind": {
+      "description": "What a group of piles is for. The kind sets defaults and tells the solver how to treat it.",
+      "oneOf": [
+        {
+          "description": "Main playing piles.",
+          "type": "string",
+          "enum": [
+            "tableau"
+          ]
+        },
+        {
+          "description": "Where cards are built to win (or discarded to, in removal games).",
+          "type": "string",
+          "enum": [
+            "foundation"
+          ]
+        },
+        {
+          "description": "Free cells: hold one card each by default.",
+          "type": "string",
+          "enum": [
+            "cell"
+          ]
+        },
+        {
+          "description": "Cards that may be played from but not onto.",
+          "type": "string",
+          "enum": [
+            "reserve"
+          ]
+        },
+        {
+          "description": "The face-down stock. At most one pile.",
+          "type": "string",
+          "enum": [
+            "stock"
+          ]
+        },
+        {
+          "description": "Where the stock deals to. At most one pile.",
+          "type": "string",
+          "enum": [
+            "waste"
+          ]
+        }
+      ]
+    },
+    "PileOverride": {
+      "description": "Rules for some piles of a group that differ from the group's. Fields left out keep the group's value.",
+      "type": "object",
+      "required": [
+        "piles"
+      ],
+      "properties": {
+        "build": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Build"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Color"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "empty": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EmptyRule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "empty_max_accept": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "empty_suit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Suit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_accept": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "max_cards": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "moves": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MoveUnit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "piles": {
+          "description": "Indices within the group.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0.0
+          }
+        },
+        "suit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Suit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "PokerPoints": {
+      "description": "Points per poker hand. A hand counts as its highest-ranking combination (in the usual poker order), whatever the points.",
+      "type": "object",
+      "properties": {
+        "flush": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "four": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "full_house": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "pair": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "royal_flush": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "straight": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "straight_flush": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "three": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "two_pair": {
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "PokerScoring": {
+      "oneOf": [
+        {
+          "description": "Pair 2, two pair 5, three of a kind 10, straight 15, flush 20, full house 25, four of a kind 50, straight flush 75, royal flush 100.",
+          "type": "string",
+          "enum": [
+            "american"
+          ]
+        },
+        {
+          "description": "Pair 1, two pair 3, three of a kind 6, straight 12, flush 5, full house 10, four of a kind 16, straight or royal flush 30.",
+          "type": "string",
+          "enum": [
+            "english"
+          ]
+        }
+      ]
+    },
+    "PokerTable": {
+      "description": "Points for each poker hand: a named table or explicit points.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/PokerScoring"
+        },
+        {
+          "$ref": "#/definitions/PokerPoints"
+        }
+      ]
+    },
+    "RedealHow": {
+      "description": "How a redeal deals the gathered cards.",
+      "oneOf": [
+        {
+          "description": "Keep the cards in order and deal them back `per_pile` at a time to each pile in turn, starting from the first pile's top cards (Cruel). Fewer piles may end up in use. If there are more cards than `per_pile` for every pile, the surplus is shared out: each pile gets an equal part and the first few one more.",
+          "type": "object",
+          "required": [
+            "regroup"
+          ],
+          "properties": {
+            "regroup": {
+              "type": "object",
+              "required": [
+                "per_pile"
+              ],
+              "properties": {
+                "per_pile": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie), sharing out any surplus as for [`RedealHow::Regroup`].",
+          "type": "object",
+          "required": [
+            "shuffle"
+          ],
+          "properties": {
+            "shuffle": {
+              "type": "object",
+              "required": [
+                "per_pile"
+              ],
+              "properties": {
+                "per_pile": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap straight after each sequence (Montana).",
+          "type": "string",
+          "enum": [
+            "grid_shuffle"
+          ]
+        },
+        {
+          "description": "Close the gaps: slide the cards forward in reading order, then fill the empty places at the end from `refill_from`'s top card, turned face up (Monte Carlo).",
+          "type": "object",
+          "required": [
+            "compact"
+          ],
+          "properties": {
+            "compact": {
+              "type": "object",
+              "properties": {
+                "refill_from": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "RedealRules": {
+      "description": "Gathering a group's cards and dealing them out again.",
+      "type": "object",
+      "required": [
+        "group",
+        "how"
+      ],
+      "properties": {
+        "group": {
+          "description": "The group gathered and redealt.",
+          "type": "string"
+        },
+        "how": {
+          "$ref": "#/definitions/RedealHow"
+        },
+        "times": {
+          "description": "How many redeals are allowed.",
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "unlimited": {
+          "description": "Any number of redeals (overrides `times`).",
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RemovalKind": {
+      "description": "Jokers are wild in removals: a joker pairs with any card (another joker too) and stands for any one rank of a set. `lower_of_suit` ignores them.",
+      "oneOf": [
+        {
+          "description": "Remove two playable cards whose ranks add up to `total` (Pyramid: 13), or one card whose rank is listed in `alone` (Pyramid: kings).",
+          "type": "object",
+          "required": [
+            "pairs_sum"
+          ],
+          "properties": {
+            "pairs_sum": {
+              "type": "object",
+              "required": [
+                "total"
+              ],
+              "properties": {
+                "alone": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "uint8",
+                    "minimum": 0.0
+                  }
+                },
+                "total": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Remove a playable card when another playable card is of the same suit and higher in the pack's rank order (Aces Up).",
+          "type": "string",
+          "enum": [
+            "lower_of_suit"
+          ]
+        },
+        {
+          "description": "Remove two playable cards of the same rank (Nestor, Simple Pairs).",
+          "type": "string",
+          "enum": [
+            "same_rank"
+          ]
+        },
+        {
+          "description": "Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).",
+          "type": "object",
+          "required": [
+            "rank_set"
+          ],
+          "properties": {
+            "rank_set": {
+              "type": "object",
+              "required": [
+                "ranks"
+              ],
+              "properties": {
+                "ranks": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "uint8",
+                    "minimum": 0.0
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "RemovalRules": {
+      "description": "Card-removal mechanics.",
+      "type": "object",
+      "required": [
+        "from",
+        "kind",
+        "to"
+      ],
+      "properties": {
+        "adjacent": {
+          "description": "Cards must be neighbours in their grid (all from one grid group).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Adjacency"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from": {
+          "description": "Groups whose playable top cards may be removed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kind": {
+          "$ref": "#/definitions/RemovalKind"
+        },
+        "to": {
+          "description": "Group (its first pile) the removed cards go to.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SchemaUri": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ScoreRules": {
+      "description": "How a position is scored.",
+      "type": "object",
+      "required": [
+        "group",
+        "hands"
+      ],
+      "properties": {
+        "group": {
+          "description": "A grid group. Each of its rows and each of its columns is scored as a hand.",
+          "type": "string"
+        },
+        "hands": {
+          "$ref": "#/definitions/Hands"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SearchHints": {
+      "description": "Heuristic weights and search tuning. They change how fast the solver finds a win (or how soon it gives up), never whether a position is judged winnable. Every field has a neutral default.",
+      "type": "object",
+      "properties": {
+        "blocker_weight": {
+          "description": "Cost of a card resting on a card its foundation needs sooner (default 1).",
+          "default": 1,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "cell_weight": {
+          "description": "Cost of each card in a free cell (default 1).",
+          "default": 1,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "disorder_weight": {
+          "description": "Cost of each card out of sequence in a building pile, and of each such pile in use (default 1).",
+          "default": 1,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "down_weight": {
+          "description": "Cost of each face-down card (default 2).",
+          "default": 2,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "fast_share": {
+          "description": "Percent of the budget the default strategy spends on its fast, pruned best-first phase before the sound depth-first search (default 50).",
+          "default": 50,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "progress_weight": {
+          "description": "Cost of each card still to go home, or each step still missing from the win (default 4).",
+          "default": 4,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "stock_weight": {
+          "description": "Cost of each card still in a stock that deals to the tableau (default 1).",
+          "default": 1,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "StockRules": {
+      "description": "How the stock deals.",
+      "type": "object",
+      "required": [
+        "to"
+      ],
+      "properties": {
+        "auto": {
+          "description": "Deal by itself whenever the waste is empty (and the stock isn't).",
+          "default": false,
+          "type": "boolean"
+        },
+        "count": {
+          "description": "Cards per deal (or rounds per deal for multi-pile targets).",
+          "default": 1,
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "face_up": {
+          "description": "Keep the top card of the stock turned face up so it may be played or removed directly.",
+          "default": false,
+          "type": "boolean"
+        },
+        "first_empty": {
+          "description": "For a multi-pile target: deal `count` cards into the first empty pile instead of one to every pile (Accordion).",
+          "default": false,
+          "type": "boolean"
+        },
+        "only_when_empty": {
+          "description": "Deal only when the target pile is empty: each card must be played before the next is turned (Calculation, Sir Tommy).",
+          "default": false,
+          "type": "boolean"
+        },
+        "redeals": {
+          "description": "Times the waste may be turned back into the stock.",
+          "default": 0,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "require_no_empty": {
+          "description": "The stock may not deal while any pile of the target group is empty (Spider).",
+          "default": false,
+          "type": "boolean"
+        },
+        "skip_empty": {
+          "description": "For a multi-pile target: deal only to non-empty piles (or to the first pile if all are empty).",
+          "default": false,
+          "type": "boolean"
+        },
+        "to": {
+          "description": "Group the stock deals to. If it is a waste or foundation, `count` cards go onto its first pile. Otherwise (tableau, reserve, cell), `count` rounds of one card go to each pile in turn while cards remain.",
+          "type": "string"
+        },
+        "unlimited_redeals": {
+          "description": "The waste may be turned back any number of times (overrides `redeals`).",
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Suit": {
+      "description": "A suit of the French pack.",
+      "type": "string",
+      "enum": [
+        "clubs",
+        "diamonds",
+        "hearts",
+        "spades"
+      ]
+    },
+    "WinRule": {
+      "description": "When the game is won.",
+      "oneOf": [
+        {
+          "description": "Every card is on a foundation.",
+          "type": "string",
+          "enum": [
+            "all_on_foundations"
+          ]
+        },
+        {
+          "description": "These groups are empty (Pyramid, Golf, TriPeaks: the tableau).",
+          "type": "object",
+          "required": [
+            "empty"
+          ],
+          "properties": {
+            "empty": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "A group holds at least this many cards (Aces Up: 48 discarded).",
+          "type": "object",
+          "required": [
+            "count"
+          ],
+          "properties": {
+            "count": {
+              "type": "object",
+              "required": [
+                "cards",
+                "group"
+              ],
+              "properties": {
+                "cards": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                },
+                "group": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "At most this many piles of a group hold cards (Accordion: 1).",
+          "type": "object",
+          "required": [
+            "at_most_piles"
+          ],
+          "properties": {
+            "at_most_piles": {
+              "type": "object",
+              "required": [
+                "group",
+                "piles"
+              ],
+              "properties": {
+                "group": {
+                  "type": "string"
+                },
+                "piles": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Every row of a grid group holds a built sequence from its first column, `length` cards long (default: one less than the row), starting with the rank its first column takes (Montana).",
+          "type": "object",
+          "required": [
+            "rows"
+          ],
+          "properties": {
+            "rows": {
+              "type": "object",
+              "required": [
+                "group"
+              ],
+              "properties": {
+                "group": {
+                  "type": "string"
+                },
+                "length": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "The position scores at least this many points (see [`Rules::score`]).",
+          "type": "object",
+          "required": [
+            "score"
+          ],
+          "properties": {
+            "score": {
+              "type": "object",
+              "required": [
+                "at_least"
+              ],
+              "properties": {
+                "at_least": {
+                  "type": "integer",
+                  "format": "uint32",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

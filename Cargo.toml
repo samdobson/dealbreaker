@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/dealbreaker", "crates/dealbreaker-cli", "crates/dealbreaker-wasm"]
+members = [
+    "crates/dealbreaker",
+    "crates/dealbreaker-cli",
+    "crates/dealbreaker-wasm",
+    "crates/dealbreaker-ffi",
+]
 exclude = ["crates/dealbreaker-py"]
 
 [workspace.package]

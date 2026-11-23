@@ -100,6 +100,15 @@ if hint:
 
 Long-running searches (`solve`, `best`, `hint`) release the Python GIL so `ThreadPoolExecutor` threads can solve deals concurrently.
 
+## C / Swift / Kotlin (C ABI)
+
+`crates/dealbreaker-ffi` exposes a minimal JSON-in/JSON-out C ABI ([dealbreaker.h](../crates/dealbreaker-ffi/include/dealbreaker.h)) with thread-safe cooperative cancellation (`DealbreakerCancel`), suitable for C, C++, Swift (iOS/macOS), Kotlin/JNI (Android), Go, and Zig:
+
+```sh
+cargo build --release -p dealbreaker-ffi   # produces libdealbreaker_ffi.{a,dylib,so,dll}
+./scripts/build-xcframework.sh             # builds Apple Dealbreaker.xcframework (iOS + macOS)
+```
+
 ## Stability (SemVer 1.x)
 
 * Rule types are `#[non_exhaustive]`: construct via `Rules::new`, `GroupRules::new`, `Build::new`, etc., or JSON, and include a wildcard arm when matching rule enums.

@@ -1,0 +1,4 @@
+module DealbreakerFFI {
+    header "dealbreaker.h"
+    export *
+}

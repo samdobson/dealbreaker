@@ -1,0 +1,19 @@
+[package]
+name = "dealbreaker-cli"
+description = "Command-line front end for the dealbreaker crate."
+readme = "../../README.md"
+keywords = ["solitaire", "patience", "solver", "cli"]
+categories = ["games", "command-line-utilities"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "dealbreaker"
+path = "src/main.rs"
+
+[dependencies]
+dealbreaker = { path = "../dealbreaker", version = "1.1.0" }
+serde_json = "1"

@@ -1,0 +1,203 @@
+//! Hints that respect hidden cards.
+//!
+//! [`crate::solve`] sees every card. A player doesn't, so a hint computed from the true deal
+//! could leak where a face-down card is. [`hint`] instead treats every face-down card as
+//! unknown: it deals the unknown cards at random among the face-down places many times, solves
+//! each guess, and recommends the first step that wins most often.
+//!
+//! In a game played for points, every possible next step is tried on every guess instead, and
+//! the step with the highest average best score is recommended.
+
+use std::collections::HashMap;
+
+use crate::game::{Game, State, Step};
+use crate::rng::Rng;
+use crate::solver::{maximize, solve, Outcome, SolveOptions};
+
+/// Hint settings.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+#[non_exhaustive]
+pub struct HintOptions {
+    /// Random guesses at the hidden cards (ignored when nothing is hidden).
+    pub samples: u32,
+    /// Search options for each guess. Its `max_states` is the budget for each guess.
+    pub solve: SolveOptions,
+    pub seed: u64,
+}
+
+impl Default for HintOptions {
+    fn default() -> Self {
+        HintOptions {
+            samples: 16,
+            solve: SolveOptions {
+                max_states: 100_000,
+                ..SolveOptions::default()
+            },
+            seed: 0,
+        }
+    }
+}
+
+impl HintOptions {
+    /// Random guesses at the hidden cards.
+    pub fn samples(mut self, n: u32) -> Self {
+        self.samples = n;
+        self
+    }
+
+    /// Search options for each guess.
+    pub fn solve(mut self, opts: SolveOptions) -> Self {
+        self.solve = opts;
+        self
+    }
+
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.seed = seed;
+        self
+    }
+}
+
+/// A recommended next step.
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct Hint {
+    pub step: Step,
+    /// Guesses in which this step started a win.
+    pub wins: u32,
+    /// Guesses tried.
+    pub samples: u32,
+    /// Games played for points: the step's average best score over the guesses.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub score: Option<f64>,
+}
+
+/// Recommend a next step without looking at face-down cards. `None` if no guess could be won
+/// within the budget.
+pub fn hint(game: &Game, state: &State, opts: &HintOptions) -> Option<Hint> {
+    let hidden: Vec<(usize, usize)> = state
+        .piles
+        .iter()
+        .enumerate()
+        .flat_map(|(p, pile)| {
+            pile.iter()
+                .enumerate()
+                .filter(|(_, c)| !c.is_face_up())
+                .map(move |(i, _)| (p, i))
+        })
+        .collect();
+    // A shuffling redeal makes the future unknown even with every card face up.
+    let random_future = game.rules().redeal.as_ref().is_some_and(|r| {
+        matches!(
+            r.how,
+            crate::rules::RedealHow::Shuffle { .. } | crate::rules::RedealHow::GridShuffle
+        )
+    });
+    let samples = if hidden.is_empty() && !random_future {
+        1
+    } else {
+        opts.samples.max(1)
+    };
+    let mut rng = Rng::new(opts.seed);
+    let guess = |rng: &mut Rng| {
+        let mut guess = state.clone();
+        // Future shuffles are unknown too.
+        if random_future {
+            guess.seed = rng.next_u64();
+        }
+        let mut cards: Vec<_> = hidden.iter().map(|&(p, i)| state.piles[p][i]).collect();
+        rng.shuffle(&mut cards);
+        for (&(p, i), c) in hidden.iter().zip(cards) {
+            guess.piles[p][i] = c;
+        }
+        guess
+    };
+    if game.is_scored() {
+        return scored_hint(game, state, opts, samples, || guess(&mut rng));
+    }
+    let mut votes: HashMap<String, (Step, u32)> = HashMap::new();
+    let mut order: Vec<String> = Vec::new();
+    for _ in 0..samples {
+        let guess = guess(&mut rng);
+        if let Outcome::Solved(moves) = solve(game, &guess, &opts.solve).outcome {
+            if let Some(step) = game.steps(&guess, &moves).into_iter().next() {
+                let key = format!("{step:?}");
+                let e = votes.entry(key.clone()).or_insert_with(|| {
+                    order.push(key);
+                    (step, 0)
+                });
+                e.1 += 1;
+            }
+        }
+    }
+    // Most wins; earliest found breaks ties.
+    let best = order.iter().max_by_key(|k| {
+        (
+            votes[*k].1,
+            std::cmp::Reverse(order.iter().position(|o| o == *k)),
+        )
+    })?;
+    let (step, wins) = votes.remove(best)?;
+    Some(Hint {
+        step,
+        wins,
+        samples,
+        score: None,
+    })
+}
+
+/// Try every distinct next step on every guess; recommend the best average score. `wins`
+/// counts guesses where the step's best line reached the game's target score, if it has one.
+fn scored_hint(
+    game: &Game,
+    state: &State,
+    opts: &HintOptions,
+    samples: u32,
+    mut guess: impl FnMut() -> State,
+) -> Option<Hint> {
+    let moves = game.distinct_moves(state);
+    match moves.as_slice() {
+        [] => return None,
+        // Nothing to choose between.
+        [m] => {
+            return Some(Hint {
+                step: game.steps(state, &[*m]).into_iter().next()?,
+                wins: 0,
+                samples: 0,
+                score: None,
+            })
+        }
+        _ => {}
+    }
+    let per = SolveOptions {
+        max_states: (opts.solve.max_states / moves.len() as u64).max(1),
+        ..opts.solve.clone()
+    };
+    let mut totals = vec![(0u64, 0u32); moves.len()];
+    for _ in 0..samples {
+        let g = guess();
+        for (i, &m) in moves.iter().enumerate() {
+            let mut s = g.clone();
+            if game.play(&mut s, m).is_err() {
+                continue;
+            }
+            let r = maximize(game, &s, &per);
+            totals[i].0 += r.score as u64;
+            if game.target_score().is_some_and(|t| r.score >= t) {
+                totals[i].1 += 1;
+            }
+        }
+    }
+    // Highest total; the earliest step breaks ties.
+    let (i, &(total, wins)) = totals
+        .iter()
+        .enumerate()
+        .max_by_key(|&(i, &(t, _))| (t, std::cmp::Reverse(i)))?;
+    let step = game.steps(state, &[moves[i]]).into_iter().next()?;
+    Some(Hint {
+        step,
+        wins,
+        samples,
+        score: Some(total as f64 / samples as f64),
+    })
+}

@@ -1,0 +1,1234 @@
+//! The rules model: a game is described as data.
+//!
+//! A [`Rules`] value names the pack, the groups of piles on the table (tableau, foundations,
+//! cells, reserves, stock, waste), what each pile accepts and lets go, how the stock deals, how
+//! the cards are dealt at the start, any card-removal mechanic (Pyramid's pairs, Aces Up's
+//! discards), and what counts as a win.
+//!
+//! Every field that has a sensible default for its pile kind may be left out, so most games are
+//! a dozen lines of JSON. The presets in [`crate::presets`] are written with the same types.
+
+use serde::{Deserialize, Serialize};
+
+use crate::card::{Color, Suit};
+
+/// A complete description of one solitaire game.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct Rules {
+    /// Human-readable name, e.g. "FreeCell".
+    pub name: String,
+    #[serde(default)]
+    pub pack: Pack,
+    /// The piles on the table, in groups of identical piles.
+    pub groups: Vec<GroupRules>,
+    /// How the stock deals. Needs a group of kind `stock`. A stock without these rules only
+    /// feeds refills (`refill_from`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stock: Option<StockRules>,
+    /// Gathering the tableau and dealing it out again, as a player action (Cruel, La Belle
+    /// Lucie, Montana). Can't be combined with `stock`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub redeal: Option<RedealRules>,
+    /// The opening deal, step by step. Cards come off a shuffled pack.
+    #[serde(default)]
+    pub deal: Vec<DealStep>,
+    /// Card-removal mechanics, for games that discard cards instead of (or as well as)
+    /// building. One object or a list.
+    #[serde(
+        default,
+        deserialize_with = "one_or_many",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub removal: Vec<RemovalRules>,
+    /// Points for the position, for games played for a score (Poker Squares).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub score: Option<ScoreRules>,
+    #[serde(default)]
+    pub win: WinRule,
+    /// Turn up a face-down card when it becomes the top of an uncovered pile. Default true.
+    #[serde(default = "yes")]
+    pub auto_flip: bool,
+    /// Let the solver play cards to foundations automatically when it can prove nothing could
+    /// ever need to be built on them. Sound for in-suit foundations; default true.
+    #[serde(default = "yes")]
+    pub safe_autoplay: bool,
+    /// Tuning for the solver's heuristic. Changes how fast a win is found, never whether a
+    /// position is judged winnable.
+    #[serde(default, skip_serializing_if = "SearchHints::is_default")]
+    pub search: SearchHints,
+}
+
+/// Heuristic weights and search tuning. They change how fast the solver finds a win (or how
+/// soon it gives up), never whether a position is judged winnable. Every field has a neutral
+/// default.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+#[non_exhaustive]
+pub struct SearchHints {
+    /// Cost of each card still to go home, or each step still missing from the win (default 4).
+    pub progress_weight: u32,
+    /// Cost of each face-down card (default 2).
+    pub down_weight: u32,
+    /// Cost of each card out of sequence in a building pile, and of each such pile in use
+    /// (default 1).
+    pub disorder_weight: u32,
+    /// Cost of a card resting on a card its foundation needs sooner (default 1).
+    pub blocker_weight: u32,
+    /// Cost of each card in a free cell (default 1).
+    pub cell_weight: u32,
+    /// Cost of each card still in a stock that deals to the tableau (default 1).
+    pub stock_weight: u32,
+    /// Percent of the budget the default strategy spends on its fast, pruned best-first phase
+    /// before the sound depth-first search (default 50).
+    pub fast_share: u32,
+}
+
+impl Default for SearchHints {
+    fn default() -> Self {
+        SearchHints {
+            progress_weight: 4,
+            down_weight: 2,
+            disorder_weight: 1,
+            blocker_weight: 1,
+            cell_weight: 1,
+            stock_weight: 1,
+            fast_share: 50,
+        }
+    }
+}
+
+impl Rules {
+    /// Rules with a name, pack, groups and deal; everything else at its default (no stock
+    /// rules, redeal, removal or score; won with every card on a foundation). Set the other
+    /// fields directly.
+    pub fn new(name: &str, pack: Pack, groups: Vec<GroupRules>, deal: Vec<DealStep>) -> Rules {
+        Rules {
+            name: name.to_string(),
+            pack,
+            groups,
+            stock: None,
+            redeal: None,
+            deal,
+            removal: Vec::new(),
+            score: None,
+            win: WinRule::AllOnFoundations,
+            auto_flip: true,
+            safe_autoplay: true,
+            search: SearchHints::default(),
+        }
+    }
+}
+
+impl SearchHints {
+    pub fn is_default(&self) -> bool {
+        *self == SearchHints::default()
+    }
+}
+
+fn yes() -> bool {
+    true
+}
+
+fn one() -> u16 {
+    1
+}
+
+/// The cards in play.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct Pack {
+    /// Copies of each (suit, rank) card. Two-pack games use 2; one-suit Spider uses 8.
+    #[serde(default = "one_u8")]
+    pub copies: u8,
+    /// Suits in use. Default: all four.
+    #[serde(default = "all_suits")]
+    pub suits: Vec<Suit>,
+    /// Ranks in use, in sequence order: building goes from each rank to the next one in this
+    /// list. Default `[1..=13]` (ace low). Aces high is `[2, 3, …, 13, 1]`; a stripped pack
+    /// leaves ranks out.
+    #[serde(default = "all_ranks")]
+    pub ranks: Vec<u8>,
+    /// Jokers in play, in all (not per copy). Jokers are wild: see [`GroupRules::wild`],
+    /// [`RemovalKind`] and [`Hands`] for what they stand for where.
+    #[serde(default, skip_serializing_if = "is_zero_u8")]
+    pub jokers: u8,
+}
+
+fn is_zero_u8(n: &u8) -> bool {
+    *n == 0
+}
+
+fn one_u8() -> u8 {
+    1
+}
+
+fn all_suits() -> Vec<Suit> {
+    Suit::ALL.to_vec()
+}
+
+fn all_ranks() -> Vec<u8> {
+    (1..=13).collect()
+}
+
+impl Default for Pack {
+    fn default() -> Self {
+        Pack {
+            copies: 1,
+            suits: all_suits(),
+            ranks: all_ranks(),
+            jokers: 0,
+        }
+    }
+}
+
+impl Pack {
+    /// One copy of each card of these suits and ranks (ranks in sequence order), no jokers.
+    pub fn new(suits: &[Suit], ranks: &[u8]) -> Pack {
+        Pack {
+            copies: 1,
+            suits: suits.to_vec(),
+            ranks: ranks.to_vec(),
+            jokers: 0,
+        }
+    }
+
+    /// `n` copies of every card.
+    pub fn with_copies(mut self, n: u8) -> Pack {
+        self.copies = n;
+        self
+    }
+
+    pub fn decks(n: u8) -> Pack {
+        Pack {
+            copies: n,
+            ..Pack::default()
+        }
+    }
+
+    /// Cards in the pack, jokers included.
+    pub fn len(&self) -> usize {
+        self.copies as usize * self.suits.len() * self.ranks.len() + self.jokers as usize
+    }
+
+    /// Add `n` jokers.
+    pub fn with_jokers(mut self, n: u8) -> Pack {
+        self.jokers = n;
+        self
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+/// What a group of piles is for. The kind sets defaults and tells the solver how to treat it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum PileKind {
+    /// Main playing piles.
+    Tableau,
+    /// Where cards are built to win (or discarded to, in removal games).
+    Foundation,
+    /// Free cells: hold one card each by default.
+    Cell,
+    /// Cards that may be played from but not onto.
+    Reserve,
+    /// The face-down stock. At most one pile.
+    Stock,
+    /// Where the stock deals to. At most one pile.
+    Waste,
+}
+
+/// One group of identical piles.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct GroupRules {
+    /// Name used in deal steps, solutions and states, e.g. "tableau".
+    pub name: String,
+    pub kind: PileKind,
+    #[serde(default = "one")]
+    pub count: u16,
+    /// What may be placed on a pile's top card. Default: foundations build up in suit; every
+    /// other kind accepts nothing on a non-empty pile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build: Option<Build>,
+    /// What an empty pile accepts. Default: foundations take the pack's first rank; tableaux and
+    /// cells take any card; reserves, stock and waste take none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty: Option<EmptyRule>,
+    /// Which cards may leave a pile. Default: one card for tableaux, cells, reserves and the
+    /// waste; none for foundations and the stock.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moves: Option<MoveUnit>,
+    /// Most cards the pile may hold. Default: 1 for cells, unlimited otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_cards: Option<u16>,
+    /// Most cards the pile accepts in one move. Default: 1 for foundations (a whole suit for
+    /// `complete_runs`), unlimited otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_accept: Option<u16>,
+    /// Only cards coming from these groups are accepted (default: any group).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accepts_from: Option<Vec<String>>,
+    /// When a pile in this group empties, refill it automatically with the top card of the
+    /// first non-empty pile of these groups, tried in order (Canfield's tableau from its
+    /// reserve; many games from the waste, then the stock). Stock cards are turned face up.
+    /// Groups to try in order; a group name or a list.
+    #[serde(
+        default,
+        deserialize_with = "one_or_many",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub refill_from: Vec<String>,
+    /// For piles that overlap (Pyramid, TriPeaks): which piles cover which.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<Layout>,
+    /// Foundation only accepts a whole suit sequence at once, moved together (Spider).
+    #[serde(default)]
+    pub complete_runs: bool,
+    /// A pile accepts cards only from piles of its own group exactly this many places after
+    /// it (Accordion: 1 and 3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reach: Option<Vec<u16>>,
+    /// Keep the group packed: whenever a pile empties, the piles after it slide forward.
+    #[serde(default)]
+    pub compact: bool,
+    /// Piles accept only cards of this suit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suit: Option<Suit>,
+    /// Empty piles accept only cards of this suit (non-empty piles follow `build` as usual).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_suit: Option<Suit>,
+    /// Piles accept only cards of this colour.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<Color>,
+    /// Different rules for particular piles of the group (Calculation's foundations, each
+    /// building by a different step from a different base).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub piles: Vec<PileOverride>,
+    /// Jokers are wild on these piles: a joker stands for any card that would be legal where
+    /// it lies. It may be placed wherever some card could be (by the build rule, or the empty
+    /// rule on an empty pile), and a card may be built on it if it could be built on some card
+    /// the joker could stand for, given the cards beneath it. The joker's stand-in is never
+    /// fixed: it is whatever keeps the pile legal. Where jokers aren't wild, a joker can only
+    /// go to an empty pile that takes any card, and nothing is built on it. Default: wild
+    /// everywhere but foundations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wild: Option<bool>,
+    /// Each pile after the first only accepts a card whose rank is already present on the
+    /// previous pile in the group (when empty, it must match the previous pile's bottom card).
+    #[serde(default)]
+    pub requires_rank_on_prev: bool,
+    /// A pile with fewer cards than the longest pile in this group only accepts a card whose rank
+    /// matches the card at the same index in the longest pile.
+    #[serde(default)]
+    pub match_longest_rank: bool,
+    /// Most cards that may be placed onto an empty pile in one move. Default: same as `max_accept`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_max_accept: Option<u16>,
+    /// Accept cards only when the destination pile is empty (even if `build` is set for moving runs).
+    #[serde(default)]
+    pub accept_only_when_empty: bool,
+    /// Accept cards only when the stock pile is empty.
+    #[serde(default)]
+    pub accept_when_stock_empty: bool,
+    /// When a pile in this group becomes empty, shift the movable face-up run from the next pile
+    /// into it, leaving any face-down cards behind.
+    #[serde(default)]
+    pub compact_face_up: bool,
+    /// When refilling from a multi-pile group in `refill_from`, take from the pile with the most
+    /// cards (ties broken by lowest index) rather than the first non-empty pile.
+    #[serde(default)]
+    pub refill_largest: bool,
+    /// Refill a pile in this group only when a move just emptied it, rather than also filling
+    /// pre-existing empty piles when a refill source later receives a card.
+    #[serde(default)]
+    pub refill_on_empty: bool,
+}
+
+/// Rules for some piles of a group that differ from the group's. Fields left out keep the
+/// group's value.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct PileOverride {
+    /// Indices within the group.
+    pub piles: Vec<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build: Option<Build>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty: Option<EmptyRule>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moves: Option<MoveUnit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_cards: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_accept: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_max_accept: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suit: Option<Suit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_suit: Option<Suit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<Color>,
+}
+
+impl PileOverride {
+    pub fn on(piles: &[u16]) -> PileOverride {
+        PileOverride {
+            piles: piles.to_vec(),
+            ..PileOverride::default()
+        }
+    }
+
+    pub fn build(mut self, b: Build) -> Self {
+        self.build = Some(b);
+        self
+    }
+
+    pub fn empty(mut self, e: EmptyRule) -> Self {
+        self.empty = Some(e);
+        self
+    }
+
+    pub fn suit(mut self, s: Suit) -> Self {
+        self.suit = Some(s);
+        self
+    }
+
+    pub fn empty_suit(mut self, s: Suit) -> Self {
+        self.empty_suit = Some(s);
+        self
+    }
+}
+
+/// Accept `"x"` or `["x", "y"]` (or one object or a list of them).
+fn one_or_many<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany<T> {
+        One(T),
+        Many(Vec<T>),
+    }
+    Ok(match OneOrMany::<T>::deserialize(d)? {
+        OneOrMany::One(t) => vec![t],
+        OneOrMany::Many(v) => v,
+    })
+}
+
+impl GroupRules {
+    /// A group with every optional field at its kind's default.
+    pub fn new(name: &str, kind: PileKind, count: u16) -> GroupRules {
+        GroupRules {
+            name: name.to_string(),
+            kind,
+            count,
+            build: None,
+            empty: None,
+            moves: None,
+            max_cards: None,
+            max_accept: None,
+            accepts_from: None,
+            refill_from: Vec::new(),
+            reach: None,
+            compact: false,
+            suit: None,
+            empty_suit: None,
+            color: None,
+            piles: Vec::new(),
+            layout: None,
+            complete_runs: false,
+            wild: None,
+            requires_rank_on_prev: false,
+            match_longest_rank: false,
+            empty_max_accept: None,
+            accept_only_when_empty: false,
+            accept_when_stock_empty: false,
+            compact_face_up: false,
+            refill_largest: false,
+            refill_on_empty: false,
+        }
+    }
+
+    pub fn build(mut self, by: BuildBy, dir: Dir) -> Self {
+        self.build = Some(Build {
+            by,
+            dir,
+            ..Build::default()
+        });
+        self
+    }
+
+    pub fn build_rule(mut self, b: Build) -> Self {
+        self.build = Some(b);
+        self
+    }
+
+    pub fn empty(mut self, e: EmptyRule) -> Self {
+        self.empty = Some(e);
+        self
+    }
+
+    pub fn moves(mut self, m: MoveUnit) -> Self {
+        self.moves = Some(m);
+        self
+    }
+
+    pub fn max_cards(mut self, n: u16) -> Self {
+        self.max_cards = Some(n);
+        self
+    }
+
+    pub fn max_accept(mut self, n: u16) -> Self {
+        self.max_accept = Some(n);
+        self
+    }
+
+    pub fn accepts_from(mut self, groups: &[&str]) -> Self {
+        self.accepts_from = Some(groups.iter().map(|s| s.to_string()).collect());
+        self
+    }
+
+    pub fn refill_from(mut self, groups: &[&str]) -> Self {
+        self.refill_from = groups.iter().map(|s| s.to_string()).collect();
+        self
+    }
+
+    pub fn suit(mut self, s: Suit) -> Self {
+        self.suit = Some(s);
+        self
+    }
+
+    pub fn empty_suit(mut self, s: Suit) -> Self {
+        self.empty_suit = Some(s);
+        self
+    }
+
+    /// Override rules for some piles of the group.
+    pub fn pile(mut self, o: PileOverride) -> Self {
+        self.piles.push(o);
+        self
+    }
+
+    pub fn layout(mut self, l: Layout) -> Self {
+        self.layout = Some(l);
+        self
+    }
+
+    pub fn complete_runs(mut self) -> Self {
+        self.complete_runs = true;
+        self
+    }
+
+    pub fn wild(mut self, wild: bool) -> Self {
+        self.wild = Some(wild);
+        self
+    }
+
+    pub fn requires_rank_on_prev(mut self) -> Self {
+        self.requires_rank_on_prev = true;
+        self
+    }
+
+    pub fn match_longest_rank(mut self) -> Self {
+        self.match_longest_rank = true;
+        self
+    }
+
+    pub fn empty_max_accept(mut self, n: u16) -> Self {
+        self.empty_max_accept = Some(n);
+        self
+    }
+
+    pub fn accept_only_when_empty(mut self) -> Self {
+        self.accept_only_when_empty = true;
+        self
+    }
+
+    pub fn accept_when_stock_empty(mut self) -> Self {
+        self.accept_when_stock_empty = true;
+        self
+    }
+
+    pub fn compact_face_up(mut self) -> Self {
+        self.compact_face_up = true;
+        self
+    }
+
+    pub fn refill_largest(mut self) -> Self {
+        self.refill_largest = true;
+        self
+    }
+
+    pub fn refill_on_empty(mut self) -> Self {
+        self.refill_on_empty = true;
+        self
+    }
+}
+
+/// How cards are built on one another.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct Build {
+    pub by: BuildBy,
+    #[serde(default)]
+    pub dir: Dir,
+    /// The sequence wraps: king to ace and ace to king.
+    #[serde(default)]
+    pub wrap: bool,
+    /// Ranks between consecutive cards (default 1).
+    #[serde(default = "one_u8")]
+    pub step: u8,
+    /// Nothing may be built on cards of these ranks (Golf: kings).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blocked_ranks: Vec<u8>,
+}
+
+impl Build {
+    /// Build `by` a suit or colour relation in direction `dir`, one rank at a time.
+    pub fn new(by: BuildBy, dir: Dir) -> Build {
+        Build {
+            by,
+            dir,
+            ..Build::default()
+        }
+    }
+
+    pub fn wrap(mut self) -> Self {
+        self.wrap = true;
+        self
+    }
+
+    pub fn step(mut self, step: u8) -> Self {
+        self.step = step;
+        self
+    }
+
+    pub fn blocked_ranks(mut self, ranks: &[u8]) -> Self {
+        self.blocked_ranks = ranks.to_vec();
+        self
+    }
+}
+
+impl Default for Build {
+    fn default() -> Self {
+        Build {
+            by: BuildBy::None,
+            dir: Dir::Down,
+            wrap: false,
+            step: 1,
+            blocked_ranks: Vec::new(),
+        }
+    }
+}
+
+/// The suit or colour relation between a card and the card placed on it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum BuildBy {
+    /// Nothing may be built.
+    None,
+    /// Any suit.
+    Any,
+    /// Same suit.
+    Suit,
+    /// Alternate colours.
+    Alternate,
+    /// Same colour.
+    SameColor,
+    /// Any suit but the same one.
+    OtherSuit,
+    /// The same suit or the same rank (Accordion; pair with `dir: any`).
+    SuitOrRank,
+}
+
+/// Rank direction from a card to the card placed on it.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum Dir {
+    #[default]
+    Down,
+    Up,
+    /// Up or down.
+    Either,
+    /// Same rank.
+    Same,
+    /// Any rank at all (a pile that takes anything, subject to `by`).
+    Any,
+}
+
+/// What an empty pile accepts.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum EmptyRule {
+    /// Nothing.
+    None,
+    /// Any card (or any movable unit).
+    Any,
+    /// Only a card of this rank (13 for "kings only").
+    Rank(u8),
+    /// Only a card whose rank is in this list (e.g. `[1, 13]` for Ace or King).
+    Ranks(Vec<u8>),
+    /// Only a card of the rank turned up by the deal (Canfield). See [`DealStep::set_base`].
+    DealtBase,
+    /// Only the card this many places after the rank turned up by the deal, going round the
+    /// pack's ranks: `-1` is the rank below the base (Penguin's columns, which take the card
+    /// that would sit under the foundations' base). See [`DealStep::set_base`].
+    DealtBaseOffset(i8),
+    /// In a grid: a card that could be built (by this pile's build rule) on the top card of
+    /// the pile to the left; in the first column, a card of rank `first` (Montana's gaps).
+    AfterLeft { first: u8 },
+}
+
+/// Which cards may leave a pile together.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum MoveUnit {
+    /// No card may leave.
+    None,
+    /// The top card only.
+    Top,
+    /// Any built sequence (by this group's build rule) from the top.
+    Run,
+    /// Any built sequence from the top whose cards are all one suit (Spider).
+    SuitRun,
+    /// Any number of face-up cards from the top, built or not (Yukon).
+    AnyFaceUp,
+    /// A built sequence, as long as free cells and empty piles would allow moving it one card at
+    /// a time (FreeCell's "supermove"): (empty cells + 1) × 2^(empty piles).
+    Supermove,
+    /// Only the whole pile, all face up.
+    Whole,
+    /// Either the top card alone, or the whole pile when all face up and built in sequence.
+    TopOrWhole,
+}
+
+/// Overlapping piles: a pile is playable only once every pile covering it is empty.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum Layout {
+    /// A triangle with `rows` rows (row r has r + 1 piles); each pile is covered by the two
+    /// below it. Group count must be rows × (rows + 1) / 2.
+    Pyramid { rows: u16 },
+    /// Three peaks of 3 rows each over a base row of 10 (28 piles).
+    TriPeaks,
+    /// Explicit: `covered_by[i]` lists the piles (indices within the group) covering pile i.
+    Covers { covered_by: Vec<Vec<u16>> },
+    /// Rows of `columns` piles, read left to right (gap games: Montana). Nothing covers
+    /// anything; the layout gives each pile a left neighbour.
+    Grid { columns: u16 },
+}
+
+/// How the stock deals.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct StockRules {
+    /// Group the stock deals to. If it is a waste or foundation, `count` cards go onto its first
+    /// pile. Otherwise (tableau, reserve, cell), `count` rounds of one card go to each pile in
+    /// turn while cards remain.
+    pub to: String,
+    /// Cards per deal (or rounds per deal for multi-pile targets).
+    #[serde(default = "one")]
+    pub count: u16,
+    /// Times the waste may be turned back into the stock.
+    #[serde(default)]
+    pub redeals: u32,
+    /// The waste may be turned back any number of times (overrides `redeals`).
+    #[serde(default)]
+    pub unlimited_redeals: bool,
+    /// The stock may not deal while any pile of the target group is empty (Spider).
+    #[serde(default)]
+    pub require_no_empty: bool,
+    /// Deal by itself whenever the waste is empty (and the stock isn't).
+    #[serde(default)]
+    pub auto: bool,
+    /// For a multi-pile target: deal `count` cards into the first empty pile instead of one to
+    /// every pile (Accordion).
+    #[serde(default)]
+    pub first_empty: bool,
+    /// Deal only when the target pile is empty: each card must be played before the next is
+    /// turned (Calculation, Sir Tommy).
+    #[serde(default)]
+    pub only_when_empty: bool,
+    /// For a multi-pile target: deal only to non-empty piles (or to the first pile if all are
+    /// empty).
+    #[serde(default)]
+    pub skip_empty: bool,
+    /// Keep the top card of the stock turned face up so it may be played or removed directly.
+    #[serde(default)]
+    pub face_up: bool,
+}
+
+impl StockRules {
+    /// Deal one card at a time to `group`, with no redeals and no other conditions.
+    pub fn to(group: &str) -> StockRules {
+        StockRules {
+            to: group.to_string(),
+            count: 1,
+            redeals: 0,
+            unlimited_redeals: false,
+            require_no_empty: false,
+            auto: false,
+            first_empty: false,
+            only_when_empty: false,
+            skip_empty: false,
+            face_up: false,
+        }
+    }
+}
+
+/// Gathering a group's cards and dealing them out again.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct RedealRules {
+    /// The group gathered and redealt.
+    pub group: String,
+    /// How many redeals are allowed.
+    #[serde(default)]
+    pub times: u32,
+    /// Any number of redeals (overrides `times`).
+    #[serde(default)]
+    pub unlimited: bool,
+    pub how: RedealHow,
+}
+
+impl RedealRules {
+    /// One redeal of `group`, dealt `how`. Set `times` or `unlimited` for more.
+    pub fn new(group: &str, how: RedealHow) -> RedealRules {
+        RedealRules {
+            group: group.to_string(),
+            times: 1,
+            unlimited: false,
+            how,
+        }
+    }
+}
+
+/// How a redeal deals the gathered cards.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum RedealHow {
+    /// Keep the cards in order and deal them back `per_pile` at a time to each pile in turn,
+    /// starting from the first pile's top cards (Cruel). Fewer piles may end up in use. If there
+    /// are more cards than `per_pile` for every pile, the surplus is shared out: each pile gets
+    /// an equal part and the first few one more.
+    Regroup { per_pile: u16 },
+    /// Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie),
+    /// sharing out any surplus as for [`RedealHow::Regroup`].
+    Shuffle { per_pile: u16 },
+    /// Grid games: leave each row's built sequence in place, shuffle every other card, and
+    /// deal them back leaving one gap straight after each sequence (Montana).
+    GridShuffle,
+    /// Close the gaps: slide the cards forward in reading order, then fill the empty places
+    /// at the end from `refill_from`'s top card, turned face up (Monte Carlo).
+    Compact {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        refill_from: Option<String>,
+    },
+}
+
+/// One step of the opening deal.
+///
+/// Cards come off the shuffled pack in order. With `count` or `counts`, they are dealt in rows:
+/// one card to each selected pile, then the next row, as a person would deal them.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct DealStep {
+    /// Target group.
+    pub to: String,
+    /// Piles of the group to deal to (indices). Default: all.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piles: Option<Vec<u16>>,
+    /// Cards to each selected pile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<u16>,
+    /// Cards to each selected pile, per pile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub counts: Option<Vec<u16>>,
+    /// Deal every remaining card, round-robin over the selected piles.
+    #[serde(default)]
+    pub rest: bool,
+    /// Take every card of these ranks out of the pack and put one on each selected pile in
+    /// turn (Beleaguered Castle's aces).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ranks: Option<Vec<u8>>,
+    /// Face up (default) or face down.
+    #[serde(default = "yes")]
+    pub face_up: bool,
+    /// After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen).
+    #[serde(default)]
+    pub kings_to_bottom: bool,
+    /// With `ranks`: take only the first card of each listed rank, in the listed order
+    /// (Calculation's A, 2, 3, 4).
+    #[serde(default)]
+    pub one_each: bool,
+    /// After this step, take every card of these ranks off the table and put them on this
+    /// step's group (Montana: deal all 52, then remove the aces to leave gaps).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub collect: Option<Vec<u8>>,
+    /// The first card this step deals sets the base rank for [`EmptyRule::DealtBase`].
+    #[serde(default)]
+    pub set_base: bool,
+    /// Take every remaining card of the dealt base rank out of the pack and put one on each
+    /// selected pile in turn (requires an earlier step with `set_base`).
+    #[serde(default)]
+    pub of_base: bool,
+}
+
+impl DealStep {
+    pub fn to(group: &str) -> DealStep {
+        DealStep {
+            to: group.to_string(),
+            face_up: true,
+            ..DealStep::default()
+        }
+    }
+
+    pub fn each(mut self, n: u16) -> Self {
+        self.count = Some(n);
+        self
+    }
+
+    pub fn counts(mut self, c: &[u16]) -> Self {
+        self.counts = Some(c.to_vec());
+        self
+    }
+
+    pub fn rest(mut self) -> Self {
+        self.rest = true;
+        self
+    }
+
+    pub fn piles(mut self, p: &[u16]) -> Self {
+        self.piles = Some(p.to_vec());
+        self
+    }
+
+    pub fn ranks(mut self, r: &[u8]) -> Self {
+        self.ranks = Some(r.to_vec());
+        self
+    }
+
+    pub fn down(mut self) -> Self {
+        self.face_up = false;
+        self
+    }
+
+    pub fn kings_to_bottom(mut self) -> Self {
+        self.kings_to_bottom = true;
+        self
+    }
+
+    pub fn collect(mut self, ranks: &[u8]) -> Self {
+        self.collect = Some(ranks.to_vec());
+        self
+    }
+
+    pub fn one_each(mut self) -> Self {
+        self.one_each = true;
+        self
+    }
+
+    pub fn set_base(mut self) -> Self {
+        self.set_base = true;
+        self
+    }
+}
+
+/// Card-removal mechanics.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct RemovalRules {
+    pub kind: RemovalKind,
+    /// Groups whose playable top cards may be removed.
+    pub from: Vec<String>,
+    /// Group (its first pile) the removed cards go to.
+    pub to: String,
+    /// Cards must be neighbours in their grid (all from one grid group).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adjacent: Option<Adjacency>,
+}
+
+impl RemovalRules {
+    /// Remove cards of `kind` from the playable tops of `from` to `to`'s first pile.
+    pub fn new(kind: RemovalKind, from: &[&str], to: &str) -> RemovalRules {
+        RemovalRules {
+            kind,
+            from: from.iter().map(|s| s.to_string()).collect(),
+            to: to.to_string(),
+            adjacent: None,
+        }
+    }
+}
+
+/// Which grid positions count as neighbours.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum Adjacency {
+    /// Horizontally, vertically or diagonally next to each other (Monte Carlo).
+    Eight,
+    /// Horizontally or vertically next to each other.
+    Four,
+}
+
+/// Jokers are wild in removals: a joker pairs with any card (another joker too) and stands for
+/// any one rank of a set. `lower_of_suit` ignores them.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum RemovalKind {
+    /// Remove two playable cards whose ranks add up to `total` (Pyramid: 13), or one card
+    /// whose rank is listed in `alone` (Pyramid: kings).
+    PairsSum {
+        total: u8,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        alone: Vec<u8>,
+    },
+    /// Remove a playable card when another playable card is of the same suit and higher in the
+    /// pack's rank order (Aces Up).
+    LowerOfSuit,
+    /// Remove two playable cards of the same rank (Nestor, Simple Pairs).
+    SameRank,
+    /// Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).
+    RankSet { ranks: Vec<u8> },
+}
+
+/// When the game is won.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum WinRule {
+    /// Every card is on a foundation.
+    #[default]
+    AllOnFoundations,
+    /// These groups are empty (Pyramid, Golf, TriPeaks: the tableau).
+    Empty(Vec<String>),
+    /// A group holds at least this many cards (Aces Up: 48 discarded).
+    Count { group: String, cards: u16 },
+    /// At most this many piles of a group hold cards (Accordion: 1).
+    AtMostPiles { group: String, piles: u16 },
+    /// Every row of a grid group holds a built sequence from its first column, `length` cards
+    /// long (default: one less than the row), starting with the rank its first column takes
+    /// (Montana).
+    Rows {
+        group: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        length: Option<u16>,
+    },
+    /// The position scores at least this many points (see [`Rules::score`]).
+    Score { at_least: u32 },
+}
+
+/// How a position is scored.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct ScoreRules {
+    /// A grid group. Each of its rows and each of its columns is scored as a hand.
+    pub group: String,
+    pub hands: Hands,
+}
+
+impl ScoreRules {
+    /// Score each row and column of the grid group `group` as a hand.
+    pub fn new(group: &str, hands: Hands) -> ScoreRules {
+        ScoreRules {
+            group: group.to_string(),
+            hands,
+        }
+    }
+}
+
+/// How a hand (the cards in one row or column) scores.
+///
+/// A joker in a hand counts as whichever card scores that hand best. Each hand is valued on its
+/// own, so a joker shared by a row and a column (or a joker starter) may stand for different
+/// cards in each.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum Hands {
+    /// As a poker hand: its best five-card poker combination. Straights and flushes need five
+    /// cards; pairs and sets count in a line of any length.
+    Poker(PokerTable),
+    /// As a cribbage hand, together with a shared starter card (Cribbage Squares).
+    Cribbage(CribbageRules),
+}
+
+/// Cribbage scoring. Each line is a hand; once every pile of the grid holds a card, the
+/// starter joins every hand as a fifth card. Fifteens, pairs and runs count in a line of any
+/// length; a flush needs a full line of at least four cards.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct CribbageRules {
+    /// Group whose first pile's top card is the starter, read when the grid is full. Usually
+    /// the waste: the card turned after the grid is filled. No starter if left out or empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starter: Option<String>,
+    #[serde(default, skip_serializing_if = "CribbagePoints::is_standard")]
+    pub points: CribbagePoints,
+}
+
+impl CribbageRules {
+    /// Standard points, with the starter on top of `group`'s first pile.
+    pub fn with_starter(group: &str) -> CribbageRules {
+        CribbageRules {
+            starter: Some(group.to_string()),
+            points: CribbagePoints::default(),
+        }
+    }
+}
+
+impl Default for CribbageRules {
+    /// Standard points, no starter.
+    fn default() -> Self {
+        CribbageRules {
+            starter: None,
+            points: CribbagePoints::default(),
+        }
+    }
+}
+
+/// Points for each cribbage combination. Defaults are the standard values.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+#[non_exhaustive]
+pub struct CribbagePoints {
+    /// Each different set of cards adding up to 15 (court cards count 10, aces 1).
+    pub fifteen: u32,
+    /// Each pair of cards of the same rank.
+    pub pair: u32,
+    /// Each card of each run of three or more ranks in sequence (ace low), counted once per
+    /// different set of cards making the run.
+    pub run_card: u32,
+    /// A full line all of one suit.
+    pub flush: u32,
+    /// More when the starter is that suit too.
+    pub flush_starter: u32,
+    /// For each hand holding the jack of the starter's suit ("one for his nob").
+    pub nobs: u32,
+    /// Once, if the starter is a jack ("two for his heels").
+    pub heels: u32,
+}
+
+impl Default for CribbagePoints {
+    fn default() -> Self {
+        CribbagePoints {
+            fifteen: 2,
+            pair: 2,
+            run_card: 1,
+            flush: 4,
+            flush_starter: 1,
+            nobs: 1,
+            heels: 2,
+        }
+    }
+}
+
+impl CribbagePoints {
+    pub fn is_standard(&self) -> bool {
+        *self == CribbagePoints::default()
+    }
+}
+
+/// Points for each poker hand: a named table or explicit points.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+#[non_exhaustive]
+pub enum PokerTable {
+    Named(PokerScoring),
+    Points(PokerPoints),
+}
+
+impl PokerTable {
+    pub fn points(&self) -> PokerPoints {
+        match self {
+            PokerTable::Named(PokerScoring::American) => PokerPoints {
+                pair: 2,
+                two_pair: 5,
+                three: 10,
+                straight: 15,
+                flush: 20,
+                full_house: 25,
+                four: 50,
+                straight_flush: 75,
+                royal_flush: 100,
+            },
+            PokerTable::Named(PokerScoring::English) => PokerPoints {
+                pair: 1,
+                two_pair: 3,
+                three: 6,
+                straight: 12,
+                flush: 5,
+                full_house: 10,
+                four: 16,
+                straight_flush: 30,
+                royal_flush: 30,
+            },
+            PokerTable::Points(p) => p.clone(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum PokerScoring {
+    /// Pair 2, two pair 5, three of a kind 10, straight 15, flush 20, full house 25, four of a
+    /// kind 50, straight flush 75, royal flush 100.
+    American,
+    /// Pair 1, two pair 3, three of a kind 6, straight 12, flush 5, full house 10, four of a
+    /// kind 16, straight or royal flush 30.
+    English,
+}
+
+/// Points per poker hand. A hand counts as its highest-ranking combination (in the usual poker
+/// order), whatever the points.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+#[non_exhaustive]
+pub struct PokerPoints {
+    pub pair: u32,
+    pub two_pair: u32,
+    pub three: u32,
+    pub straight: u32,
+    pub flush: u32,
+    pub full_house: u32,
+    pub four: u32,
+    pub straight_flush: u32,
+    pub royal_flush: u32,
+}
+
+#[cfg(feature = "json")]
+impl Rules {
+    pub fn from_json(s: &str) -> Result<Rules, serde_json::Error> {
+        serde_json::from_str(s)
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string_pretty(self).expect("rules serialize")
+    }
+}

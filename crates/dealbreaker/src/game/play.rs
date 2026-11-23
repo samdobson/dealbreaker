@@ -147,7 +147,9 @@ impl Game {
                 );
                 // With unlimited redeals the count can't matter, and tracking it would make every
                 // pass through the stock a new position.
-                if st.redeals != u32::MAX {
+                if st.redeals != u32::MAX
+                    || (s.redeals_used as usize) + 1 < st.count_per_round.len()
+                {
                     self.push(s, j, Op::Redeal);
                 }
                 if !self.simple_settle || st.face_up || self.has_covers {
@@ -181,47 +183,93 @@ impl Game {
                     }
                 }
             }
-            if st.redeals != u32::MAX {
+            if st.redeals != u32::MAX || (s.redeals_used as usize) + 1 < st.count_per_round.len() {
                 self.push(s, j, Op::Redeal);
             }
         }
         let stock_len = s.piles[st.pile as usize].len() as u16;
         if stock_len > 0 {
-            match st.target_kind {
-                PileKind::Waste | PileKind::Foundation => {
-                    let n = st.count.min(stock_len);
-                    self.deal_from_stock(s, j, st.pile, tg.start, n);
-                }
-                _ if st.first_empty => {
-                    if let Some(p) = tg.piles().find(|&p| s.piles[p as usize].is_empty()) {
-                        let n = st.count.min(stock_len);
-                        self.deal_from_stock(s, j, st.pile, p, n);
+            let count = st.deal_count(s.redeals_used);
+            if let Some(ft) = st
+                .final_to
+                .filter(|&ft| stock_len <= self.groups[ft as usize].count)
+            {
+                let fg = &self.groups[ft as usize];
+                for p in fg.piles() {
+                    if s.piles[st.pile as usize].is_empty() {
+                        break;
                     }
+                    self.deal_from_stock(s, j, st.pile, p, 1);
                 }
-                _ if st.skip_empty => {
-                    let mut targets: Vec<u16> = tg
-                        .piles()
-                        .filter(|&p| !s.piles[p as usize].is_empty())
-                        .collect();
-                    if targets.is_empty() {
-                        targets.push(tg.start);
+            } else {
+                match st.target_kind {
+                    PileKind::Waste | PileKind::Foundation => {
+                        let n = count.min(stock_len);
+                        let dest = st
+                            .piles
+                            .as_ref()
+                            .and_then(|v| v.first().copied())
+                            .unwrap_or(tg.start);
+                        self.deal_from_stock(s, j, st.pile, dest, n);
                     }
-                    for _ in 0..st.count {
-                        for &p in &targets {
-                            if s.piles[st.pile as usize].is_empty() {
-                                break;
+                    _ if st.first_empty => {
+                        let found = match &st.piles {
+                            Some(ps) => {
+                                ps.iter().copied().find(|&p| s.piles[p as usize].is_empty())
                             }
-                            self.deal_from_stock(s, j, st.pile, p, 1);
+                            None => tg.piles().find(|&p| s.piles[p as usize].is_empty()),
+                        };
+                        if let Some(p) = found {
+                            let n = count.min(stock_len);
+                            self.deal_from_stock(s, j, st.pile, p, n);
                         }
                     }
-                }
-                _ => {
-                    for _ in 0..st.count {
-                        for p in tg.piles() {
-                            if s.piles[st.pile as usize].is_empty() {
-                                break;
+                    _ if st.skip_empty => {
+                        let mut targets: Vec<u16> = match &st.piles {
+                            Some(ps) => ps
+                                .iter()
+                                .copied()
+                                .filter(|&p| !s.piles[p as usize].is_empty())
+                                .collect(),
+                            None => tg
+                                .piles()
+                                .filter(|&p| !s.piles[p as usize].is_empty())
+                                .collect(),
+                        };
+                        if targets.is_empty() {
+                            targets.push(
+                                st.piles
+                                    .as_ref()
+                                    .and_then(|v| v.first().copied())
+                                    .unwrap_or(tg.start),
+                            );
+                        }
+                        for _ in 0..count {
+                            for &p in &targets {
+                                if s.piles[st.pile as usize].is_empty() {
+                                    break;
+                                }
+                                self.deal_from_stock(s, j, st.pile, p, 1);
                             }
-                            self.deal_from_stock(s, j, st.pile, p, 1);
+                        }
+                    }
+                    _ => {
+                        for _ in 0..count {
+                            if let Some(ps) = &st.piles {
+                                for &p in ps {
+                                    if s.piles[st.pile as usize].is_empty() {
+                                        break;
+                                    }
+                                    self.deal_from_stock(s, j, st.pile, p, 1);
+                                }
+                            } else {
+                                for p in tg.piles() {
+                                    if s.piles[st.pile as usize].is_empty() {
+                                        break;
+                                    }
+                                    self.deal_from_stock(s, j, st.pile, p, 1);
+                                }
+                            }
                         }
                     }
                 }
@@ -566,7 +614,32 @@ impl Game {
                     });
                     if let Some(q) = src {
                         if self.group_of(q).kind == PileKind::Stock {
-                            self.deal_from_stock(s, j, q, p, 1);
+                            let via_waste = self.stock.as_ref().and_then(|st| {
+                                if st.pile == q
+                                    && st.target_kind == PileKind::Waste
+                                    && g.refill_from.contains(&st.target)
+                                {
+                                    let c = st.deal_count(s.redeals_used);
+                                    (c > 1).then_some((self.groups[st.target as usize].start, c))
+                                } else {
+                                    None
+                                }
+                            });
+                            if let Some((waste, c)) = via_waste {
+                                let n = c.min(s.piles[q as usize].len() as u16);
+                                self.deal_from_stock(s, j, q, waste, n);
+                                self.push(
+                                    s,
+                                    j,
+                                    Op::Shift {
+                                        from: waste,
+                                        to: p,
+                                        count: 1,
+                                    },
+                                );
+                            } else {
+                                self.deal_from_stock(s, j, q, p, 1);
+                            }
                         } else {
                             self.push(
                                 s,
@@ -591,7 +664,9 @@ impl Game {
                     && s.piles[target as usize].is_empty()
                     && !s.piles[st.pile as usize].is_empty()
                 {
-                    let n = st.count.min(s.piles[st.pile as usize].len() as u16);
+                    let n = st
+                        .deal_count(s.redeals_used)
+                        .min(s.piles[st.pile as usize].len() as u16);
                     self.deal_from_stock(s, j, st.pile, target, n);
                     changed = true;
                 }

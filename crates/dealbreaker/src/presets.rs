@@ -209,6 +209,9 @@ fn to_waste(count: u16, redeals: Option<u32>) -> StockRules {
         only_when_empty: false,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     }
 }
 
@@ -449,6 +452,9 @@ pub fn spider(suits: u8) -> Rules {
         only_when_empty: false,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     });
     if suits >= 4 {
         // Tuned on deals 101-120, checked on 121-140: with four suits, cards out of sequence
@@ -511,6 +517,9 @@ pub fn scorpion() -> Rules {
         only_when_empty: false,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     });
     r
 }
@@ -567,6 +576,9 @@ pub fn gypsy() -> Rules {
         only_when_empty: false,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     });
     r
 }
@@ -667,6 +679,9 @@ pub fn golf() -> Rules {
         only_when_empty: false,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     });
     r.win = WinRule::Empty(vec!["tableau".into()]);
     r
@@ -771,6 +786,9 @@ pub fn aces_up() -> Rules {
         only_when_empty: false,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     });
     r.removal = vec![RemovalRules {
         kind: RemovalKind::LowerOfSuit,
@@ -801,6 +819,9 @@ fn hand_stock() -> StockRules {
         only_when_empty: true,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     }
 }
 
@@ -1144,6 +1165,9 @@ pub fn accordion() -> Rules {
         only_when_empty: false,
         skip_empty: false,
         face_up: false,
+        count_per_round: Vec::new(),
+        final_to: None,
+        piles: None,
     });
     r.win = WinRule::AtMostPiles {
         group: "tableau".into(),

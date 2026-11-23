@@ -386,6 +386,13 @@ pub struct GroupRules {
     /// pre-existing empty piles when a refill source later receives a card.
     #[serde(default)]
     pub refill_on_empty: bool,
+    /// Each pile after the first may only be started (while empty) once the previous pile in the
+    /// group is non-empty.
+    #[serde(default)]
+    pub requires_prev_non_empty: bool,
+    /// Most consecutive face-up cards of the same rank allowed at the top of a pile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_same_rank: Option<u8>,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -495,6 +502,8 @@ impl GroupRules {
             compact_face_up: false,
             refill_largest: false,
             refill_on_empty: false,
+            requires_prev_non_empty: false,
+            max_same_rank: None,
         }
     }
 
@@ -610,6 +619,16 @@ impl GroupRules {
 
     pub fn refill_on_empty(mut self) -> Self {
         self.refill_on_empty = true;
+        self
+    }
+
+    pub fn requires_prev_non_empty(mut self) -> Self {
+        self.requires_prev_non_empty = true;
+        self
+    }
+
+    pub fn max_same_rank(mut self, n: u8) -> Self {
+        self.max_same_rank = Some(n);
         self
     }
 }
@@ -819,6 +838,17 @@ pub struct StockRules {
     /// Keep the top card of the stock turned face up so it may be played or removed directly.
     #[serde(default)]
     pub face_up: bool,
+    /// Cards per deal on each round (0-indexed by redeals used). When non-empty, overrides `count`;
+    /// rounds past the end reuse the last entry.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub count_per_round: Vec<u16>,
+    /// For a multi-pile target: when the remaining stock has at most as many cards as this group
+    /// has piles, deal one card to each pile of this group instead of `to`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_to: Option<String>,
+    /// Specific piles of `to` to deal to (indices within the group). Default: all piles.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piles: Option<Vec<u16>>,
 }
 
 impl StockRules {
@@ -835,6 +865,9 @@ impl StockRules {
             only_when_empty: false,
             skip_empty: false,
             face_up: false,
+            count_per_round: Vec::new(),
+            final_to: None,
+            piles: None,
         }
     }
 }
@@ -941,6 +974,10 @@ pub struct DealStep {
     /// selected pile in turn (requires an earlier step with `set_base`).
     #[serde(default)]
     pub of_base: bool,
+    /// Pull one card of each suit (in pack suit order) from the deck per round (repeated `count`
+    /// times, default 1), placing them on the selected piles in turn.
+    #[serde(default)]
+    pub one_per_suit: bool,
 }
 
 impl DealStep {

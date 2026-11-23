@@ -166,6 +166,7 @@ impl Game {
                     && g.kind == PileKind::Foundation
                     && !g.complete_runs
                     && !g.requires_rank_on_prev
+                    && !g.requires_prev_non_empty
                     && !g.match_longest_rank
                     && build.by == BuildBy::Suit
                     && matches!(build.dir, Dir::Up | Dir::Down)
@@ -187,7 +188,8 @@ impl Game {
                     sink: moves == MoveUnit::None
                         && g.kind != PileKind::Stock
                         && !g.requires_rank_on_prev
-                        && !g.match_longest_rank,
+                        && !g.match_longest_rank
+                        && g.max_same_rank.is_none(),
                     admits,
                     empty_suit,
                     fits: [0; FACES],
@@ -222,7 +224,8 @@ impl Game {
                     && g.reach.is_none()
                     && !g.compact
                     && !g.compact_face_up
-                    && !g.requires_rank_on_prev,
+                    && !g.requires_rank_on_prev
+                    && !g.requires_prev_non_empty,
                 symmetric_when_no_stock: false,
                 symmetric_when_no_redeal: false,
                 sym_classes: Vec::new(),
@@ -240,6 +243,8 @@ impl Game {
                 compact_face_up: g.compact_face_up,
                 refill_largest: g.refill_largest,
                 refill_on_empty: g.refill_on_empty,
+                requires_prev_non_empty: g.requires_prev_non_empty,
+                max_same_rank: g.max_same_rank,
             });
             start = start
                 .checked_add(g.count)
@@ -287,6 +292,8 @@ impl Game {
                     compact_face_up: false,
                     refill_largest: false,
                     refill_on_empty: false,
+                    requires_prev_non_empty: false,
+                    max_same_rank: None,
                 });
                 pile_rules.push(PileRules {
                     build: Build::default(),
@@ -361,6 +368,42 @@ impl Game {
                 if sr.count == 0 {
                     return err("stock count must be at least 1");
                 }
+                if sr.count_per_round.contains(&0) {
+                    return err("stock count_per_round entries must be at least 1");
+                }
+                let final_to = match &sr.final_to {
+                    None => None,
+                    Some(name) => {
+                        let ft = find(name)?;
+                        let ftk = groups[ft as usize].kind;
+                        if matches!(ftk, PileKind::Stock) {
+                            return err("stock final_to can't be the stock");
+                        }
+                        if ftk != PileKind::Waste && ftk != PileKind::Foundation {
+                            if groups[ft as usize].symmetric && groups[ft as usize].count > 1 {
+                                groups[ft as usize].symmetric_when_no_stock = true;
+                            }
+                            groups[ft as usize].symmetric = false;
+                        }
+                        Some(ft)
+                    }
+                };
+                let piles = match &sr.piles {
+                    None => None,
+                    Some(ix) => {
+                        if ix.is_empty() {
+                            return err("stock piles must not be empty");
+                        }
+                        let mut out = Vec::with_capacity(ix.len());
+                        for &i in ix {
+                            if i >= groups[target as usize].count {
+                                return err(format!("stock piles: {:?} has no pile {i}", sr.to));
+                            }
+                            out.push(groups[target as usize].start + i);
+                        }
+                        Some(out)
+                    }
+                };
                 if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
                     return err(
                         "stock skip_empty can't be combined with require_no_empty or first_empty",
@@ -380,6 +423,9 @@ impl Game {
                     target,
                     target_kind: tk,
                     count: sr.count,
+                    count_per_round: sr.count_per_round.clone(),
+                    final_to,
+                    piles,
                     redeals: if sr.unlimited_redeals {
                         u32::MAX
                     } else {
@@ -670,7 +716,9 @@ impl Game {
                     && pr.empty_max_accept >= pr.max_accept
                     && !gr.accept_only_when_empty
                     && !gr.requires_rank_on_prev
+                    && !gr.requires_prev_non_empty
                     && !gr.match_longest_rank
+                    && gr.max_same_rank.is_none()
                     && (pr.admits & all_real_in_pack) == all_real_in_pack
             })
             .collect();
@@ -718,15 +766,17 @@ impl Game {
                 || gr.compact
                 || gr.compact_face_up
                 || gr.requires_rank_on_prev
+                || gr.requires_prev_non_empty
                 || is_refill_source[gi]
                 || game
                     .redeal
                     .as_ref()
                     .is_some_and(|rd| rd.group as usize == gi)
                 || game.stock.as_ref().is_some_and(|st| {
-                    st.target as usize == gi
+                    (st.target as usize == gi
                         && st.target_kind != PileKind::Waste
-                        && st.target_kind != PileKind::Foundation
+                        && st.target_kind != PileKind::Foundation)
+                        || st.final_to == Some(gi as u16)
                 })
                 || gr.piles().any(|p| !game.covered_by[p as usize].is_empty())
             {

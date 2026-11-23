@@ -1364,3 +1364,154 @@ fn dump_pile_safe_autoplay() {
     r.stock = Some(st);
     check(r, 0..40);
 }
+
+#[test]
+fn stock_count_per_round() {
+    let mut r = Rules::new(
+        "mini count per round",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 3),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Any),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("waste");
+    st.count_per_round = vec![3, 2, 1];
+    st.redeals = 2;
+    r.stock = Some(st);
+    check(r, 0..40);
+}
+
+#[test]
+fn stock_final_to() {
+    let mut r = Rules::new(
+        "mini stock final_to",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("reserve", PileKind::Reserve, 2),
+            GroupRules::new("foundation", PileKind::Foundation, 3),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Suit, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("reserve").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("reserve");
+    st.count = 2;
+    st.final_to = Some("tableau".into());
+    r.stock = Some(st);
+    check(r, 0..40);
+}
+
+#[test]
+fn stock_specific_piles() {
+    let mut r = Rules::new(
+        "mini stock piles",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 3),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Any),
+        ],
+        vec![
+            DealStep::to("tableau").each(2),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.piles = Some(vec![0]);
+    r.stock = Some(st);
+    check(r, 0..40);
+}
+
+#[test]
+fn refill_via_multi_waste() {
+    let mut r = Rules::new(
+        "mini multi-waste refill",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 3),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Any)
+                .refill_from(&["waste", "stock"]),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("waste");
+    st.count = 2;
+    st.redeals = 1;
+    r.stock = Some(st);
+    check(r, 0..40);
+}
+
+#[test]
+fn requires_prev_non_empty() {
+    let mut r = Rules::new(
+        "mini requires prev non empty",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 3)
+                .build_rule(Build::new(BuildBy::Any, Dir::Down).wrap())
+                .empty(EmptyRule::Rank(4))
+                .max_cards(4)
+                .requires_prev_non_empty()
+                .pile(PileOverride::on(&[1]).empty(EmptyRule::Rank(3)))
+                .pile(PileOverride::on(&[2]).empty(EmptyRule::Rank(2))),
+        ],
+        vec![DealStep::to("stock").rest().down()],
+    );
+    let mut st = StockRules::to("waste");
+    st.redeals = 2;
+    r.stock = Some(st);
+    check(r, 0..40);
+}
+
+#[test]
+fn max_same_rank_and_one_per_suit() {
+    let mut step_f = DealStep::to("foundation");
+    step_f.one_per_suit = true;
+    let r = Rules::new(
+        "mini max same rank + one per suit",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 3)
+                .build_rule(Build::new(BuildBy::Suit, Dir::Up).wrap())
+                .empty(EmptyRule::Any)
+                .max_cards(4),
+            GroupRules::new("tableau", PileKind::Tableau, 4)
+                .build(BuildBy::Any, Dir::Same)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::None)
+                .max_same_rank(2),
+        ],
+        vec![step_f, DealStep::to("tableau").rest()],
+    );
+    check(r, 0..40);
+}

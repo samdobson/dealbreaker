@@ -492,6 +492,30 @@ impl Game {
         if !ok {
             return false;
         }
+        if tg.requires_prev_non_empty
+            && dst.is_empty()
+            && to > tg.start
+            && s.piles[to as usize - 1].is_empty()
+        {
+            return false;
+        }
+        if let Some(limit) = tg.max_same_rank {
+            if !card.is_joker() {
+                let r = card.rank();
+                let existing = dst
+                    .iter()
+                    .rev()
+                    .take_while(|c| c.is_face_up() && !c.is_joker() && c.rank() == r)
+                    .count();
+                let incoming = src[src.len() - n..]
+                    .iter()
+                    .take_while(|c| !c.is_joker() && c.rank() == r)
+                    .count();
+                if existing + incoming > limit as usize {
+                    return false;
+                }
+            }
+        }
         if tg.requires_rank_on_prev && to > tg.start {
             let prev = &s.piles[to as usize - 1];
             if prev.is_empty() {
@@ -942,25 +966,26 @@ impl Game {
         }
         let Some(st) = &self.stock else { return false };
         if !s.piles[st.pile as usize].is_empty() {
-            if st.only_when_empty
-                && self.groups[st.target as usize]
+            let any_non_empty = || match &st.piles {
+                Some(ps) => ps.iter().any(|&p| !s.piles[p as usize].is_empty()),
+                None => self.groups[st.target as usize]
                     .piles()
-                    .any(|p| !s.piles[p as usize].is_empty())
-            {
+                    .any(|p| !s.piles[p as usize].is_empty()),
+            };
+            let any_empty = || match &st.piles {
+                Some(ps) => ps.iter().any(|&p| s.piles[p as usize].is_empty()),
+                None => self.groups[st.target as usize]
+                    .piles()
+                    .any(|p| s.piles[p as usize].is_empty()),
+            };
+            if st.only_when_empty && any_non_empty() {
                 return false;
             }
-            if st.first_empty
-                && !self.groups[st.target as usize]
-                    .piles()
-                    .any(|p| s.piles[p as usize].is_empty())
-            {
+            if st.first_empty && !any_empty() {
                 return false;
             }
-            if st.require_no_empty {
-                let tg = &self.groups[st.target as usize];
-                if tg.piles().any(|p| s.piles[p as usize].is_empty()) {
-                    return false;
-                }
+            if st.require_no_empty && any_empty() {
+                return false;
             }
             return true;
         }

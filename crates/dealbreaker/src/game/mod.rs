@@ -132,6 +132,10 @@ pub(crate) struct Group {
     pub refill_largest: bool,
     /// Refill a pile only when a move just emptied it.
     pub refill_on_empty: bool,
+    /// Each pile after the first may only start once the previous pile is non-empty.
+    pub requires_prev_non_empty: bool,
+    /// Most consecutive face-up cards of the same rank allowed at the top of a pile.
+    pub max_same_rank: Option<u8>,
 }
 
 #[derive(Clone, Debug)]
@@ -182,6 +186,9 @@ pub(crate) struct Stock {
     pub target: u16,
     pub target_kind: PileKind,
     pub count: u16,
+    pub count_per_round: Vec<u16>,
+    pub final_to: Option<u16>,
+    pub piles: Option<Vec<u16>>,
     pub redeals: u32,
     pub require_no_empty: bool,
     pub auto: bool,
@@ -189,6 +196,18 @@ pub(crate) struct Stock {
     pub first_empty: bool,
     pub skip_empty: bool,
     pub face_up: bool,
+}
+
+impl Stock {
+    #[inline]
+    pub fn deal_count(&self, redeals_used: u32) -> u16 {
+        if self.count_per_round.is_empty() {
+            self.count
+        } else {
+            let i = (redeals_used as usize).min(self.count_per_round.len() - 1);
+            self.count_per_round[i]
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

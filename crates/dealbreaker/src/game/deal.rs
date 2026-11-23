@@ -167,6 +167,24 @@ impl Game {
                         }
                     }
                 }
+            } else if step.one_per_suit {
+                let rounds = step.count.unwrap_or(1) as usize;
+                let mut taken = Vec::new();
+                for _ in 0..rounds {
+                    for &suit in &self.rules.pack.suits {
+                        let at = deck
+                            .iter()
+                            .position(|c| !c.is_joker() && c.suit() == suit)
+                            .ok_or_else(|| {
+                                RulesError(format!("deal: no card of suit {suit:?} left to take"))
+                            })?;
+                        taken.push(deck.remove(at).unwrap());
+                    }
+                }
+                taken.sort_by_key(|c| c.suit() as u8);
+                for (i, c) in taken.into_iter().enumerate() {
+                    put(&mut s, piles[i % piles.len()], c);
+                }
             } else if step.rest {
                 let mut i = 0;
                 while let Some(c) = deck.pop_front() {

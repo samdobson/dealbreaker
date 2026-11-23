@@ -789,7 +789,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
                 g.gen_actions(s, Some(waste), &mut buf);
             }
             let mut talon_forced = false;
-            if st.only_when_empty || (self.fast && st.count == 1) {
+            if st.only_when_empty || (self.fast && st.deal_count(s.redeals_used) == 1) {
                 if let Some(m) = self.forced(s, &buf) {
                     buf.clear();
                     buf.push(m);

@@ -100,6 +100,79 @@ impl Game {
         Ok(s)
     }
 
+    /// Parse a position for [`crate::hint`], allowing `"?"` or `"~?"` for unknown face-down cards.
+    ///
+    /// Concrete cards must form a valid subset of the game's pack and the number of `"?"` slots
+    /// must match the remaining unseen cards. Unknown slots are filled face down with the
+    /// remaining unseen cards in deterministic order so [`crate::hint`] can shuffle them across
+    /// all face-down slots. Use [`Game::state_from_data`] when every card must be known (for
+    /// [`crate::solve`] and [`crate::maximize`]).
+    pub fn hint_state_from_data(&self, d: &StateData) -> Result<State, StateError> {
+        let mut s = State {
+            piles: vec![Vec::new(); self.num_piles()],
+            redeals_used: d.redeals_used,
+            base_rank: d.base_rank,
+            seed: d.seed,
+        };
+        let mut unknown_slots: Vec<(usize, usize)> = Vec::new();
+        let mut concrete: Vec<Card> = Vec::new();
+        for (name, piles) in &d.piles {
+            let g = self
+                .groups
+                .iter()
+                .find(|g| &g.name == name && !g.hidden)
+                .ok_or_else(|| StateError(format!("no group named {name:?}")))?;
+            if piles.len() > g.count as usize {
+                return Err(StateError(format!(
+                    "{name:?} has {} piles, not {}",
+                    g.count,
+                    piles.len()
+                )));
+            }
+            for (i, pile) in piles.iter().enumerate() {
+                let p = g.start as usize + i;
+                for c in pile {
+                    let t = c.trim();
+                    if t == "?" || t == "~?" {
+                        let idx = s.piles[p].len();
+                        unknown_slots.push((p, idx));
+                        s.piles[p].push(Card::from_face(0).down());
+                    } else {
+                        let card: Card = c.parse().map_err(|e| StateError(format!("{e}")))?;
+                        concrete.push(card.up());
+                        s.piles[p].push(card);
+                    }
+                }
+            }
+        }
+        if !unknown_slots.is_empty() {
+            let mut want = self.pack_cards();
+            want.sort();
+            concrete.sort();
+            let extra = diff(&concrete, &want);
+            if !extra.is_empty() {
+                let names: Vec<String> = extra.iter().map(|c| c.to_string()).collect();
+                return Err(StateError(format!(
+                    "cards don't match the pack (extra: [{}])",
+                    names.join(" ")
+                )));
+            }
+            let remaining = diff(&want, &concrete);
+            if remaining.len() != unknown_slots.len() {
+                return Err(StateError(format!(
+                    "found {} unknown \"?\" card(s), expected {} to complete the pack",
+                    unknown_slots.len(),
+                    remaining.len()
+                )));
+            }
+            for ((p, idx), card) in unknown_slots.into_iter().zip(remaining) {
+                s.piles[p][idx] = card.down();
+            }
+        }
+        self.validate(&s)?;
+        Ok(s)
+    }
+
     /// Check a position holds exactly the game's pack, in piles of legal sizes.
     pub fn validate(&self, s: &State) -> Result<(), StateError> {
         if s.piles.len() != self.num_piles() {
@@ -137,6 +210,13 @@ impl Game {
     pub fn state_from_json(&self, json: &str) -> Result<State, StateError> {
         let d: StateData = serde_json::from_str(json).map_err(|e| StateError(e.to_string()))?;
         self.state_from_data(&d)
+    }
+
+    /// JSON form of [`Game::hint_state_from_data`].
+    #[cfg(feature = "json")]
+    pub fn hint_state_from_json(&self, json: &str) -> Result<State, StateError> {
+        let d: StateData = serde_json::from_str(json).map_err(|e| StateError(e.to_string()))?;
+        self.hint_state_from_data(&d)
     }
 
     #[cfg(feature = "json")]
@@ -231,5 +311,45 @@ mod tests {
     fn state_from_json_rejects_bad_json() {
         let g = Game::new(presets::freecell()).unwrap();
         assert!(g.state_from_json("{bad").is_err());
+    }
+
+    #[test]
+    fn hint_state_accepts_unknown_placeholders_and_state_rejects_them() {
+        let g = Game::new(presets::klondike1()).unwrap();
+        let deal = g.deal(2);
+        let mut data = g.state_to_data(&deal);
+        // Replace every face-down card with "?" or "~?".
+        let mut alt = false;
+        for piles in data.piles.values_mut() {
+            for pile in piles {
+                for card in pile {
+                    if card.starts_with('~') {
+                        *card = if alt { "~?".into() } else { "?".into() };
+                        alt = !alt;
+                    }
+                }
+            }
+        }
+        // Strict state_from_data rejects "?" so solve()/maximize() never fabricate hidden cards.
+        assert!(g.state_from_data(&data).is_err());
+
+        // hint_state_from_data fills unseen cards deterministically and passes validate().
+        let s1 = g.hint_state_from_data(&data).unwrap();
+        let s2 = g.hint_state_from_data(&data).unwrap();
+        assert_eq!(s1, s2);
+        assert!(g.validate(&s1).is_ok());
+
+        // Wrong number of "?" slots is rejected.
+        let mut bad_count = data.clone();
+        bad_count.piles.get_mut("stock").unwrap()[0].pop();
+        let err = g.hint_state_from_data(&bad_count).unwrap_err();
+        assert!(err.0.contains("unknown \"?\""), "{err}");
+
+        // Duplicate visible card alongside "?" is rejected.
+        let mut dup = data.clone();
+        let first_vis = dup.piles["tableau"][0][0].clone();
+        dup.piles.get_mut("stock").unwrap()[0][0] = first_vis;
+        let err = g.hint_state_from_data(&dup).unwrap_err();
+        assert!(err.0.contains("extra"), "{err}");
     }
 }

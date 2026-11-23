@@ -309,7 +309,12 @@ fn run(argv: &[String]) -> Result<(), String> {
         }
         "hint" => {
             let g = load_game(game_arg()?, &a)?;
-            let s = load_deal(&g, &a)?;
+            let s = if let Some(path) = a.get("--state") {
+                let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+                g.hint_state_from_json(&text).map_err(|e| e.to_string())?
+            } else {
+                load_deal(&g, &a)?
+            };
             let mut o = HintOptions::default().solve(search_opts(&a)?);
             if a.get("--max-states").is_none() {
                 o.solve.max_states = 100_000;
@@ -691,7 +696,14 @@ fn handle_serve_line(game: &Game, line: &str) -> (serde_json::Value, bool) {
             }))
         })(),
         "hint" => (|| {
-            let s = parse_state(obj)?;
+            let v = obj
+                .get("state")
+                .ok_or_else(|| "missing \"state\"".to_string())?;
+            let data: StateData =
+                serde_json::from_value(v.clone()).map_err(|e| format!("invalid state: {e}"))?;
+            let s = game
+                .hint_state_from_data(&data)
+                .map_err(|e| e.to_string())?;
             let opts: HintOptions = match obj.get("options") {
                 Some(v) => serde_json::from_value(v.clone())
                     .map_err(|e| format!("invalid options: {e}"))?,

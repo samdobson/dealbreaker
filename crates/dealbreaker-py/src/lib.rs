@@ -188,7 +188,7 @@ impl NativeSolver {
         autoplay: bool,
         shorten: bool,
     ) -> PyResult<String> {
-        let s = self.parse_state(state_json)?;
+        let s = self.game.hint_state_from_json(state_json).map_err(py_err)?;
         let solve_opts = build_solve_opts(max_states, strategy, timeout_ms, autoplay, shorten)?;
         let opts = HintOptions::default()
             .samples(samples)

@@ -148,7 +148,7 @@ impl Solver {
     /// Returns `{ step, wins, samples, score? }` or `null`; `score` (games played for points)
     /// is the step's average best score over the guesses.
     pub fn hint(&self, state_json: &str, options_json: Option<String>) -> Result<String, JsError> {
-        let s = self.state(state_json)?;
+        let s = self.game.hint_state_from_json(state_json).map_err(js_err)?;
         let opts: HintOptions = parse_opts(options_json)?;
         Ok(to_json(&hint(&self.game, &s, &opts)))
     }

@@ -233,7 +233,7 @@ export interface Rules {
 
 /**
  * A position keyed by group name. Cards are bottom-first, e.g. `"AS"`, `"10H"`, `"~KC"` (face down),
- * or `"JK"` / `"~JK"` (joker).
+ * or `"JK"` / `"~JK"` (joker). In `hint()`, unknown face-down cards may be written as `"?"` or `"~?"`.
  */
 export interface StateData {
   piles: Record<string, string[][]>;

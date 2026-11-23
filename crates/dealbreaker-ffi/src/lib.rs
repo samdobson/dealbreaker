@@ -386,7 +386,9 @@ pub unsafe extern "C" fn dealbreaker_solver_hint(
 ) -> *mut c_char {
     run_ptr(|| {
         let game = solver_ref(solver)?;
-        let s = parse_state(game, read_str(state_json, "state_json")?)?;
+        let s = game
+            .hint_state_from_json(read_str(state_json, "state_json")?)
+            .map_err(|e| e.to_string())?;
         let opts: HintOptions = parse_opts(read_opt_str(options_json, "options_json")?)?;
         let h = match cancel.as_ref() {
             Some(c) => hint_with_cancel(game, &s, &opts, &c.flag),

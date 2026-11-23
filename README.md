@@ -12,7 +12,7 @@ Instead of hard-coding rules into a search engine, Dealbreaker models solitaire 
 
 * **39 built-in games** — Klondike, FreeCell, Spider, Yukon, TriPeaks, Poker Squares, and [33 more](docs/games.md).
 * **Custom games in JSON** — describe new variants without touching Rust; see the [rules format](docs/rules-format.md).
-* **Use it anywhere** — ships as a CLI, a Rust crate, and a ~600 KB dependency-free WebAssembly module for JavaScript/TypeScript.
+* **Use it anywhere** — ships as a CLI, a Rust crate, Python wheels, a C ABI, and a ~600 KB dependency-free WebAssembly module ([try the live web demo](https://samdobson.github.io/dealbreaker/)).
 * **Fast** — solves 31,980 of the 32,000 Microsoft FreeCell deals in 13.1 ms mean time (proving #11982 unsolvable in 0.26 s).
 
 ## Benchmarks

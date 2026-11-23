@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dealbreaker — WebAssembly Patience Solver</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "dealbreaker": "../js/src/index.js",
+        "dealbreaker/worker": "../js/src/worker.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Dealbreaker</h1>
+      <span class="tagline">Every game is data · WebAssembly solver</span>
+    </div>
+    <a class="gh-link" href="https://github.com/samdobson/dealbreaker" target="_blank" rel="noopener">GitHub ↗</a>
+  </header>
+
+  <main class="container">
+    <section class="controls">
+      <div class="control-group">
+        <label for="preset">Game</label>
+        <select id="preset"></select>
+      </div>
+
+      <div class="control-group">
+        <label for="seed">Deal #</label>
+        <input id="seed" type="number" min="1" value="1" />
+        <label class="checkbox" id="ms-wrap" title="Use Microsoft FreeCell deal numbering">
+          <input id="ms-mode" type="checkbox" checked />
+          MS #
+        </label>
+        <button id="btn-deal" class="btn">Deal</button>
+      </div>
+
+      <div class="control-group actions">
+        <button id="btn-solve" class="btn primary">Solve</button>
+        <button id="btn-hint" class="btn">Fair Hint</button>
+        <button id="btn-cancel" class="btn danger" disabled>Cancel</button>
+        <button id="btn-undo" class="btn" disabled>Undo</button>
+      </div>
+    </section>
+
+    <section class="status-bar">
+      <div id="status" class="status-text">Loading WebAssembly…</div>
+      <div id="playback" class="playback hidden">
+        <button id="btn-first" class="btn small" title="Back to start">⏮</button>
+        <button id="btn-prev" class="btn small" title="Previous step">◀</button>
+        <button id="btn-play" class="btn small primary">▶ Play</button>
+        <button id="btn-next" class="btn small" title="Next step">▶</button>
+        <span id="step-counter" class="step-counter">0 / 0</span>
+      </div>
+    </section>
+
+    <section id="board" class="board" aria-label="Solitaire table"></section>
+
+    <section class="legal-section">
+      <div class="legal-header">
+        <span id="legal-title">Legal moves</span>
+        <span class="hint-note">Click cards on the table or pick a move below</span>
+      </div>
+      <div id="legal-list" class="legal-list"></div>
+    </section>
+
+    <details class="rules-drawer">
+      <summary>Rules JSON — edit any game live</summary>
+      <div class="rules-body">
+        <textarea id="rules-editor" spellcheck="false"></textarea>
+        <div class="rules-actions">
+          <button id="btn-apply-rules" class="btn primary">Apply Custom Rules</button>
+          <button id="btn-reset-rules" class="btn">Reset to Preset</button>
+          <span id="rules-error" class="rules-error"></span>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

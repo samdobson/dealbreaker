@@ -1515,3 +1515,40 @@ fn max_same_rank_and_one_per_suit() {
     );
     check(r, 0..40);
 }
+
+#[test]
+fn card_dependent_deal_steps() {
+    let mut split_step = DealStep::to("tableau").rest();
+    split_step.split_on_rank = Some(4);
+    split_step.divert_ranks = Some(vec![1]);
+    let r = Rules::new(
+        "mini split + divert deal",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 3),
+            GroupRules::new("cell", PileKind::Cell, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 4)
+                .build(BuildBy::Alternate, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::None),
+        ],
+        vec![split_step],
+    );
+    check(r, 0..40);
+
+    let mut drain_step = DealStep::to("tableau").each(3);
+    drain_step.drain_foundations = true;
+    let r2 = Rules::new(
+        "mini drain deal",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 3),
+            GroupRules::new("tableau", PileKind::Tableau, 4)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Any),
+        ],
+        vec![drain_step],
+    );
+    check(r2, 0..40);
+}

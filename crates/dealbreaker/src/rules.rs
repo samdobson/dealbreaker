@@ -978,6 +978,21 @@ pub struct DealStep {
     /// times, default 1), placing them on the selected piles in turn.
     #[serde(default)]
     pub one_per_suit: bool,
+    /// With `rest`: deal sequentially into each selected pile, advancing to the next pile whenever
+    /// a card of this rank is dealt to a non-empty pile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub split_on_rank: Option<u8>,
+    /// During this step, place any dealt card directly on the first foundation that accepts it.
+    #[serde(default)]
+    pub auto_foundation: bool,
+    /// During this step, divert dealt cards of these ranks to the first foundation that accepts
+    /// them; with `drain_foundations`, restrict draining to these ranks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub divert_ranks: Option<Vec<u8>>,
+    /// After each dealt row, repeatedly move exposed top cards of the selected piles onto any
+    /// accepting foundation (restricted to `divert_ranks` if set).
+    #[serde(default)]
+    pub drain_foundations: bool,
 }
 
 impl DealStep {

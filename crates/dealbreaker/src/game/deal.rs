@@ -50,6 +50,33 @@ impl Game {
         self.deal_from(d)
     }
 
+    /// First foundation pile that currently accepts `c` (used by card-dependent deal steps).
+    fn find_foundation(&self, s: &State, c: Card) -> Option<u16> {
+        for g in self
+            .groups
+            .iter()
+            .filter(|g| g.kind == crate::rules::PileKind::Foundation)
+        {
+            for p in g.piles() {
+                let pile = &s.piles[p as usize];
+                let tr = self.rule(p);
+                if pile.len() >= tr.max_cards as usize || tr.complete_runs {
+                    continue;
+                }
+                let ok = match pile.last() {
+                    None => self.empty_accepts(p, c, s),
+                    Some(&top) => {
+                        top.is_face_up() && tr.fits[top.face() as usize] >> c.face() & 1 != 0
+                    }
+                };
+                if ok {
+                    return Some(p);
+                }
+            }
+        }
+        None
+    }
+
     fn deal_from(&self, deck: Vec<Card>) -> Result<State, RulesError> {
         let mut deck: std::collections::VecDeque<Card> = deck.into_iter().map(|c| c.up()).collect();
         let mut s = State {
@@ -186,10 +213,46 @@ impl Game {
                     put(&mut s, piles[i % piles.len()], c);
                 }
             } else if step.rest {
-                let mut i = 0;
-                while let Some(c) = deck.pop_front() {
-                    put(&mut s, piles[i % piles.len()], c);
-                    i += 1;
+                if let Some(split_r) = step.split_on_rank {
+                    let mut idx = 0usize;
+                    while let Some(c) = deck.pop_front() {
+                        let divert = step.auto_foundation
+                            || step
+                                .divert_ranks
+                                .as_ref()
+                                .is_some_and(|rs| rs.contains(&c.rank()));
+                        if divert {
+                            if let Some(f) = self.find_foundation(&s, c) {
+                                put(&mut s, f, c);
+                                continue;
+                            }
+                        }
+                        if c.rank() == split_r
+                            && !s.piles[piles[idx] as usize].is_empty()
+                            && idx + 1 < piles.len()
+                        {
+                            idx += 1;
+                        }
+                        put(&mut s, piles[idx], c);
+                    }
+                } else {
+                    let mut i = 0;
+                    while let Some(c) = deck.pop_front() {
+                        let divert = step.auto_foundation
+                            || step
+                                .divert_ranks
+                                .as_ref()
+                                .is_some_and(|rs| rs.contains(&c.rank()));
+                        if divert {
+                            if let Some(f) = self.find_foundation(&s, c) {
+                                put(&mut s, f, c);
+                                i += 1;
+                                continue;
+                            }
+                        }
+                        put(&mut s, piles[i % piles.len()], c);
+                        i += 1;
+                    }
                 }
             } else {
                 let counts: Vec<u16> = match (&step.counts, step.count) {
@@ -212,13 +275,55 @@ impl Game {
                     }
                 };
                 let rows = counts.iter().copied().max().unwrap_or(0);
-                for r in 0..rows {
+                let allow_short = !step.drain_foundations
+                    && (step.auto_foundation || step.divert_ranks.is_some());
+                'deal_rows: for r in 0..rows {
                     for (i, &p) in piles.iter().enumerate() {
                         if counts[i] > r {
-                            let c = deck
-                                .pop_front()
-                                .ok_or_else(|| RulesError("deal: ran out of cards".into()))?;
+                            let Some(c) = deck.pop_front() else {
+                                if allow_short {
+                                    break 'deal_rows;
+                                }
+                                return err("deal: ran out of cards");
+                            };
+                            let divert = !step.drain_foundations
+                                && (step.auto_foundation
+                                    || step
+                                        .divert_ranks
+                                        .as_ref()
+                                        .is_some_and(|rs| rs.contains(&c.rank())));
+                            if divert {
+                                if let Some(f) = self.find_foundation(&s, c) {
+                                    put(&mut s, f, c);
+                                    continue;
+                                }
+                            }
                             put(&mut s, p, c);
+                        }
+                    }
+                    if step.drain_foundations {
+                        loop {
+                            let mut moved = false;
+                            for &p in &piles {
+                                if let Some(&c) = s.piles[p as usize].last() {
+                                    if c.is_face_up()
+                                        && step
+                                            .divert_ranks
+                                            .as_ref()
+                                            .is_none_or(|rs| rs.contains(&c.rank()))
+                                    {
+                                        if let Some(f) = self.find_foundation(&s, c) {
+                                            s.piles[p as usize].pop();
+                                            s.piles[f as usize].push(c);
+                                            moved = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if !moved {
+                                break;
+                            }
                         }
                     }
                 }

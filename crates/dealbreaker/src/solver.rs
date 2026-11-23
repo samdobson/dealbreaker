@@ -1929,12 +1929,15 @@ mod tests {
         assert_eq!(mr.states, 0);
 
         // JSON serialization round-trips timeout_ms and omits it when None.
-        let def_json = serde_json::to_string(&SolveOptions::default()).unwrap();
-        assert!(!def_json.contains("timeout_ms"), "{def_json}");
-        let with_t = SolveOptions::default().timeout_ms(250);
-        let t_json = serde_json::to_string(&with_t).unwrap();
-        assert!(t_json.contains("\"timeout_ms\":250"), "{t_json}");
-        let parsed: SolveOptions = serde_json::from_str(&t_json).unwrap();
-        assert_eq!(parsed.timeout_ms, Some(250));
+        #[cfg(feature = "json")]
+        {
+            let def_json = serde_json::to_string(&SolveOptions::default()).unwrap();
+            assert!(!def_json.contains("timeout_ms"), "{def_json}");
+            let with_t = SolveOptions::default().timeout_ms(250);
+            let t_json = serde_json::to_string(&with_t).unwrap();
+            assert!(t_json.contains("\"timeout_ms\":250"), "{t_json}");
+            let parsed: SolveOptions = serde_json::from_str(&t_json).unwrap();
+            assert_eq!(parsed.timeout_ms, Some(250));
+        }
     }
 }

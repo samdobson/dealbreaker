@@ -71,7 +71,4 @@ export class Solver {
 
   /** Free the underlying WebAssembly instance. */
   free(): void;
-
-  /** Alias for `free()` supporting explicit resource management (`using solver = ...`). */
-  [Symbol.dispose](): void;
 }

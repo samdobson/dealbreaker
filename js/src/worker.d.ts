@@ -34,5 +34,4 @@ export class WorkerSolver {
 
   /** Terminate the worker immediately (also cancels any in-flight search). */
   terminate(): void;
-  [Symbol.dispose](): void;
 }

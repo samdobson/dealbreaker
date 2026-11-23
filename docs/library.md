@@ -22,7 +22,7 @@ match result.outcome {
 }
 ```
 
-Other entry points: `Game::legal_steps` / `Game::play_step` (interactive play), `hint` (fair advice), `maximize` / `Game::score` (points games), `microsoft_deal` (MS FreeCell deals), and `Game::with_hooks` (custom Rust rules).
+Other entry points: `Game::legal_steps` / `Game::play_step` (interactive play), `hint` (fair advice), `maximize` / `Game::score` (points games), `solve_with_cancel` / `maximize_with_cancel` / `hint_with_cancel` and `SolveOptions::timeout_ms` / `max_duration` (cooperative cancellation and wall-clock timeouts), `microsoft_deal` (MS FreeCell deals), and `Game::with_hooks` (custom Rust rules).
 
 ## JavaScript / TypeScript (WebAssembly)
 

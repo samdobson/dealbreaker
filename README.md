@@ -25,7 +25,7 @@ Across all **32,000 Microsoft FreeCell deals** (`--max-states 500000`), Dealbrea
 
 ## Quick start
 
-Install the CLI from [crates.io](https://crates.io/crates/dealbreaker-cli):
+Download a pre-built binary for macOS, Linux, or Windows from [GitHub Releases](https://github.com/samdobson/dealbreaker/releases), or install from [crates.io](https://crates.io/crates/dealbreaker-cli):
 
 ```sh
 cargo install dealbreaker-cli

@@ -16,5 +16,5 @@ path = "src/main.rs"
 doc = false
 
 [dependencies]
-dealbreaker = { path = "../dealbreaker", version = "1.1.0" }
+dealbreaker = { path = "../dealbreaker", version = "1.2.0" }
 serde_json = "1"

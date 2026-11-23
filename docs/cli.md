@@ -1,6 +1,6 @@
 # Command-Line Reference
 
-Install the `dealbreaker` binary from [crates.io](https://crates.io/crates/dealbreaker-cli):
+Download a pre-built binary for macOS, Linux, or Windows from [GitHub Releases](https://github.com/samdobson/dealbreaker/releases), or install from [crates.io](https://crates.io/crates/dealbreaker-cli):
 
 ```sh
 cargo install dealbreaker-cli

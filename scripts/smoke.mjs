@@ -35,3 +35,19 @@ let c = cstate;
 for (const step of cbest.steps) c = cs.playStep(c, JSON.stringify(step));
 if (cs.score(c) !== cbest.score) throw new Error("cribbage best line doesn't score as claimed");
 console.log("cribbage squares best:", cbest.score, "points, replayed");
+
+// Rules JSON constructor, rules(), legalSteps(), and error paths
+const fcFromJson = new Solver(fc.rules());
+const legal = JSON.parse(fcFromJson.legalSteps(state));
+if (!Array.isArray(legal) || legal.length === 0) throw new Error("expected legal steps");
+const expectThrows = (fn, label) => {
+  let threw = false;
+  try { fn(); } catch { threw = true; }
+  if (!threw) throw new Error(`expected throw: ${label}`);
+};
+expectThrows(() => new Solver("{bad"), "invalid rules json");
+expectThrows(() => Solver.fromPreset("does-not-exist"), "unknown preset");
+expectThrows(() => fc.solve("{bad"), "invalid state json");
+expectThrows(() => fc.solve(state, "{bad"), "invalid options json");
+expectThrows(() => fc.playStep(state, "{bad"), "invalid step json");
+console.log("smoke error paths & constructors: ok");

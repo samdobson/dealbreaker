@@ -187,3 +187,68 @@ fn parse_opts<T: serde::de::DeserializeOwned + Default>(
         Some(j) => serde_json::from_str(j).map_err(js_err),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn presets_and_solver_happy_paths() {
+        let list: Vec<serde_json::Value> = serde_json::from_str(&presets()).unwrap();
+        assert!(!list.is_empty());
+
+        let fc = Solver {
+            game: Game::new(presets::freecell()).unwrap(),
+        };
+        assert!(Rules::from_json(&fc.rules()).is_ok());
+
+        let s1 = fc.deal(1.0);
+        assert!(fc.score(&s1).unwrap().is_none());
+        assert!(!fc.is_won(&s1).unwrap());
+
+        let ms1 = fc.deal_microsoft(1).unwrap();
+        let legal: Vec<Step> = serde_json::from_str(&fc.legal_steps(&ms1).unwrap()).unwrap();
+        assert!(!legal.is_empty());
+
+        let solved: serde_json::Value = serde_json::from_str(
+            &fc.solve(&ms1, Some(r#"{"max_states":200000}"#.into()))
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(solved["outcome"], "solved");
+        let steps = solved["steps"].as_array().unwrap();
+        let mut cur = ms1;
+        for step in steps {
+            cur = fc.play_step(&cur, &step.to_string()).unwrap();
+        }
+        assert!(fc.is_won(&cur).unwrap());
+
+        let h = fc
+            .hint(
+                &fc.deal_microsoft(5).unwrap(),
+                Some(r#"{"samples":1}"#.into()),
+            )
+            .unwrap();
+        assert!(h.contains("\"wins\":1"), "{h}");
+
+        let ps = Solver {
+            game: Game::new(presets::poker_squares()).unwrap(),
+        };
+        let pstate = ps.deal(1.0);
+        let best: serde_json::Value = serde_json::from_str(
+            &ps.best(&pstate, Some(r#"{"max_states":5000}"#.into()))
+                .unwrap(),
+        )
+        .unwrap();
+        assert!(best["score"].as_u64().unwrap() > 0);
+    }
+
+    #[test]
+    fn parse_opts_handles_empty_and_valid_json() {
+        let def: SolveOptions = parse_opts(None).unwrap();
+        let empty: SolveOptions = parse_opts(Some("  ".into())).unwrap();
+        assert_eq!(def.max_states, empty.max_states);
+        let custom: SolveOptions = parse_opts(Some(r#"{"max_states":42}"#.into())).unwrap();
+        assert_eq!(custom.max_states, 42);
+    }
+}

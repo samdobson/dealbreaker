@@ -536,3 +536,92 @@ impl fmt::Display for Step {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::presets;
+
+    #[test]
+    fn game_metadata_render_and_steps() {
+        let mut r = presets::klondike1();
+        r.stock.as_mut().unwrap().unlimited_redeals = false;
+        r.stock.as_mut().unwrap().redeals = 2;
+        let g = Game::new(r).unwrap();
+        assert_eq!(g.name(), "Klondike");
+        assert_eq!(g.groups().count(), 4);
+        assert_eq!(g.pile_kind(0), PileKind::Stock);
+
+        let mut s = g.deal(1);
+        assert!(g.legal_steps(&s).contains(&Step::Deal));
+        g.play_step(&mut s, &Step::Deal).unwrap();
+        assert!(g.play_step(&mut s, &Step::Redeal).is_err());
+
+        // Drain stock to test Redeal and render with redeals_used > 0.
+        while g.step_to_move(&s, &Step::Deal).is_some() {
+            g.play_step(&mut s, &Step::Deal).unwrap();
+        }
+        assert!(g.legal_steps(&s).contains(&Step::Redeal));
+        g.play_step(&mut s, &Step::Redeal).unwrap();
+        let rendered = g.render(&s);
+        assert!(rendered.contains("redeals used"), "{rendered}");
+
+        // Display impls for Step, IllegalMove, IllegalStep.
+        assert_eq!(Step::Deal.to_string(), "deal");
+        assert_eq!(Step::Redeal.to_string(), "redeal");
+        let p0 = PileRef {
+            group: "tableau".into(),
+            index: 0,
+        };
+        let p1 = PileRef {
+            group: "tableau".into(),
+            index: 1,
+        };
+        assert_eq!(
+            Step::Move {
+                from: p0.clone(),
+                to: p1.clone(),
+                count: 1
+            }
+            .to_string(),
+            "tableau 1 -> tableau 2"
+        );
+        assert_eq!(
+            Step::Move {
+                from: p0.clone(),
+                to: p1.clone(),
+                count: 3
+            }
+            .to_string(),
+            "tableau 1 -> tableau 2 (3 cards)"
+        );
+        assert_eq!(
+            Step::Remove {
+                piles: vec![p0, p1]
+            }
+            .to_string(),
+            "remove tableau 1 + tableau 2"
+        );
+        let im = IllegalMove(Move::new(Action::Deal));
+        assert!(im.to_string().contains("illegal move"));
+        let is = IllegalStep(Step::Redeal);
+        assert!(is.to_string().contains("illegal step"));
+    }
+
+    #[test]
+    fn step_to_move_handles_redeal_and_remove() {
+        let g_lbl = Game::new(presets::la_belle_lucie()).unwrap();
+        let s_lbl = g_lbl.deal(1);
+        assert!(g_lbl.step_to_move(&s_lbl, &Step::Deal).is_none());
+        assert!(g_lbl.step_to_move(&s_lbl, &Step::Redeal).is_some());
+
+        let g_pyr = Game::new(presets::pyramid()).unwrap();
+        let s_pyr = g_pyr.deal(1);
+        let remove = g_pyr
+            .legal_steps(&s_pyr)
+            .into_iter()
+            .find(|st| matches!(st, Step::Remove { .. }))
+            .expect("pyramid seed 1 has a removal");
+        assert!(g_pyr.step_to_move(&s_pyr, &remove).is_some());
+    }
+}

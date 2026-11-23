@@ -1074,3 +1074,57 @@ fn layout_covers(layout: &Layout, count: u16) -> Result<Vec<Vec<u16>>, String> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::presets;
+
+    #[test]
+    fn compile_rejects_invalid_rules() {
+        let mut r = presets::freecell();
+        r.pack.copies = 0;
+        assert!(Game::new(r).unwrap_err().0.contains("empty"));
+
+        let mut r = presets::freecell();
+        r.pack.ranks = vec![0];
+        assert!(Game::new(r).unwrap_err().0.contains("1..=13"));
+
+        let mut r = presets::freecell();
+        r.pack.ranks = vec![1, 1];
+        assert!(Game::new(r).unwrap_err().0.contains("twice"));
+
+        let mut r = presets::freecell();
+        r.groups[0].name = r.groups[1].name.clone();
+        assert!(Game::new(r).unwrap_err().0.contains("two groups"));
+
+        let mut r = presets::freecell();
+        r.groups[0].count = 0;
+        assert!(Game::new(r).unwrap_err().0.contains("no piles"));
+
+        let mut r = presets::klondike1();
+        r.groups[0].count = 2;
+        assert!(Game::new(r).unwrap_err().0.contains("exactly one pile"));
+
+        let mut r = presets::freecell();
+        r.groups[2].complete_runs = true;
+        assert!(Game::new(r).unwrap_err().0.contains("complete_runs"));
+
+        let mut r = presets::freecell();
+        r.groups[0].piles.push(PileOverride::on(&[99]));
+        assert!(Game::new(r).unwrap_err().0.contains("doesn't exist"));
+
+        let mut r = presets::freecell();
+        r.groups[2].layout = Some(Layout::Covers {
+            covered_by: vec![vec![]],
+        });
+        assert!(Game::new(r).unwrap_err().0.contains("covered_by"));
+
+        let mut r = presets::freecell();
+        let count = r.groups[2].count as usize;
+        let mut bad = vec![vec![]; count];
+        bad[0] = vec![99];
+        r.groups[2].layout = Some(Layout::Covers { covered_by: bad });
+        assert!(Game::new(r).unwrap_err().0.contains("doesn't exist"));
+    }
+}

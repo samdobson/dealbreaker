@@ -55,3 +55,26 @@ pub trait Hooks: Send + Sync + Debug {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::presets;
+
+    #[derive(Debug)]
+    struct DefaultHooks;
+    impl Hooks for DefaultHooks {}
+
+    #[test]
+    fn default_hooks_defer_to_data_rules() {
+        let g = Game::with_hooks(presets::freecell(), std::sync::Arc::new(DefaultHooks)).unwrap();
+        let s = g.deal(1);
+        let h = DefaultHooks;
+        assert_eq!(h.accepts(&g, &s, 0, 1, 1), None);
+        assert_eq!(h.movable(&g, &s, 0), None);
+        assert_eq!(h.is_won(&g, &s), None);
+        assert!(h.auto_moves(&g, &s).is_empty());
+        assert!(!h.keeps_pruning_sound());
+        assert!(!g.is_won(&s));
+    }
+}

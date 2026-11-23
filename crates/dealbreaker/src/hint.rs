@@ -201,3 +201,57 @@ fn scored_hint(
         score: Some(total as f64 / samples as f64),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::presets;
+
+    #[test]
+    fn hint_random_future_and_budget_exhaustion() {
+        // La Belle Lucie has a shuffling redeal, so even with all cards face up it samples.
+        let g = Game::new(presets::la_belle_lucie()).unwrap();
+        let s = g.deal(1);
+        let opts = HintOptions::default()
+            .samples(2)
+            .seed(7)
+            .solve(SolveOptions::default().max_states(5_000));
+        if let Some(h) = hint(&g, &s, &opts) {
+            assert_eq!(h.samples, 2);
+            assert!(h.wins >= 1);
+        }
+
+        // Tiny budget on an unsolved position yields None.
+        let fc = Game::new(presets::freecell()).unwrap();
+        let fs = fc.deal(1);
+        let tiny = HintOptions::default().solve(SolveOptions::default().max_states(1));
+        assert!(hint(&fc, &fs, &tiny).is_none());
+    }
+
+    #[test]
+    fn scored_hint_edge_cases() {
+        let g = Game::new(presets::poker_squares()).unwrap();
+        let mut s = g.deal(1);
+        // Play 25 cards to leave 0 legal moves.
+        let mut plays = 0;
+        while plays < 25 {
+            let moves = g.distinct_moves(&s);
+            if moves.is_empty() {
+                break;
+            }
+            g.play(&mut s, moves[0]).unwrap();
+            plays += 1;
+        }
+        assert!(hint(&g, &s, &HintOptions::default()).is_none());
+
+        // Back up by 1 card (24 placed -> only 1 empty cell left, so 1 distinct move).
+        let mut s24 = g.deal(1);
+        for _ in 0..24 {
+            let m = g.distinct_moves(&s24)[0];
+            g.play(&mut s24, m).unwrap();
+        }
+        let h = hint(&g, &s24, &HintOptions::default()).expect("single forced move");
+        assert_eq!(h.samples, 0);
+        assert_eq!(h.score, None);
+    }
+}

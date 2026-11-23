@@ -180,3 +180,55 @@ pub fn microsoft_deal(n: u32) -> Vec<Card> {
         .map(|c| Card::new(Suit::from_index((c % 4) as u8), (c / 4 + 1) as u8))
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::presets;
+
+    #[test]
+    fn state_validation_errors() {
+        let g = Game::new(presets::freecell()).unwrap();
+        let mut s = g.deal(1);
+        s.piles.pop();
+        let err = g.validate(&s).unwrap_err();
+        assert!(err.to_string().contains("expected"), "{err}");
+
+        let mut d = g.state_to_data(&g.deal(1));
+        d.piles.insert("bogus".into(), vec![]);
+        let err = g.state_from_data(&d).unwrap_err();
+        assert!(err.0.contains("no group"), "{err}");
+
+        let mut d = g.state_to_data(&g.deal(1));
+        d.piles.get_mut("cell").unwrap().push(vec![]);
+        let err = g.state_from_data(&d).unwrap_err();
+        assert!(err.0.contains("4 piles"), "{err}");
+
+        let g_klondike = Game::new(presets::klondike1()).unwrap();
+        let mut s_k = g_klondike.deal(1);
+        let top = s_k.piles[g_klondike.pile_index("stock", 0).unwrap() as usize]
+            .pop()
+            .unwrap();
+        s_k.piles[g_klondike.pile_index("foundation", 0).unwrap() as usize].push(top);
+        // Move all 24 stock cards? Easier: check freecell cell max_cards = 1.
+        let mut s_fc = g.deal(1);
+        let c0 = s_fc.piles[g.pile_index("tableau", 0).unwrap() as usize]
+            .pop()
+            .unwrap();
+        let c1 = s_fc.piles[g.pile_index("tableau", 0).unwrap() as usize]
+            .pop()
+            .unwrap();
+        let cell0 = g.pile_index("cell", 0).unwrap() as usize;
+        s_fc.piles[cell0].push(c0);
+        s_fc.piles[cell0].push(c1);
+        let err = g.validate(&s_fc).unwrap_err();
+        assert!(err.0.contains("too many cards"), "{err}");
+    }
+
+    #[cfg(feature = "json")]
+    #[test]
+    fn state_from_json_rejects_bad_json() {
+        let g = Game::new(presets::freecell()).unwrap();
+        assert!(g.state_from_json("{bad").is_err());
+    }
+}

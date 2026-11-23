@@ -475,8 +475,43 @@ fn run(argv: &[String]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     const STEP: &str = r#"{"type":"deal"}"#;
+    static TEMP_SEQ: AtomicU64 = AtomicU64::new(0);
+
+    struct TempFile {
+        path: PathBuf,
+    }
+
+    impl TempFile {
+        fn new(name: &str, contents: &str) -> Self {
+            let id = TEMP_SEQ.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "dealbreaker_cli_test_{}_{}_{}",
+                std::process::id(),
+                id,
+                name
+            ));
+            std::fs::write(&path, contents).unwrap();
+            Self { path }
+        }
+
+        fn str(&self) -> &str {
+            self.path.to_str().unwrap()
+        }
+    }
+
+    impl Drop for TempFile {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+
+    fn argv(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| (*s).to_string()).collect()
+    }
 
     #[test]
     fn steps_from_an_array_or_solve_output() {
@@ -492,5 +527,223 @@ mod tests {
         assert!(err.contains("steps"), "{err}");
         assert!(parse_steps("3").is_err());
         assert!(parse_steps(r#"[{"type":"nonsense"}]"#).is_err());
+    }
+
+    #[test]
+    fn args_parsing_and_search_merge() {
+        let a = Args::parse(&argv(&[
+            "solve", "freecell", "--seed=3", "--seed", "5", "--json",
+        ]));
+        assert_eq!(a.rest, ["solve", "freecell"]);
+        assert_eq!(a.get("--seed"), Some("5"));
+        assert_eq!(a.num::<u64>("--seed").unwrap(), Some(5));
+        assert!(a.has("--json"));
+        assert!(!a.has("--verbose"));
+
+        let bad = Args::parse(&argv(&["--seed", "nope"]));
+        assert!(bad
+            .num::<u64>("--seed")
+            .unwrap_err()
+            .contains("not a number"));
+
+        let base = SearchHints::default();
+        let merged = merge_search(&base, r#"{"blocker_weight": 4}"#).unwrap();
+        assert_ne!(
+            serde_json::to_value(&merged).unwrap(),
+            serde_json::to_value(&base).unwrap()
+        );
+        assert!(merge_search(&base, "[]")
+            .unwrap_err()
+            .contains("JSON object"));
+        assert!(merge_search(&base, "{bad").is_err());
+    }
+
+    #[test]
+    fn cli_commands_happy_paths() {
+        run(&argv(&[])).unwrap();
+        run(&argv(&["help"])).unwrap();
+        run(&argv(&["--help"])).unwrap();
+        run(&argv(&["-h"])).unwrap();
+        run(&argv(&["list"])).unwrap();
+        run(&argv(&["rules", "freecell"])).unwrap();
+
+        let rules_json = presets::freecell().to_json();
+        let rules_file = TempFile::new("rules.json", &rules_json);
+        run(&argv(&["rules", rules_file.str()])).unwrap();
+
+        run(&argv(&["deal", "freecell", "--seed", "2"])).unwrap();
+        run(&argv(&["deal", "freecell", "--ms", "1"])).unwrap();
+
+        let g = Game::new(presets::freecell()).unwrap();
+        let state_json = g.state_to_json(&g.deal_ordered(&microsoft_deal(1)).unwrap());
+        let state_file = TempFile::new("state.json", &state_json);
+        run(&argv(&["deal", "freecell", "--state", state_file.str()])).unwrap();
+
+        run(&argv(&[
+            "solve",
+            "freecell",
+            "--ms",
+            "1",
+            "--max-states",
+            "200000",
+            "--json",
+        ]))
+        .unwrap();
+        run(&argv(&[
+            "solve",
+            "freecell",
+            "--ms",
+            "1",
+            "--strategy",
+            "dfs",
+            "--no-autoplay",
+            "--no-shorten",
+            "--max-states",
+            "200000",
+        ]))
+        .unwrap();
+        run(&argv(&[
+            "solve",
+            "freecell",
+            "--ms",
+            "1",
+            "--strategy",
+            "best-first",
+            "--search",
+            r#"{"blocker_weight":4}"#,
+            "--max-states",
+            "5",
+        ]))
+        .unwrap();
+
+        let s1 = g.deal_ordered(&microsoft_deal(1)).unwrap();
+        let r = solve(&g, &s1, &SolveOptions::default().max_states(200_000));
+        let Outcome::Solved(moves) = &r.outcome else {
+            panic!("expected ms deal 1 to solve");
+        };
+        let steps_json = serde_json::to_string(&g.steps(&s1, moves)).unwrap();
+        let steps_file = TempFile::new("steps.json", &steps_json);
+        run(&argv(&[
+            "replay",
+            "freecell",
+            "--ms",
+            "1",
+            "--steps",
+            steps_file.str(),
+        ]))
+        .unwrap();
+        run(&argv(&[
+            "replay",
+            "freecell",
+            "--ms",
+            "1",
+            "--steps",
+            steps_file.str(),
+            "--legal",
+            "--json",
+        ]))
+        .unwrap();
+
+        run(&argv(&["hint", "freecell", "--ms", "5", "--samples", "1"])).unwrap();
+
+        run(&argv(&[
+            "best",
+            "poker-squares",
+            "--seed",
+            "1",
+            "--max-states",
+            "2000",
+            "--json",
+        ]))
+        .unwrap();
+        run(&argv(&[
+            "best",
+            "poker-squares",
+            "--seed",
+            "1",
+            "--max-states",
+            "2000",
+        ]))
+        .unwrap();
+
+        run(&argv(&[
+            "bench",
+            "freecell",
+            "--seeds",
+            "1..2",
+            "--microsoft",
+            "--max-states",
+            "200000",
+            "--verbose",
+            "--json",
+        ]))
+        .unwrap();
+        run(&argv(&[
+            "bench",
+            "freecell",
+            "--seeds",
+            "1..2",
+            "--max-states",
+            "10",
+        ]))
+        .unwrap();
+        run(&argv(&[
+            "bench",
+            "poker-squares",
+            "--best",
+            "--seeds",
+            "1..2",
+            "--max-states",
+            "1000",
+            "--verbose",
+            "--json",
+        ]))
+        .unwrap();
+        run(&argv(&[
+            "bench",
+            "poker-squares",
+            "--best",
+            "--seeds",
+            "1..2",
+            "--max-states",
+            "1000",
+        ]))
+        .unwrap();
+    }
+
+    #[test]
+    fn cli_commands_error_paths() {
+        assert!(run(&argv(&["bogus"]))
+            .unwrap_err()
+            .contains("unknown command"));
+        assert!(run(&argv(&["solve"])).unwrap_err().contains("needs a game"));
+        assert!(run(&argv(&["rules", "no-such-game-or-file"])).is_err());
+        assert!(run(&argv(&["deal", "spider", "--ms", "1"])).is_err());
+        assert!(run(&argv(&["solve", "freecell", "--strategy", "bogus"]))
+            .unwrap_err()
+            .contains("unknown strategy"));
+        assert!(run(&argv(&["replay", "freecell"]))
+            .unwrap_err()
+            .contains("--steps"));
+        let bad_steps = TempFile::new("bad_steps.json", r#"[{"type":"deal"}]"#);
+        assert!(run(&argv(&[
+            "replay",
+            "freecell",
+            "--ms",
+            "1",
+            "--steps",
+            bad_steps.str(),
+        ]))
+        .unwrap_err()
+        .contains("not legal"));
+        assert!(run(&argv(&["best", "freecell"]))
+            .unwrap_err()
+            .contains("points"));
+        assert!(run(&argv(&["bench", "freecell", "--best"]))
+            .unwrap_err()
+            .contains("points"));
+        assert!(run(&argv(&["bench", "freecell", "--seeds", "bad"]))
+            .unwrap_err()
+            .contains("A..B"));
     }
 }

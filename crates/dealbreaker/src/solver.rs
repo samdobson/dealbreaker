@@ -1054,7 +1054,7 @@ impl<'g> Ctx<'g> {
                     && pr.build.blocked_ranks.is_empty();
                 let mut soonest = u8::MAX;
                 let mut prev_n = u8::MAX;
-                for c in pile.iter() {
+                for c in pile {
                     let n = need[c.face() as usize];
                     if n > soonest {
                         h += wt.blocker_weight;
@@ -1564,7 +1564,7 @@ fn encode(s: &State) -> Box<[u8]> {
 
 fn decode_into(b: &[u8], s: &mut State) {
     let mut i = 0;
-    for p in s.piles.iter_mut() {
+    for p in &mut s.piles {
         let n = b[i] as usize;
         i += 1;
         p.clear();

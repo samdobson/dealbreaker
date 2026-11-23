@@ -2631,7 +2631,8 @@ impl Game {
                 let surplus = (len(s, gp) as usize).saturating_sub(per * count);
                 let share = |i: usize| per + surplus / count + usize::from(i < surplus % count);
                 if surplus > 0 {
-                    self.arrange_surplus(s, j, gp, per, (0..count).map(share).collect());
+                    let sizes: Vec<usize> = (0..count).map(share).collect();
+                    self.arrange_surplus(s, j, gp, per, &sizes);
                 }
                 for (i, p) in g.piles().enumerate() {
                     let n = share(i).min(len(s, gp) as usize) as u16;
@@ -2749,7 +2750,7 @@ impl Game {
         j: &mut Vec<Op>,
         pile: u16,
         per_pile: usize,
-        sizes: Vec<usize>,
+        sizes: &[usize],
     ) {
         let cards = s.piles[pile as usize].clone();
         let n = cards.len();
@@ -2765,7 +2766,7 @@ impl Game {
         let mut want: Vec<Card> = Vec::with_capacity(n);
         let mut cuts = Vec::with_capacity(sizes.len());
         let mut at = 0;
-        for &size in &sizes {
+        for &size in sizes {
             let size = size.min(n - at);
             cuts.push(&dealt[at..at + size]);
             at += size;

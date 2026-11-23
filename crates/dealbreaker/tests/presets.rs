@@ -127,7 +127,7 @@ fn scored_presets_best_lines_replay() {
             let s = g.deal(seed);
             let opts = SolveOptions::default().max_states(20_000);
             let r = maximize(&g, &s, &opts);
-            let mut end = s.clone();
+            let mut end = s;
             for &m in &r.moves {
                 g.play(&mut end, m).unwrap();
                 g.validate(&end).unwrap();

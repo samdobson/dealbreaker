@@ -143,7 +143,7 @@ fn jokers_stay_off_foundations_unless_wild_there() {
     assert!(can(&g, &s, ("tableau", 0), ("foundation", 0), 1));
     assert!(can(&g, &s, ("tableau", 0), ("foundation", 1), 1));
     // On the 6♥, the joker is the 7♥: the 8♥ follows it and the 8♠ doesn't.
-    let mut t = s.clone();
+    let mut t = s;
     g.play(
         &mut t,
         Move::new(Action::Transfer {

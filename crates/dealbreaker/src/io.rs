@@ -100,11 +100,11 @@ impl Game {
         Ok(s)
     }
 
-    /// Parse a position for [`crate::hint`], allowing `"?"` or `"~?"` for unknown face-down cards.
+    /// Parse a position for [`crate::hint()`], allowing `"?"` or `"~?"` for unknown face-down cards.
     ///
     /// Concrete cards must form a valid subset of the game's pack and the number of `"?"` slots
     /// must match the remaining unseen cards. Unknown slots are filled face down with the
-    /// remaining unseen cards in deterministic order so [`crate::hint`] can shuffle them across
+    /// remaining unseen cards in deterministic order so [`crate::hint()`] can shuffle them across
     /// all face-down slots. Use [`Game::state_from_data`] when every card must be known (for
     /// [`crate::solve`] and [`crate::maximize`]).
     pub fn hint_state_from_data(&self, d: &StateData) -> Result<State, StateError> {

@@ -19,7 +19,7 @@ export type BuildBy =
   | "other_suit"
   | "suit_or_rank";
 
-export type Dir = "down" | "up" | "either" | "same" | "any";
+export type Dir = "down" | "up" | "up_any" | "either" | "same" | "any";
 
 export interface Build {
   by: BuildBy;
@@ -36,17 +36,23 @@ export type EmptyRule =
   | { rank: number }
   | { ranks: number[] }
   | { dealt_base_offset: number }
-  | { after_left: { first: number } };
+  | { after_left: { first: number } }
+  | { after_neighbor: { first: number } }
+  | { after_pile: { group: string; offset: number } };
 
 export type MoveUnit =
   | "none"
   | "top"
   | "run"
   | "suit_run"
+  | "alt_color_run"
+  | "same_color_run"
   | "any_face_up"
   | "supermove"
   | "whole"
   | "top_or_whole";
+
+export type SwapBases = "both_single" | "either_pile";
 
 export type Layout =
   | "tri_peaks"
@@ -60,8 +66,10 @@ export interface PileOverride {
   empty?: EmptyRule;
   moves?: MoveUnit;
   max_cards?: number;
+  min_cards?: number;
   max_accept?: number;
   empty_max_accept?: number;
+  non_empty_max_accept?: number;
   suit?: Suit;
   empty_suit?: Suit;
   color?: Color;
@@ -75,13 +83,19 @@ export interface GroupRules {
   empty?: EmptyRule;
   moves?: MoveUnit;
   max_cards?: number;
+  min_cards?: number;
   max_accept?: number;
   empty_max_accept?: number;
+  non_empty_max_accept?: number;
   accepts_from?: string[];
+  empty_accepts_from?: string[];
   refill_from?: string | string[];
+  refill_count?: number;
   layout?: Layout;
   complete_runs?: boolean;
   reach?: number[];
+  reach_both_ways?: boolean;
+  replace_on_drop?: string;
   compact?: boolean;
   suit?: Suit;
   empty_suit?: Suit;
@@ -95,6 +109,26 @@ export interface GroupRules {
   compact_face_up?: boolean;
   refill_largest?: boolean;
   refill_on_empty?: boolean;
+  requires_prev_non_empty?: boolean;
+  max_same_rank?: number;
+  moves_when_stock_empty?: boolean;
+  moves_when_any_empty?: string;
+  moves_when_same_index_empty?: string;
+  flip_only_last?: boolean;
+  final_from_same_index?: string;
+  lock_build_dir?: boolean;
+  no_flip?: boolean;
+  refill_same_index?: boolean;
+  refill_nearest?: boolean;
+  require_valid_base?: boolean;
+  swap_bases?: SwapBases;
+  supermove_complete_run?: boolean;
+  unrestricted_from?: string[];
+  lock_pile_dir?: boolean;
+  rank_sequence?: number[];
+  unique_suits?: boolean;
+  no_build_single_while_stock?: boolean;
+  refill_first_face_down?: boolean;
 }
 
 export interface Pack {
@@ -115,10 +149,28 @@ export interface StockRules {
   only_when_empty?: boolean;
   skip_empty?: boolean;
   face_up?: boolean;
+  count_per_round?: number[];
+  final_to?: string;
+  piles?: number[];
+  final_piles?: number[];
+  deal_per_pile?: boolean;
+  redeal_reverse?: boolean;
+  redeal_shuffle?: boolean;
+  redeal_deal_all_alternating?: boolean;
+  deal_empty_first?: boolean;
+  divert_ranks?: number[];
+  piles_per_round?: number[][];
+  final_split_to?: string;
+  require_no_empty_group?: string;
 }
 
 export type RedealHow =
   | "grid_shuffle"
+  | "grid_shuffle_random_gaps"
+  | "rotate_bottom"
+  | "deal_rows"
+  | "redistribute_pile"
+  | "shuffle_redeal"
   | { regroup: { per_pile: number } }
   | { shuffle: { per_pile: number } }
   | { compact: { refill_from?: string } };
@@ -137,12 +189,18 @@ export interface DealStep {
   counts?: number[];
   rest?: boolean;
   ranks?: number[];
+  limit?: number;
   face_up?: boolean;
   kings_to_bottom?: boolean;
   one_each?: boolean;
   collect?: number[];
   set_base?: boolean;
   of_base?: boolean;
+  one_per_suit?: boolean;
+  split_on_rank?: number;
+  auto_foundation?: boolean;
+  divert_ranks?: number[];
+  drain_foundations?: boolean;
 }
 
 export type Adjacency = "eight" | "four";
@@ -151,7 +209,10 @@ export type RemovalKind =
   | "lower_of_suit"
   | "same_rank"
   | { pairs_sum: { total: number; alone?: number[] } }
-  | { rank_set: { ranks: number[] } };
+  | { rank_set: { ranks: number[] } }
+  | { reach_suit_or_rank: { distances: number[] } }
+  | { between_match: { max_len: number } }
+  | { contiguous_sum_multiple: { divisor: number; max_len: number } };
 
 export interface RemovalRules {
   kind: RemovalKind;
@@ -202,9 +263,17 @@ export type WinRule =
   | "all_on_foundations"
   | { empty: string[] }
   | { count: { group: string; cards: number } }
+  | { count_and_spread: { group: string; cards: number; spread: string } }
   | { at_most_piles: { group: string; piles: number } }
-  | { rows: { group: string; length?: number } }
-  | { score: { at_least: number } };
+  | { rows: { group: string; length?: number; build?: Build } }
+  | { score: { at_least: number } }
+  | { all_full: { group: string } };
+
+export interface ChooseBase {
+  from: string;
+  refill_from_stock?: boolean;
+  deal_waste?: boolean;
+}
 
 export interface SearchHints {
   progress_weight?: number;
@@ -217,6 +286,7 @@ export interface SearchHints {
 }
 
 export interface Rules {
+  $schema?: string;
   name: string;
   pack?: Pack;
   groups: GroupRules[];
@@ -229,6 +299,7 @@ export interface Rules {
   auto_flip?: boolean;
   safe_autoplay?: boolean;
   search?: SearchHints;
+  choose_base?: ChooseBase;
 }
 
 /**

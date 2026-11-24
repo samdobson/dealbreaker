@@ -110,7 +110,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -135,7 +138,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -160,7 +166,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -195,7 +204,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -212,6 +224,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -339,7 +352,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -364,7 +380,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -389,7 +408,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -424,7 +446,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -441,6 +466,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -568,7 +594,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -593,7 +622,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -618,7 +650,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -653,7 +688,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -670,6 +708,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -798,7 +837,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -823,7 +865,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -848,7 +893,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -883,7 +931,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -900,6 +951,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -1027,7 +1079,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -1052,7 +1107,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -1084,7 +1142,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -1169,7 +1230,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -1194,7 +1258,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -1226,7 +1293,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -1311,7 +1381,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -1336,7 +1409,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -1371,7 +1447,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -1476,7 +1555,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -1501,7 +1583,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -1536,7 +1621,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -1639,7 +1727,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -1664,7 +1755,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -1696,7 +1790,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -1713,6 +1810,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -1841,7 +1939,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -1866,7 +1967,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -1898,7 +2002,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -1915,6 +2022,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -2033,7 +2141,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -2058,7 +2169,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -2090,7 +2204,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -2107,6 +2224,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -2228,7 +2346,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -2253,7 +2374,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -2285,7 +2409,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -2302,6 +2429,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -2429,7 +2557,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -2454,7 +2585,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -2489,7 +2623,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -2506,6 +2643,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -2630,7 +2768,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -2665,7 +2806,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -2780,7 +2924,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -2815,7 +2962,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -2930,7 +3080,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -2955,7 +3108,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -2980,7 +3136,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -3011,7 +3170,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -3028,6 +3190,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -3125,7 +3288,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -3150,7 +3316,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -3182,7 +3351,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -3199,6 +3371,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -3309,7 +3482,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -3341,7 +3517,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -3436,7 +3615,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -3467,7 +3649,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -3568,7 +3753,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -3599,7 +3787,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -3684,7 +3875,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -3715,7 +3909,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -3800,7 +3997,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -3825,7 +4025,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -3857,7 +4060,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "reserve",
@@ -3882,7 +4088,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -3917,7 +4126,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -3934,6 +4146,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -4073,7 +4286,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -4111,7 +4327,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -4137,7 +4356,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -4154,6 +4376,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -4268,7 +4491,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -4303,7 +4529,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -4330,7 +4559,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -4347,6 +4579,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -4506,7 +4739,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -4532,7 +4768,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "discard",
@@ -4564,7 +4803,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -4596,7 +4838,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -4613,6 +4858,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -4731,7 +4977,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "discard",
@@ -4763,7 +5012,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -4788,7 +5040,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -4805,6 +5060,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -4925,7 +5181,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -4950,7 +5209,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -5023,7 +5285,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -5057,7 +5322,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -5074,6 +5342,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -5185,7 +5454,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -5210,7 +5482,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "foundation",
@@ -5241,7 +5516,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -5275,7 +5553,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -5292,6 +5573,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -5395,7 +5677,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -5427,7 +5712,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -5548,7 +5836,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "discard",
@@ -5580,7 +5871,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -5610,7 +5904,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -5748,7 +6045,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "reserve",
@@ -5774,7 +6074,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -5801,7 +6104,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -5922,7 +6228,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -5964,7 +6273,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "deal": [
@@ -6076,7 +6388,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -6118,7 +6433,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "redeal": {
@@ -6229,7 +6547,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -6261,7 +6582,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "redeal": {
@@ -6372,7 +6696,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "discard",
@@ -6404,7 +6731,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -6437,7 +6767,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "redeal": {
@@ -6560,7 +6893,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -6597,7 +6933,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -6614,6 +6953,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -6719,7 +7059,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -6751,7 +7094,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "redeal": {
@@ -6882,7 +7228,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -6907,7 +7256,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -6942,7 +7294,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -6959,6 +7314,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [
@@ -7053,7 +7409,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "waste",
@@ -7078,7 +7437,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     },
     {
       "name": "tableau",
@@ -7113,7 +7475,10 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "refill_nearest": false,
       "require_valid_base": false,
       "supermove_complete_run": false,
-      "lock_pile_dir": false
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
     }
   ],
   "stock": {
@@ -7130,6 +7495,7 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     "deal_per_pile": false,
     "redeal_reverse": false,
     "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
     "deal_empty_first": false
   },
   "deal": [

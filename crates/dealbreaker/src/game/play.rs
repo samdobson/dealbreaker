@@ -49,6 +49,7 @@ impl Game {
             Op::Redeal => s.redeals_used += 1,
             Op::SetBaseRank(r) => s.base_rank = Some(r),
             Op::Swap { pile, i, j } => s.piles[pile as usize].swap(i as usize, j as usize),
+            Op::SwapPiles(a, b) => s.piles.swap(a as usize, b as usize),
         }
     }
 
@@ -80,6 +81,7 @@ impl Game {
             Op::Redeal => s.redeals_used -= 1,
             Op::SetBaseRank(_) => s.base_rank = None,
             Op::Swap { .. } => self.do_op(s, op),
+            Op::SwapPiles(a, b) => s.piles.swap(a as usize, b as usize),
         }
     }
 
@@ -770,10 +772,17 @@ impl Game {
                         let Some(q) = find_src(s) else { break };
                         let need = g.refill_count - moved;
                         if self.group_of(q).kind == PileKind::Stock {
+                            let stock_gi = self.pile_group[q as usize];
                             let via_waste = self.stock.as_ref().and_then(|st| {
+                                let waste_before_stock = g
+                                    .refill_from
+                                    .iter()
+                                    .position(|&x| x == st.target)
+                                    .zip(g.refill_from.iter().position(|&x| x == stock_gi))
+                                    .is_some_and(|(wi, si)| wi < si);
                                 if st.pile == q
                                     && st.target_kind == PileKind::Waste
-                                    && g.refill_from.contains(&st.target)
+                                    && waste_before_stock
                                 {
                                     let c = st.deal_count(s.redeals_used);
                                     (c > 1).then_some((self.groups[st.target as usize].start, c))
@@ -897,49 +906,54 @@ impl Game {
         }
         match mv.action {
             Action::Transfer { from, to, count } => {
-                if let Some(discard) = self.group_of(to).replace_on_drop {
-                    let existing = s.piles[to as usize].len() as u16;
-                    if existing > 0 {
-                        self.push(
-                            s,
-                            j,
-                            Op::Shift {
-                                from: to,
-                                to: discard,
-                                count: existing,
-                            },
-                        );
+                if self.can_swap(s, from, to) {
+                    self.push(s, j, Op::SwapPiles(from, to));
+                    self.settle_with(s, j, &[]);
+                } else {
+                    if let Some(discard) = self.group_of(to).replace_on_drop {
+                        let existing = s.piles[to as usize].len() as u16;
+                        if existing > 0 {
+                            self.push(
+                                s,
+                                j,
+                                Op::Shift {
+                                    from: to,
+                                    to: discard,
+                                    count: existing,
+                                },
+                            );
+                        }
                     }
-                }
-                self.push(s, j, Op::Shift { from, to, count });
-                if let Some(cb) = &self.choose_base {
-                    if s.base_rank.is_none() {
-                        let r = s.piles[to as usize].last().unwrap().rank();
-                        self.push(s, j, Op::SetBaseRank(r));
-                        if cb.refill_from_stock {
-                            if let Some(sp) = self.stock_pile {
-                                for p in self.groups[cb.from_group as usize].piles() {
-                                    if s.piles[p as usize].is_empty()
-                                        && !s.piles[sp as usize].is_empty()
+                    self.push(s, j, Op::Shift { from, to, count });
+                    if let Some(cb) = &self.choose_base {
+                        if s.base_rank.is_none() {
+                            let r = s.piles[to as usize].last().unwrap().rank();
+                            self.push(s, j, Op::SetBaseRank(r));
+                            if cb.refill_from_stock {
+                                if let Some(sp) = self.stock_pile {
+                                    for p in self.groups[cb.from_group as usize].piles() {
+                                        if s.piles[p as usize].is_empty()
+                                            && !s.piles[sp as usize].is_empty()
+                                        {
+                                            self.deal_from_stock(s, j, sp, p, 1);
+                                        }
+                                    }
+                                }
+                            }
+                            if cb.deal_waste {
+                                if let Some(st) = &self.stock {
+                                    if st.target_kind == PileKind::Waste
+                                        && !s.piles[st.pile as usize].is_empty()
                                     {
-                                        self.deal_from_stock(s, j, sp, p, 1);
+                                        let dest = self.groups[st.target as usize].start;
+                                        self.deal_from_stock(s, j, st.pile, dest, 1);
                                     }
                                 }
                             }
                         }
-                        if cb.deal_waste {
-                            if let Some(st) = &self.stock {
-                                if st.target_kind == PileKind::Waste
-                                    && !s.piles[st.pile as usize].is_empty()
-                                {
-                                    let dest = self.groups[st.target as usize].start;
-                                    self.deal_from_stock(s, j, st.pile, dest, 1);
-                                }
-                            }
-                        }
                     }
+                    self.settle_with(s, j, &[from]);
                 }
-                self.settle_with(s, j, &[from]);
             }
             Action::Deal => {
                 let ok = self.talon_step(s, j);
@@ -995,6 +1009,11 @@ impl Game {
                 (0..g.count / cols).all(|row| self.row_prefix(s, *gi, row) >= *len as usize)
             }
             Win::Score(n) => self.score(s).is_some_and(|v| v >= *n),
+            Win::AllFull(gi) => self.groups[*gi as usize].piles().all(|p| {
+                let pile = &s.piles[p as usize];
+                pile.len() == self.rule(p).max_cards as usize
+                    && pile.first().is_some_and(|&c| self.empty_accepts(p, c, s))
+            }),
             Win::Count(g, n) => {
                 self.groups[*g as usize]
                     .piles()

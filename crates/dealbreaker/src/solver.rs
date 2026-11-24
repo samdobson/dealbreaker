@@ -653,6 +653,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
                 Op::Flip(p) => touch(p, 1),
                 Op::Redeal | Op::SetBaseRank(_) => {}
                 Op::Swap { pile, .. } => touch(pile, u16::MAX),
+                Op::SwapPiles(a, b) => touch(a, b),
             }
         }
     }
@@ -1134,6 +1135,18 @@ impl<'g, 'c> Ctx<'g, 'c> {
                         .map(|p| s.piles[p as usize].len())
                         .sum();
                     h += pw * (n as u32).saturating_sub(have as u32);
+                }
+                if let crate::game::Win::AllFull(gi) = g.win {
+                    for p in g.groups[gi as usize].piles() {
+                        let pile = &s.piles[p as usize];
+                        let want = g.rule(p).max_cards as usize;
+                        let good = if pile.first().is_some_and(|&c| g.empty_accepts(p, c, s)) {
+                            pile.len().min(want)
+                        } else {
+                            0
+                        };
+                        h += pw * (want - good) as u32;
+                    }
                 }
             }
         }

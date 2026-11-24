@@ -90,6 +90,8 @@ pub(crate) enum Op {
     SetBaseRank(u8),
     /// Swap two cards of a pile (shuffles are recorded as swaps, so they undo exactly).
     Swap { pile: u16, i: u16, j: u16 },
+    /// Swap the entire contents of two piles.
+    SwapPiles(u16, u16),
 }
 
 /// Compiled opening base-rank choice rules.
@@ -175,6 +177,8 @@ pub(crate) struct Group {
     pub refill_nearest: bool,
     /// Only allow building on a non-empty pile if its bottom card satisfies the pile's `empty` rule.
     pub require_valid_base: bool,
+    /// Swap-on-drop mode for piles within this group.
+    pub swap_bases: Option<SwapBases>,
 }
 
 #[derive(Clone, Debug)]
@@ -330,6 +334,7 @@ impl Group {
             refill_same_index: false,
             refill_nearest: false,
             require_valid_base: false,
+            swap_bases: None,
         }
     }
 }
@@ -358,6 +363,7 @@ pub(crate) struct Stock {
     pub deal_empty_first: bool,
     pub divert_ranks: Vec<u8>,
     pub final_split_to: Option<u16>,
+    pub require_no_empty_group: Option<u16>,
 }
 
 impl Stock {
@@ -383,7 +389,11 @@ impl Stock {
 
     /// True if emptying a target pile can block or alter how a stock deal behaves.
     pub fn sensitive_to_empty_piles(&self) -> bool {
-        self.require_no_empty || self.skip_empty || self.first_empty || self.deal_empty_first
+        self.require_no_empty
+            || self.require_no_empty_group.is_some()
+            || self.skip_empty
+            || self.first_empty
+            || self.deal_empty_first
     }
 }
 
@@ -409,6 +419,8 @@ pub(crate) enum Win {
     AtMostPiles(u16, u16),
     /// At least this many points.
     Score(u32),
+    /// Every pile in `group` holds `max_cards` cards with a valid base card.
+    AllFull(u16),
 }
 
 /// A game ready to play and solve: [`Rules`] compiled into tables.

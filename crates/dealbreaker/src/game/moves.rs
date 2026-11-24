@@ -531,6 +531,43 @@ impl Game {
 
     // ----- Moves ----------------------------------------------------------------------------
 
+    /// True if moving from `from` onto `to` swaps the two piles under `GroupRules::swap_bases`.
+    pub(crate) fn can_swap(&self, s: &State, from: u16, to: u16) -> bool {
+        if from == to {
+            return false;
+        }
+        let fgi = self.pile_group[from as usize];
+        if fgi != self.pile_group[to as usize] {
+            return false;
+        }
+        let Some(mode) = self.groups[fgi as usize].swap_bases else {
+            return false;
+        };
+        let src = &s.piles[from as usize];
+        let dst = &s.piles[to as usize];
+        if src.is_empty() || dst.is_empty() {
+            return false;
+        }
+        let c0 = src[0];
+        let c1 = dst[0];
+        if !c0.is_face_up() || !c1.is_face_up() {
+            return false;
+        }
+        match mode {
+            SwapBases::BothSingle => {
+                src.len() == 1
+                    && dst.len() == 1
+                    && self.empty_accepts(to, c0, s)
+                    && self.empty_accepts(from, c1, s)
+            }
+            SwapBases::EitherPile => {
+                self.rule(from).empty != self.rule(to).empty
+                    && c0.rank() != c1.rank()
+                    && (self.empty_accepts(to, c0, s) || self.empty_accepts(from, c1, s))
+            }
+        }
+    }
+
     /// Could `n` cards from the top of `from` go to `to`? Doesn't check the unit is movable.
     pub(crate) fn can_place(&self, s: &State, from: u16, to: u16, n: usize) -> bool {
         self.can_place_with_limit(s, from, to, n, None)
@@ -571,6 +608,9 @@ impl Game {
         let dst = &s.piles[to as usize];
         if matches!(tg.kind, PileKind::Stock) {
             return false;
+        }
+        if self.can_swap(s, from, to) {
+            return n == 1 && self.available(s, to);
         }
         let is_final_same_index =
             tg.final_from_same_index.is_some() && dst.len() + n == tr.max_cards as usize;
@@ -910,7 +950,10 @@ impl Game {
                 }
                 let tr = self.rule(to);
                 if no_hooks {
-                    if tg.replace_on_drop.is_none() && dst.len() >= tr.max_cards as usize {
+                    if tg.replace_on_drop.is_none()
+                        && tg.swap_bases.is_none()
+                        && dst.len() >= tr.max_cards as usize
+                    {
                         continue;
                     }
                     if !tr.complete_runs {
@@ -918,7 +961,7 @@ impl Game {
                             if tr.empty == EmptyRule::None {
                                 continue;
                             }
-                        } else if tr.build.by == BuildBy::None {
+                        } else if tr.build.by == BuildBy::None && tg.swap_bases.is_none() {
                             continue;
                         }
                     }
@@ -933,7 +976,7 @@ impl Game {
                     (unit, unit)
                 } else {
                     let max_n = if no_hooks {
-                        let room = if tg.replace_on_drop.is_some() {
+                        let room = if tg.replace_on_drop.is_some() || tg.swap_bases.is_some() {
                             tr.max_cards as usize
                         } else {
                             (tr.max_cards as usize).saturating_sub(dst.len())
@@ -955,7 +998,12 @@ impl Game {
                     (1, max_n)
                 };
                 // Fast bitmask pre-filter for non-empty, non-joker destinations.
-                let fit_mask = if no_hooks && self.jokers == 0 && !tr.complete_runs && !dst_empty {
+                let fit_mask = if no_hooks
+                    && self.jokers == 0
+                    && !tr.complete_runs
+                    && !dst_empty
+                    && tg.swap_bases.is_none()
+                {
                     let top = *dst.last().unwrap();
                     if !top.is_face_up() {
                         continue;
@@ -1284,6 +1332,14 @@ impl Game {
             }
             if st.require_no_empty && any_empty() {
                 return false;
+            }
+            if let Some(req_gi) = st.require_no_empty_group {
+                if self.groups[req_gi as usize]
+                    .piles()
+                    .any(|p| s.piles[p as usize].is_empty())
+                {
+                    return false;
+                }
             }
             if matches!(st.target_kind, PileKind::Waste | PileKind::Foundation) {
                 let dest = st.targets[0];

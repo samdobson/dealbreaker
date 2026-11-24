@@ -321,6 +321,7 @@ impl Game {
                 refill_same_index: g.refill_same_index,
                 refill_nearest: g.refill_nearest,
                 require_valid_base: g.require_valid_base,
+                swap_bases: g.swap_bases,
             };
             grp.symmetric = g.layout.is_none()
                 && g.piles.is_empty()
@@ -486,6 +487,10 @@ impl Game {
                         Some(groups[ft as usize].start)
                     }
                 };
+                let require_no_empty_group = match &sr.require_no_empty_group {
+                    None => None,
+                    Some(name) => Some(find(name)?),
+                };
                 if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
                     return err(
                         "stock skip_empty can't be combined with require_no_empty or first_empty",
@@ -526,6 +531,7 @@ impl Game {
                     deal_empty_first: sr.deal_empty_first,
                     divert_ranks: sr.divert_ranks.clone(),
                     final_split_to,
+                    require_no_empty_group,
                 })
             }
             (None, _) => None,
@@ -668,6 +674,7 @@ impl Game {
                 }
                 Win::Score(*at_least)
             }
+            WinRule::AllFull { group } => Win::AllFull(find(group)?),
         };
 
         let waste = groups

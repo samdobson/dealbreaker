@@ -2279,3 +2279,84 @@ fn moves_when_empty_gates() {
     );
     check(r_same, 0..40);
 }
+
+#[test]
+fn swap_bases_and_all_full_win() {
+    // 1) SwapBases::BothSingle + require_no_empty_group (2 suits x 5 ranks: A=1, 2, 3, 4, 5).
+    let pack1 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    let gallery1 = GroupRules::new("gallery", PileKind::Tableau, 4)
+        .build_rule(Build::new(BuildBy::Suit, Dir::Up).step(2))
+        .moves(MoveUnit::Top)
+        .max_accept(1)
+        .require_valid_base()
+        .swap_bases(SwapBases::BothSingle)
+        .pile(
+            PileOverride::on(&[0, 1])
+                .empty(EmptyRule::Rank(2))
+                .build(Build::new(BuildBy::Suit, Dir::Up).step(2)),
+        )
+        .pile(
+            PileOverride::on(&[2, 3])
+                .empty(EmptyRule::Rank(3))
+                .build(Build::new(BuildBy::Suit, Dir::Up).step(2)),
+        );
+    let mut r1 = Rules::new(
+        "mini-swap-single",
+        pack1,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::Any, Dir::Same)
+                .empty(EmptyRule::Rank(1))
+                .moves(MoveUnit::None)
+                .max_cards(2),
+            gallery1,
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::Top),
+        ],
+        vec![
+            DealStep::to("gallery").each(1),
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.require_no_empty_group = Some("gallery".into());
+    r1.stock = Some(st);
+    r1.win = WinRule::Empty(vec!["stock".into(), "tableau".into()]);
+    check(r1, 0..40);
+
+    // 2) SwapBases::EitherPile + WinRule::AllFull (2 suits x 4 ranks: 2, 3, 4, 5).
+    let pack2 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[2, 3, 4, 5]);
+    let gallery2 = GroupRules::new("gallery", PileKind::Tableau, 4)
+        .build_rule(Build::new(BuildBy::Suit, Dir::Up).step(2))
+        .moves(MoveUnit::Run)
+        .max_cards(2)
+        .max_accept(2)
+        .refill_from(&["stock", "waste"])
+        .swap_bases(SwapBases::EitherPile)
+        .pile(PileOverride::on(&[0, 1]).empty(EmptyRule::Rank(2)))
+        .pile(PileOverride::on(&[2, 3]).empty(EmptyRule::Rank(3)));
+    let mut r2 = Rules::new(
+        "mini-swap-either",
+        pack2,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            gallery2,
+        ],
+        vec![
+            DealStep::to("gallery").each(1),
+            DealStep::to("waste").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st2 = StockRules::to("waste");
+    st2.unlimited_redeals = true;
+    r2.stock = Some(st2);
+    r2.win = WinRule::AllFull {
+        group: "gallery".into(),
+    };
+    check(r2, 0..40);
+}

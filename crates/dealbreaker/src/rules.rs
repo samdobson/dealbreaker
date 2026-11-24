@@ -479,6 +479,23 @@ pub struct GroupRules {
     /// rule.
     #[serde(default)]
     pub require_valid_base: bool,
+    /// When set, moving from one pile of this group onto another may swap the two piles instead
+    /// of building.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub swap_bases: Option<SwapBases>,
+}
+
+/// When two piles in the same group may swap their contents on a move from one to the other.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SwapBases {
+    /// Swap two single-card piles when each card satisfies the other pile's `empty` rule.
+    BothSingle,
+    /// Swap two non-empty piles with different `empty` rules when their bottom cards differ in
+    /// rank and at least one bottom card satisfies the other pile's `empty` rule.
+    EitherPile,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -607,6 +624,7 @@ impl GroupRules {
             refill_same_index: false,
             refill_nearest: false,
             require_valid_base: false,
+            swap_bases: None,
         }
     }
 
@@ -797,6 +815,11 @@ impl GroupRules {
 
     pub fn require_valid_base(mut self) -> Self {
         self.require_valid_base = true;
+        self
+    }
+
+    pub fn swap_bases(mut self, mode: SwapBases) -> Self {
+        self.swap_bases = Some(mode);
         self
     }
 }
@@ -1056,6 +1079,9 @@ pub struct StockRules {
     /// and the last card remaining in the stock is turned face up.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub final_split_to: Option<String>,
+    /// The stock may not deal while any pile of this named group is empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub require_no_empty_group: Option<String>,
 }
 
 impl StockRules {
@@ -1082,6 +1108,7 @@ impl StockRules {
             divert_ranks: Vec::new(),
             piles_per_round: Vec::new(),
             final_split_to: None,
+            require_no_empty_group: None,
         }
     }
 }
@@ -1381,6 +1408,8 @@ pub enum WinRule {
     },
     /// The position scores at least this many points (see [`Rules::score`]).
     Score { at_least: u32 },
+    /// Every pile in `group` holds `max_cards` cards with a bottom card satisfying its `empty` rule.
+    AllFull { group: String },
 }
 
 /// How a position is scored.

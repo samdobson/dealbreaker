@@ -219,6 +219,7 @@ fn to_waste(count: u16, redeals: Option<u32>) -> StockRules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     }
 }
 
@@ -469,6 +470,7 @@ pub fn spider(suits: u8) -> Rules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     });
     if suits >= 4 {
         // Tuned on deals 101-120, checked on 121-140: with four suits, cards out of sequence
@@ -541,6 +543,7 @@ pub fn scorpion() -> Rules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     });
     r
 }
@@ -607,6 +610,7 @@ pub fn gypsy() -> Rules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     });
     r
 }
@@ -717,6 +721,7 @@ pub fn golf() -> Rules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     });
     r.win = WinRule::Empty(vec!["tableau".into()]);
     r
@@ -831,6 +836,7 @@ pub fn aces_up() -> Rules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     });
     r.removal = vec![RemovalRules {
         kind: RemovalKind::LowerOfSuit,
@@ -871,6 +877,7 @@ fn hand_stock() -> StockRules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     }
 }
 
@@ -1224,6 +1231,7 @@ pub fn accordion() -> Rules {
         divert_ranks: Vec::new(),
         piles_per_round: Vec::new(),
         final_split_to: None,
+        require_no_empty_group: None,
     });
     r.win = WinRule::AtMostPiles {
         group: "tableau".into(),

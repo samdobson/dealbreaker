@@ -9,19 +9,25 @@ use dealbreaker::{
     SearchHints, SolveOptions, State, StateData, Step, Strategy,
 };
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 const USAGE: &str = "\
 dealbreaker: solve patience (solitaire) games
 
 USAGE:
     dealbreaker list
     dealbreaker rules <GAME>
+    dealbreaker validate <GAME> [--state FILE] [--json]
     dealbreaker deal  <GAME> [DEAL]
     dealbreaker solve <GAME> [DEAL] [SEARCH] [--json]
-    dealbreaker hint  <GAME> [DEAL] [SEARCH] [--samples N]
+    dealbreaker hint  <GAME> [DEAL] [SEARCH] [--samples N] [--json]
     dealbreaker replay <GAME> [DEAL] --steps FILE [--legal] [--json]
     dealbreaker best  <GAME> [DEAL] [SEARCH] [--json]
     dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [--jobs N] [SEARCH] [--json] [--verbose]
     dealbreaker serve <GAME> [--search JSON]
+    dealbreaker --version
+
+`validate` checks that a rules file (and optional `--state` JSON) is valid.
 
 `replay` plays a list of steps (a JSON array, or `solve --json` output) from a deal and prints
 the position after each one; `--legal` adds every legal step at each position.
@@ -32,12 +38,12 @@ the position after each one; `--legal` adds every legal step at each position.
 `hint`, `legal_steps`, `play_step`, `validate`, `is_won`, `score`, `rules`, `quit`), and writes
 one JSON response line per request to stdout.
 
-GAME is a preset id (see `list`) or a path to a rules JSON file.
+GAME is a preset id (see `list`), a path to a rules JSON file, or `-` for stdin.
 
 DEAL (default: --seed 1):
     --seed N          deal from a seed
     --ms N            Microsoft FreeCell deal number (FreeCell-layout games)
-    --state FILE      a position as JSON (`deal` prints the format)
+    --state FILE      a position as JSON (`deal` prints the format; `-` for stdin)
 
 SEARCH:
     --max-states N    budget of distinct positions (default 2000000)
@@ -60,44 +66,82 @@ fn main() -> ExitCode {
     }
 }
 
+const VALUE_FLAGS: &[&str] = &[
+    "--seed",
+    "--ms",
+    "--state",
+    "--max-states",
+    "--timeout-ms",
+    "--strategy",
+    "--seeds",
+    "--jobs",
+    "--samples",
+    "--search",
+    "--steps",
+];
+
+const BOOL_FLAGS: &[&str] = &[
+    "--json",
+    "--legal",
+    "--no-autoplay",
+    "--no-shorten",
+    "--microsoft",
+    "--best",
+    "--verbose",
+    "--help",
+    "-h",
+    "--version",
+    "-V",
+];
+
+#[derive(Debug)]
 struct Args {
     rest: Vec<String>,
     flags: Vec<(String, Option<String>)>,
 }
 
 impl Args {
-    fn parse(v: &[String]) -> Args {
-        let takes_value = [
-            "--seed",
-            "--ms",
-            "--state",
-            "--max-states",
-            "--timeout-ms",
-            "--strategy",
-            "--seeds",
-            "--jobs",
-            "--samples",
-            "--search",
-            "--steps",
-        ];
+    fn parse(v: &[String]) -> Result<Args, String> {
         let mut rest = Vec::new();
         let mut flags = Vec::new();
         let mut i = 0;
         while i < v.len() {
             let a = &v[i];
-            if let Some((k, val)) = a.split_once('=').filter(|_| a.starts_with("--")) {
-                flags.push((k.to_string(), Some(val.to_string())));
-            } else if takes_value.contains(&a.as_str()) {
-                flags.push((a.clone(), v.get(i + 1).cloned()));
+            if a == "-" {
+                rest.push(a.clone());
+            } else if let Some((k, val)) = a.split_once('=').filter(|_| a.starts_with("--")) {
+                if VALUE_FLAGS.contains(&k) {
+                    flags.push((k.to_string(), Some(val.to_string())));
+                } else if BOOL_FLAGS.contains(&k) {
+                    return Err(format!("{k} does not take a value"));
+                } else {
+                    return Err(format!("unknown flag {k:?}\n\n{USAGE}"));
+                }
+            } else if VALUE_FLAGS.contains(&a.as_str()) {
+                let val = v
+                    .get(i + 1)
+                    .ok_or_else(|| format!("{a} requires a value"))?;
+                flags.push((a.clone(), Some(val.clone())));
                 i += 1;
-            } else if a.starts_with("--") {
+            } else if BOOL_FLAGS.contains(&a.as_str()) {
                 flags.push((a.clone(), None));
+            } else if a.starts_with('-') {
+                return Err(format!("unknown flag {a:?}\n\n{USAGE}"));
             } else {
                 rest.push(a.clone());
             }
             i += 1;
         }
-        Args { rest, flags }
+        Ok(Args { rest, flags })
+    }
+
+    fn check_allowed(&self, cmd: &str, allowed: &[&str]) -> Result<(), String> {
+        for (f, _) in &self.flags {
+            if !allowed.contains(&f.as_str()) {
+                return Err(format!("unknown flag {f:?} for `{cmd}`\n\n{USAGE}"));
+            }
+        }
+        Ok(())
     }
 
     fn get(&self, k: &str) -> Option<&str> {
@@ -119,14 +163,29 @@ impl Args {
     }
 }
 
+fn read_input(path: &str) -> Result<String, String> {
+    if path == "-" {
+        let mut buf = String::new();
+        io::Read::read_to_string(&mut io::stdin(), &mut buf).map_err(|e| format!("stdin: {e}"))?;
+        Ok(buf)
+    } else {
+        std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))
+    }
+}
+
 fn load_game(spec: &str, a: &Args) -> Result<Game, String> {
-    let mut rules: Rules = match presets::preset(spec) {
-        Some(r) => r,
-        None => {
-            let text = std::fs::read_to_string(spec).map_err(|e| {
-                format!("{spec:?} is not a preset (see `list`) or a readable file: {e}")
-            })?;
-            Rules::from_json(&text).map_err(|e| format!("{spec}: {e}"))?
+    let mut rules: Rules = if spec == "-" {
+        let text = read_input("-")?;
+        Rules::from_json(&text).map_err(|e| format!("stdin: {e}"))?
+    } else {
+        match presets::preset(spec) {
+            Some(r) => r,
+            None => {
+                let text = std::fs::read_to_string(spec).map_err(|e| {
+                    format!("{spec:?} is not a preset (see `list`) or a readable file: {e}")
+                })?;
+                Rules::from_json(&text).map_err(|e| format!("{spec}: {e}"))?
+            }
         }
     };
     if let Some(json) = a.get("--search") {
@@ -151,7 +210,7 @@ fn merge_search(base: &SearchHints, json: &str) -> Result<SearchHints, String> {
 
 fn load_deal(game: &Game, a: &Args) -> Result<State, String> {
     if let Some(path) = a.get("--state") {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        let text = read_input(path)?;
         return game.state_from_json(&text).map_err(|e| e.to_string());
     }
     if let Some(n) = a.num::<u32>("--ms")? {
@@ -202,30 +261,78 @@ fn search_opts(a: &Args) -> Result<SolveOptions, String> {
 }
 
 fn run(argv: &[String]) -> Result<(), String> {
-    let a = Args::parse(argv);
+    let a = Args::parse(argv)?;
+    if a.has("--help") || a.has("-h") {
+        print!("{USAGE}");
+        return Ok(());
+    }
+    if a.has("--version") || a.has("-V") {
+        println!("dealbreaker {VERSION}");
+        return Ok(());
+    }
     let cmd = a.rest.first().map(String::as_str).unwrap_or("help");
     let game_arg = || {
         a.rest
             .get(1)
             .ok_or_else(|| format!("`{cmd}` needs a game\n\n{USAGE}"))
     };
+    const DEAL_FLAGS: &[&str] = &["--seed", "--ms", "--state", "--search"];
     match cmd {
         "list" => {
+            a.check_allowed("list", &[])?;
             for p in presets::PRESETS {
                 println!("{:<20} {}", p.id, (p.rules)().name);
             }
         }
         "rules" => {
+            a.check_allowed("rules", &["--search"])?;
             let g = load_game(game_arg()?, &a)?;
             println!("{}", g.rules().to_json());
         }
+        "validate" => {
+            a.check_allowed("validate", &["--state", "--search", "--json"])?;
+            let spec = game_arg()?;
+            if spec == "-" && a.get("--state") == Some("-") {
+                return Err("cannot read both game rules and --state from stdin".into());
+            }
+            let g = load_game(spec, &a)?;
+            if let Some(path) = a.get("--state") {
+                let text = read_input(path)?;
+                g.state_from_json(&text).map_err(|e| e.to_string())?;
+            }
+            if a.has("--json") {
+                println!("{}", serde_json::json!({ "ok": true, "game": g.name() }));
+            } else {
+                println!("ok ({})", g.name());
+            }
+        }
         "deal" => {
+            a.check_allowed("deal", DEAL_FLAGS)?;
             let g = load_game(game_arg()?, &a)?;
             let s = load_deal(&g, &a)?;
             println!("{}", g.state_to_json(&s));
         }
         "solve" => {
-            let g = load_game(game_arg()?, &a)?;
+            a.check_allowed(
+                "solve",
+                &[
+                    "--seed",
+                    "--ms",
+                    "--state",
+                    "--max-states",
+                    "--timeout-ms",
+                    "--strategy",
+                    "--no-autoplay",
+                    "--no-shorten",
+                    "--search",
+                    "--json",
+                ],
+            )?;
+            let spec = game_arg()?;
+            if spec == "-" && a.get("--state") == Some("-") {
+                return Err("cannot read both game rules and --state from stdin".into());
+            }
+            let g = load_game(spec, &a)?;
             let s = load_deal(&g, &a)?;
             let t = Instant::now();
             let r = solve(&g, &s, &search_opts(&a)?);
@@ -264,10 +371,24 @@ fn run(argv: &[String]) -> Result<(), String> {
             }
         }
         "replay" => {
-            let g = load_game(game_arg()?, &a)?;
-            let mut s = load_deal(&g, &a)?;
+            a.check_allowed(
+                "replay",
+                &[
+                    "--seed", "--ms", "--state", "--steps", "--legal", "--json", "--search",
+                ],
+            )?;
+            let spec = game_arg()?;
             let path = a.get("--steps").ok_or("`replay` needs --steps FILE")?;
-            let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+            let stdin_uses = [Some(spec.as_str()), a.get("--state"), Some(path)]
+                .into_iter()
+                .filter(|&p| p == Some("-"))
+                .count();
+            if stdin_uses > 1 {
+                return Err("only one input may be read from stdin (`-`)".into());
+            }
+            let g = load_game(spec, &a)?;
+            let mut s = load_deal(&g, &a)?;
+            let text = read_input(path)?;
             let steps = parse_steps(&text).map_err(|e| format!("{path}: {e}"))?;
             let legal = a.has("--legal");
             let json = a.has("--json");
@@ -308,9 +429,29 @@ fn run(argv: &[String]) -> Result<(), String> {
             }
         }
         "hint" => {
-            let g = load_game(game_arg()?, &a)?;
+            a.check_allowed(
+                "hint",
+                &[
+                    "--seed",
+                    "--ms",
+                    "--state",
+                    "--max-states",
+                    "--timeout-ms",
+                    "--strategy",
+                    "--no-autoplay",
+                    "--no-shorten",
+                    "--search",
+                    "--samples",
+                    "--json",
+                ],
+            )?;
+            let spec = game_arg()?;
+            if spec == "-" && a.get("--state") == Some("-") {
+                return Err("cannot read both game rules and --state from stdin".into());
+            }
+            let g = load_game(spec, &a)?;
             let s = if let Some(path) = a.get("--state") {
-                let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+                let text = read_input(path)?;
                 g.hint_state_from_json(&text).map_err(|e| e.to_string())?
             } else {
                 load_deal(&g, &a)?
@@ -322,13 +463,41 @@ fn run(argv: &[String]) -> Result<(), String> {
             if let Some(n) = a.num("--samples")? {
                 o.samples = n;
             }
-            match hint(&g, &s, &o) {
-                Some(h) => println!("{} (won {} of {} guesses)", h.step, h.wins, h.samples),
-                None => println!("no winning line found"),
+            let res = hint(&g, &s, &o);
+            if a.has("--json") {
+                let out = serde_json::json!({
+                    "game": g.name(),
+                    "hint": res,
+                });
+                println!("{}", serde_json::to_string_pretty(&out).unwrap());
+            } else {
+                match res {
+                    Some(h) => println!("{} (won {} of {} guesses)", h.step, h.wins, h.samples),
+                    None => println!("no winning line found"),
+                }
             }
         }
         "best" => {
-            let g = load_game(game_arg()?, &a)?;
+            a.check_allowed(
+                "best",
+                &[
+                    "--seed",
+                    "--ms",
+                    "--state",
+                    "--max-states",
+                    "--timeout-ms",
+                    "--strategy",
+                    "--no-autoplay",
+                    "--no-shorten",
+                    "--search",
+                    "--json",
+                ],
+            )?;
+            let spec = game_arg()?;
+            if spec == "-" && a.get("--state") == Some("-") {
+                return Err("cannot read both game rules and --state from stdin".into());
+            }
+            let g = load_game(spec, &a)?;
             if !g.is_scored() {
                 return Err(format!("{} isn't played for points", g.name()));
             }
@@ -366,6 +535,23 @@ fn run(argv: &[String]) -> Result<(), String> {
             }
         }
         "bench" if a.has("--best") => {
+            a.check_allowed(
+                "bench",
+                &[
+                    "--seeds",
+                    "--microsoft",
+                    "--best",
+                    "--jobs",
+                    "--max-states",
+                    "--timeout-ms",
+                    "--strategy",
+                    "--no-autoplay",
+                    "--no-shorten",
+                    "--search",
+                    "--json",
+                    "--verbose",
+                ],
+            )?;
             let g = load_game(game_arg()?, &a)?;
             if !g.is_scored() {
                 return Err(format!("{} isn't played for points", g.name()));
@@ -427,6 +613,23 @@ fn run(argv: &[String]) -> Result<(), String> {
             }
         }
         "bench" => {
+            a.check_allowed(
+                "bench",
+                &[
+                    "--seeds",
+                    "--microsoft",
+                    "--best",
+                    "--jobs",
+                    "--max-states",
+                    "--timeout-ms",
+                    "--strategy",
+                    "--no-autoplay",
+                    "--no-shorten",
+                    "--search",
+                    "--json",
+                    "--verbose",
+                ],
+            )?;
             let g = load_game(game_arg()?, &a)?;
             let range = a.get("--seeds").unwrap_or("1..100");
             let (lo, hi) = range
@@ -500,12 +703,17 @@ fn run(argv: &[String]) -> Result<(), String> {
             }
         }
         "serve" => {
+            a.check_allowed("serve", &["--search"])?;
             let g = load_game(game_arg()?, &a)?;
             let stdin = io::stdin();
             let stdout = io::stdout();
             serve_io(&g, stdin.lock(), stdout.lock())?;
         }
-        "help" | "--help" | "-h" => print!("{USAGE}"),
+        "version" => {
+            a.check_allowed("version", &[])?;
+            println!("dealbreaker {VERSION}");
+        }
+        "help" => print!("{USAGE}"),
         other => return Err(format!("unknown command {other:?}\n\n{USAGE}")),
     }
     Ok(())
@@ -784,18 +992,49 @@ mod tests {
     fn args_parsing_and_search_merge() {
         let a = Args::parse(&argv(&[
             "solve", "freecell", "--seed=3", "--seed", "5", "--json",
-        ]));
+        ]))
+        .unwrap();
         assert_eq!(a.rest, ["solve", "freecell"]);
         assert_eq!(a.get("--seed"), Some("5"));
         assert_eq!(a.num::<u64>("--seed").unwrap(), Some(5));
         assert!(a.has("--json"));
         assert!(!a.has("--verbose"));
 
-        let bad = Args::parse(&argv(&["--seed", "nope"]));
+        let bad = Args::parse(&argv(&["--seed", "nope"])).unwrap();
         assert!(bad
             .num::<u64>("--seed")
             .unwrap_err()
             .contains("not a number"));
+
+        // Unknown flags, missing values, and values on bool flags are rejected.
+        assert!(Args::parse(&argv(&["solve", "freecell", "--bogus"]))
+            .unwrap_err()
+            .contains("unknown flag"));
+        assert!(Args::parse(&argv(&["solve", "freecell", "--seed"]))
+            .unwrap_err()
+            .contains("requires a value"));
+        assert!(Args::parse(&argv(&["solve", "freecell", "--json=true"]))
+            .unwrap_err()
+            .contains("does not take a value"));
+        assert!(run(&argv(&["solve", "freecell", "--samples", "4"]))
+            .unwrap_err()
+            .contains("unknown flag"));
+        run(&argv(&["--version"])).unwrap();
+        run(&argv(&["-V"])).unwrap();
+        run(&argv(&["version"])).unwrap();
+        run(&argv(&["solve", "--help"])).unwrap();
+        run(&argv(&["validate", "freecell"])).unwrap();
+        run(&argv(&["validate", "freecell", "--json"])).unwrap();
+        run(&argv(&[
+            "hint",
+            "freecell",
+            "--ms",
+            "5",
+            "--samples",
+            "1",
+            "--json",
+        ]))
+        .unwrap();
 
         let base = SearchHints::default();
         let merged = merge_search(&base, r#"{"blocker_weight": 4}"#).unwrap();

@@ -186,6 +186,93 @@ fn binary_json_subcommands_and_error_exit_codes() {
         .output()
         .unwrap();
     assert_eq!(bad_game.status.code(), Some(2));
+
+    // Unknown flag exits with code 2.
+    let bad_flag = Command::new(bin)
+        .args(["solve", "freecell", "--max-state", "100"])
+        .output()
+        .unwrap();
+    assert_eq!(bad_flag.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&bad_flag.stderr).contains("unknown flag"),
+        "{bad_flag:?}"
+    );
+
+    // --version prints package version.
+    let ver = Command::new(bin).arg("--version").output().unwrap();
+    assert!(ver.status.success());
+    let ver_str = String::from_utf8_lossy(&ver.stdout);
+    assert!(ver_str.contains(env!("CARGO_PKG_VERSION")), "{ver_str}");
+
+    // hint --json outputs structured JSON.
+    let hint_json_out = Command::new(bin)
+        .args(["hint", "freecell", "--ms", "5", "--samples", "1", "--json"])
+        .output()
+        .unwrap();
+    assert!(hint_json_out.status.success(), "{hint_json_out:?}");
+    let hint_val: serde_json::Value = serde_json::from_slice(&hint_json_out.stdout).unwrap();
+    assert_eq!(hint_val["game"], "FreeCell");
+    assert_eq!(hint_val["hint"]["wins"], 1);
+    assert_eq!(hint_val["hint"]["samples"], 1);
+
+    // validate checks rules and optional --state from stdin (`-`).
+    let mut val_child = Command::new(bin)
+        .args(["validate", "freecell", "--state", "-", "--json"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    val_child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(&deal_out.stdout)
+        .unwrap();
+    let val_out = val_child.wait_with_output().unwrap();
+    assert!(val_out.status.success(), "{val_out:?}");
+    let val_json: serde_json::Value = serde_json::from_slice(&val_out.stdout).unwrap();
+    assert_eq!(val_json["ok"], true);
+
+    // Pipe deal JSON into `solve --state - --json`, then pipe into `replay --steps - --json`.
+    let mut solve_pipe = Command::new(bin)
+        .args([
+            "solve",
+            "freecell",
+            "--state",
+            "-",
+            "--max-states",
+            "200000",
+            "--json",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    solve_pipe
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(&deal_out.stdout)
+        .unwrap();
+    let solve_pipe_out = solve_pipe.wait_with_output().unwrap();
+    assert!(solve_pipe_out.status.success(), "{solve_pipe_out:?}");
+    let solve_pipe_val: serde_json::Value = serde_json::from_slice(&solve_pipe_out.stdout).unwrap();
+    assert_eq!(solve_pipe_val["outcome"], "solved");
+
+    let mut replay_pipe = Command::new(bin)
+        .args(["replay", "freecell", "--ms", "1", "--steps", "-", "--json"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    replay_pipe
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(&solve_pipe_out.stdout)
+        .unwrap();
+    let replay_pipe_out = replay_pipe.wait_with_output().unwrap();
+    assert!(replay_pipe_out.status.success(), "{replay_pipe_out:?}");
 }
 
 #[test]

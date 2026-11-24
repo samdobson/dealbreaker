@@ -1,0 +1,16 @@
+{
+  "name": "Klondike (Vegas)",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "waste", "kind": "waste"},
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 7, "build": {"by": "alternate", "dir": "down"}, "empty": {"rank": 13}, "moves": "run"}
+  ],
+  "stock": {"to": "waste", "count": 3, "redeals": 2},
+  "deal": [
+    {"to": "tableau", "counts": [0, 1, 2, 3, 4, 5, 6], "face_up": false},
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "search": {"blocker_weight": 4}
+}

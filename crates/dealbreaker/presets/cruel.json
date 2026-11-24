@@ -1,0 +1,12 @@
+{
+  "name": "Cruel",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 12, "build": {"by": "suit", "dir": "down"}, "empty": "none"}
+  ],
+  "redeal": {"group": "tableau", "times": 0, "unlimited": true, "how": {"regroup": {"per_pile": 4}}},
+  "deal": [
+    {"to": "foundation", "ranks": [1]},
+    {"to": "tableau", "count": 4}
+  ]
+}

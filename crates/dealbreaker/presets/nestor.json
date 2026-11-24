@@ -1,0 +1,16 @@
+{
+  "name": "Nestor",
+  "groups": [
+    {"name": "discard", "kind": "foundation", "build": {"by": "none", "dir": "down"}, "empty": "none"},
+    {"name": "reserve", "kind": "reserve", "count": 4, "moves": "none"},
+    {"name": "tableau", "kind": "tableau", "count": 8, "empty": "none", "moves": "none"}
+  ],
+  "deal": [
+    {"to": "tableau", "count": 6},
+    {"to": "reserve", "count": 1}
+  ],
+  "removal": [
+    {"kind": "same_rank", "from": ["tableau", "reserve"], "to": "discard"}
+  ],
+  "win": {"count": {"group": "discard", "cards": 52}}
+}

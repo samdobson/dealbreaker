@@ -1,0 +1,13 @@
+{
+  "name": "Sir Tommy",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "waste", "kind": "waste"},
+    {"name": "foundation", "kind": "foundation", "count": 4, "build": {"by": "any", "dir": "up"}},
+    {"name": "tableau", "kind": "tableau", "count": 4, "build": {"by": "any", "dir": "any"}, "accepts_from": ["waste"]}
+  ],
+  "stock": {"to": "waste", "only_when_empty": true},
+  "deal": [
+    {"to": "stock", "rest": true, "face_up": false}
+  ]
+}

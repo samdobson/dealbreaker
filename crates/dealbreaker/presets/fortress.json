@@ -1,0 +1,10 @@
+{
+  "name": "Fortress",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 10, "build": {"by": "suit", "dir": "either"}}
+  ],
+  "deal": [
+    {"to": "tableau", "rest": true}
+  ]
+}

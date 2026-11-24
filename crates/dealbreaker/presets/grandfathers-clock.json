@@ -1,0 +1,41 @@
+{
+  "name": "Grandfather's Clock",
+  "groups": [
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 12,
+      "build": {"by": "suit", "dir": "up", "wrap": true},
+      "piles": [
+        {"piles": [0], "empty": {"rank": 10}, "empty_suit": "clubs", "max_cards": 5},
+        {"piles": [1], "empty": {"rank": 11}, "empty_suit": "hearts", "max_cards": 5},
+        {"piles": [2], "empty": {"rank": 12}, "empty_suit": "spades", "max_cards": 5},
+        {"piles": [3], "empty": {"rank": 13}, "empty_suit": "diamonds", "max_cards": 5},
+        {"piles": [4], "empty": {"rank": 2}, "empty_suit": "clubs", "max_cards": 4},
+        {"piles": [5], "empty": {"rank": 3}, "empty_suit": "hearts", "max_cards": 4},
+        {"piles": [6], "empty": {"rank": 4}, "empty_suit": "spades", "max_cards": 4},
+        {"piles": [7], "empty": {"rank": 5}, "empty_suit": "diamonds", "max_cards": 4},
+        {"piles": [8], "empty": {"rank": 6}, "empty_suit": "clubs", "max_cards": 4},
+        {"piles": [9], "empty": {"rank": 7}, "empty_suit": "hearts", "max_cards": 4},
+        {"piles": [10], "empty": {"rank": 8}, "empty_suit": "spades", "max_cards": 4},
+        {"piles": [11], "empty": {"rank": 9}, "empty_suit": "diamonds", "max_cards": 4}
+      ]
+    },
+    {"name": "tableau", "kind": "tableau", "count": 8, "build": {"by": "any", "dir": "down"}}
+  ],
+  "deal": [
+    {"to": "foundation", "piles": [0], "ranks": [10], "count": 1},
+    {"to": "foundation", "piles": [1], "ranks": [11], "count": 1},
+    {"to": "foundation", "piles": [2], "ranks": [12], "count": 1},
+    {"to": "foundation", "piles": [3], "ranks": [13], "count": 1},
+    {"to": "foundation", "piles": [4], "ranks": [2], "count": 1},
+    {"to": "foundation", "piles": [5], "ranks": [3], "count": 1},
+    {"to": "foundation", "piles": [6], "ranks": [4], "count": 1},
+    {"to": "foundation", "piles": [7], "ranks": [5], "count": 1},
+    {"to": "foundation", "piles": [8], "ranks": [6], "count": 1},
+    {"to": "foundation", "piles": [9], "ranks": [7], "count": 1},
+    {"to": "foundation", "piles": [10], "ranks": [8], "count": 1},
+    {"to": "foundation", "piles": [11], "ranks": [9], "count": 1},
+    {"to": "tableau", "count": 5}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Accordion",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "tableau", "kind": "tableau", "count": 52, "build": {"by": "suit_or_rank", "dir": "any"}, "empty": "none", "moves": "whole", "reach": [1, 3], "compact": true}
+  ],
+  "stock": {"to": "tableau", "first_empty": true},
+  "deal": [
+    {"to": "tableau", "piles": [0], "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "win": {"at_most_piles": {"group": "tableau", "piles": 1}}
+}

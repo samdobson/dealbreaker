@@ -1,0 +1,12 @@
+{
+  "name": "Flower Garden",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "reserve", "kind": "reserve", "count": 16},
+    {"name": "tableau", "kind": "tableau", "count": 6, "build": {"by": "any", "dir": "down"}}
+  ],
+  "deal": [
+    {"to": "tableau", "count": 6},
+    {"to": "reserve", "count": 1}
+  ]
+}

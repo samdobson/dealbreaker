@@ -1,0 +1,14 @@
+{
+  "name": "Whitehead",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "waste", "kind": "waste"},
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 7, "build": {"by": "same_color", "dir": "down"}, "moves": "suit_run"}
+  ],
+  "stock": {"to": "waste"},
+  "deal": [
+    {"to": "tableau", "counts": [1, 2, 3, 4, 5, 6, 7]},
+    {"to": "stock", "rest": true, "face_up": false}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Calculation",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "waste", "kind": "waste"},
+    {"name": "foundation", "kind": "foundation", "count": 4, "empty": "none", "max_cards": 13, "piles": [{"piles": [0], "build": {"by": "any", "dir": "up", "wrap": true, "step": 1}}, {"piles": [1], "build": {"by": "any", "dir": "up", "wrap": true, "step": 2}}, {"piles": [2], "build": {"by": "any", "dir": "up", "wrap": true, "step": 3}}, {"piles": [3], "build": {"by": "any", "dir": "up", "wrap": true, "step": 4}}]},
+    {"name": "tableau", "kind": "tableau", "count": 4, "build": {"by": "any", "dir": "any"}, "accepts_from": ["waste"]}
+  ],
+  "stock": {"to": "waste", "only_when_empty": true},
+  "deal": [
+    {"to": "foundation", "ranks": [1, 2, 3, 4], "one_each": true},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "search": {"blocker_weight": 4}
+}

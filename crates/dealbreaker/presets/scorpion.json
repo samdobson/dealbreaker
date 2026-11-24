@@ -1,0 +1,14 @@
+{
+  "name": "Scorpion",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "foundation", "kind": "foundation", "count": 4, "complete_runs": true},
+    {"name": "tableau", "kind": "tableau", "count": 7, "build": {"by": "suit", "dir": "down"}, "empty": {"rank": 13}, "moves": "any_face_up"}
+  ],
+  "stock": {"to": "tableau"},
+  "deal": [
+    {"to": "tableau", "piles": [0, 1, 2, 3], "count": 3, "face_up": false},
+    {"to": "tableau", "counts": [4, 4, 4, 4, 7, 7, 7]},
+    {"to": "stock", "rest": true, "face_up": false}
+  ]
+}

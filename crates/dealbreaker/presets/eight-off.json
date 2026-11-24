@@ -1,0 +1,12 @@
+{
+  "name": "Eight Off",
+  "groups": [
+    {"name": "cell", "kind": "cell", "count": 8},
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 8, "build": {"by": "suit", "dir": "down"}, "empty": {"rank": 13}, "moves": "supermove"}
+  ],
+  "deal": [
+    {"to": "tableau", "count": 6},
+    {"to": "cell", "piles": [0, 1, 2, 3], "count": 1}
+  ]
+}

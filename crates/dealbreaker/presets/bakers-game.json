@@ -1,0 +1,11 @@
+{
+  "name": "Baker's Game",
+  "groups": [
+    {"name": "cell", "kind": "cell", "count": 4},
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 8, "build": {"by": "suit", "dir": "down"}, "moves": "supermove"}
+  ],
+  "deal": [
+    {"to": "tableau", "rest": true}
+  ]
+}

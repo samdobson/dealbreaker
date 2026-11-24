@@ -1,0 +1,12 @@
+{
+  "name": "La Belle Lucie",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 18, "build": {"by": "suit", "dir": "down"}, "empty": "none"}
+  ],
+  "redeal": {"group": "tableau", "times": 2, "how": {"shuffle": {"per_pile": 3}}},
+  "deal": [
+    {"to": "tableau", "piles": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], "count": 3},
+    {"to": "tableau", "piles": [17], "count": 1}
+  ]
+}

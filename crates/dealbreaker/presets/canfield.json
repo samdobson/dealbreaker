@@ -1,0 +1,18 @@
+{
+  "name": "Canfield",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "waste", "kind": "waste"},
+    {"name": "foundation", "kind": "foundation", "count": 4, "build": {"by": "suit", "dir": "up", "wrap": true}, "empty": "dealt_base"},
+    {"name": "reserve", "kind": "reserve"},
+    {"name": "tableau", "kind": "tableau", "count": 4, "build": {"by": "alternate", "dir": "down", "wrap": true}, "moves": "run", "refill_from": ["reserve"]}
+  ],
+  "stock": {"to": "waste", "count": 3, "unlimited_redeals": true},
+  "deal": [
+    {"to": "reserve", "count": 12, "face_up": false},
+    {"to": "reserve", "count": 1},
+    {"to": "foundation", "piles": [0], "count": 1, "set_base": true},
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Simple Simon",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4, "complete_runs": true},
+    {"name": "tableau", "kind": "tableau", "count": 10, "build": {"by": "any", "dir": "down"}, "moves": "suit_run"}
+  ],
+  "deal": [
+    {"to": "tableau", "counts": [8, 8, 8, 7, 6, 5, 4, 3, 2, 1]}
+  ]
+}

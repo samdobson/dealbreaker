@@ -2,7 +2,7 @@
 
 # Built-in Presets Reference
 
-Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules JSON](/reference/rules-schema) definition—you can inspect any preset with `dealbreaker rules <id>` and tweak it into a custom variant.
+Dealbreaker ships with **50 built-in games**. Every preset is a standard [Rules JSON](/reference/rules-schema) definition—you can inspect any preset with `dealbreaker rules <id>` and tweak it into a custom variant.
 
 ## All Presets
 
@@ -12,15 +12,22 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
 | [`klondike-draw3`](#klondike-draw3) | Klondike (draw 3) | 1 pack | 1 stock, 1 waste, 4 foundation, 7 tableau | All cards on foundations |
 | [`klondike-vegas`](#klondike-vegas) | Klondike (Vegas) | 1 pack | 1 stock, 1 waste, 4 foundation, 7 tableau | All cards on foundations |
 | [`klondike-jokers`](#klondike-jokers) | Klondike (with jokers) | 1 pack + 2 joker(s) | 1 stock, 1 waste, 4 foundation, 7 tableau | All cards on foundations |
+| [`whitehead`](#whitehead) | Whitehead | 1 pack | 1 stock, 1 waste, 4 foundation, 7 tableau | All cards on foundations |
+| [`easthaven`](#easthaven) | Easthaven | 1 pack | 1 stock, 4 foundation, 7 tableau | All cards on foundations |
+| [`king-albert`](#king-albert) | King Albert | 1 pack | 4 foundation, 7 reserve, 9 tableau | All cards on foundations |
+| [`raglan`](#raglan) | Raglan | 1 pack | 4 foundation, 6 reserve, 9 tableau | All cards on foundations |
 | [`freecell`](#freecell) | FreeCell | 1 pack | 4 cell, 4 foundation, 8 tableau | All cards on foundations |
 | [`bakers-game`](#bakers-game) | Baker's Game | 1 pack | 4 cell, 4 foundation, 8 tableau | All cards on foundations |
 | [`eight-off`](#eight-off) | Eight Off | 1 pack | 8 cell, 4 foundation, 8 tableau | All cards on foundations |
 | [`seahaven-towers`](#seahaven-towers) | Seahaven Towers | 1 pack | 4 cell, 4 foundation, 10 tableau | All cards on foundations |
+| [`penguin`](#penguin) | Penguin | 1 pack | 7 cell, 4 foundation, 7 tableau | All cards on foundations |
 | [`spider`](#spider) | Spider | 2 packs | 1 stock, 8 foundation, 10 tableau | All cards on foundations |
 | [`spider-2suit`](#spider-2suit) | Spider (2 suits) | 4 packs | 1 stock, 8 foundation, 10 tableau | All cards on foundations |
 | [`spider-1suit`](#spider-1suit) | Spider (1 suit) | 8 packs | 1 stock, 8 foundation, 10 tableau | All cards on foundations |
 | [`spiderette`](#spiderette) | Spiderette | 1 pack | 1 stock, 4 foundation, 7 tableau | All cards on foundations |
+| [`simple-simon`](#simple-simon) | Simple Simon | 1 pack | 4 foundation, 10 tableau | All cards on foundations |
 | [`scorpion`](#scorpion) | Scorpion | 1 pack | 1 stock, 4 foundation, 7 tableau | All cards on foundations |
+| [`wasp`](#wasp) | Wasp | 1 pack | 1 stock, 4 foundation, 7 tableau | All cards on foundations |
 | [`yukon`](#yukon) | Yukon | 1 pack | 4 foundation, 7 tableau | All cards on foundations |
 | [`russian`](#russian) | Russian Solitaire | 1 pack | 4 foundation, 7 tableau | All cards on foundations |
 | [`forty-thieves`](#forty-thieves) | Forty Thieves | 2 packs | 1 stock, 1 waste, 8 foundation, 10 tableau | All cards on foundations |
@@ -29,16 +36,20 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
 | [`beleaguered-castle`](#beleaguered-castle) | Beleaguered Castle | 1 pack | 4 foundation, 8 tableau | All cards on foundations |
 | [`streets-and-alleys`](#streets-and-alleys) | Streets and Alleys | 1 pack | 4 foundation, 8 tableau | All cards on foundations |
 | [`fortress`](#fortress) | Fortress | 1 pack | 4 foundation, 10 tableau | All cards on foundations |
+| [`flower-garden`](#flower-garden) | Flower Garden | 1 pack | 4 foundation, 16 reserve, 6 tableau | All cards on foundations |
+| [`grandfathers-clock`](#grandfathers-clock) | Grandfather's Clock | 1 pack | 12 foundation, 8 tableau | All cards on foundations |
+| [`little-spider`](#little-spider) | Little Spider | 1 pack | 1 stock, 4 foundation, 8 tableau | All cards on foundations |
 | [`canfield`](#canfield) | Canfield | 1 pack | 1 stock, 1 waste, 4 foundation, 1 reserve, 4 tableau | All cards on foundations |
 | [`golf`](#golf) | Golf | 1 pack | 1 stock, 1 foundation, 7 tableau | Empty tableau |
+| [`black-hole`](#black-hole) | Black Hole | 1 pack | 1 foundation, 17 tableau | All cards on foundations |
 | [`tripeaks`](#tripeaks) | TriPeaks | 1 pack | 1 stock, 1 foundation, 28 tableau | Empty tableau |
 | [`pyramid`](#pyramid) | Pyramid | 1 pack | 1 stock, 1 waste, 1 discard, 28 tableau | Empty tableau |
 | [`aces-up`](#aces-up) | Aces Up | 1 pack | 1 stock, 1 discard, 4 tableau | 48 cards on discard |
+| [`elevens`](#elevens) | Elevens | 1 pack | 1 stock, 1 discard, 9 tableau | 52 cards on discard |
+| [`nestor`](#nestor) | Nestor | 1 pack | 1 discard, 4 reserve, 8 tableau | 52 cards on discard |
 | [`calculation`](#calculation) | Calculation | 1 pack | 1 stock, 1 waste, 4 foundation, 4 tableau | All cards on foundations |
 | [`sir-tommy`](#sir-tommy) | Sir Tommy | 1 pack | 1 stock, 1 waste, 4 foundation, 4 tableau | All cards on foundations |
 | [`bisley`](#bisley) | Bisley | 1 pack | 8 foundation, 13 tableau | All cards on foundations |
-| [`elevens`](#elevens) | Elevens | 1 pack | 1 stock, 1 discard, 9 tableau | 52 cards on discard |
-| [`nestor`](#nestor) | Nestor | 1 pack | 1 discard, 4 reserve, 8 tableau | 52 cards on discard |
 | [`gaps-single-deal`](#gaps-single-deal) | Gaps (single deal) | 1 pack | 1 discard, 52 tableau | Complete rows in tableau |
 | [`montana`](#montana) | Montana | 1 pack | 1 discard, 52 tableau | Complete rows in tableau |
 | [`cruel`](#cruel) | Cruel | 1 pack | 4 foundation, 12 tableau | All cards on foundations |
@@ -1019,6 +1030,780 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
 
 </details>
 
+### Whitehead (`whitehead`) {#whitehead}
+
+- **Pack:** 1 pack
+- **Groups:** 1 stock, 1 waste, 4 foundation, 7 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for whitehead</summary>
+
+```json
+{
+  "name": "Whitehead",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "stock",
+      "kind": "stock",
+      "count": 1,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "waste",
+      "kind": "waste",
+      "count": 1,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 7,
+      "build": {
+        "by": "same_color",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "moves": "suit_run",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "stock": {
+    "to": "waste",
+    "count": 1,
+    "redeals": 0,
+    "unlimited_redeals": false,
+    "require_no_empty": false,
+    "auto": false,
+    "first_empty": false,
+    "only_when_empty": false,
+    "skip_empty": false,
+    "face_up": false,
+    "deal_per_pile": false,
+    "redeal_reverse": false,
+    "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
+    "deal_empty_first": false
+  },
+  "deal": [
+    {
+      "to": "tableau",
+      "counts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "stock",
+      "rest": true,
+      "face_up": false,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Easthaven (`easthaven`) {#easthaven}
+
+- **Pack:** 1 pack
+- **Groups:** 1 stock, 4 foundation, 7 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for easthaven</summary>
+
+```json
+{
+  "name": "Easthaven",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "stock",
+      "kind": "stock",
+      "count": 1,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 7,
+      "build": {
+        "by": "alternate",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "moves": "run",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "stock": {
+    "to": "tableau",
+    "count": 1,
+    "redeals": 0,
+    "unlimited_redeals": false,
+    "require_no_empty": false,
+    "auto": false,
+    "first_empty": false,
+    "only_when_empty": false,
+    "skip_empty": false,
+    "face_up": false,
+    "deal_per_pile": false,
+    "redeal_reverse": false,
+    "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
+    "deal_empty_first": false
+  },
+  "deal": [
+    {
+      "to": "tableau",
+      "count": 2,
+      "rest": false,
+      "face_up": false,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "tableau",
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "stock",
+      "rest": true,
+      "face_up": false,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### King Albert (`king-albert`) {#king-albert}
+
+- **Pack:** 1 pack
+- **Groups:** 4 foundation, 7 reserve, 9 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for king-albert</summary>
+
+```json
+{
+  "name": "King Albert",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "reserve",
+      "kind": "reserve",
+      "count": 7,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 9,
+      "build": {
+        "by": "alternate",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "tableau",
+      "counts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "reserve",
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Raglan (`raglan`) {#raglan}
+
+- **Pack:** 1 pack
+- **Groups:** 4 foundation, 6 reserve, 9 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for raglan</summary>
+
+```json
+{
+  "name": "Raglan",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "reserve",
+      "kind": "reserve",
+      "count": 6,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 9,
+      "build": {
+        "by": "alternate",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "foundation",
+      "rest": false,
+      "ranks": [
+        1
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "tableau",
+      "counts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        7,
+        7
+      ],
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "reserve",
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
 ### FreeCell (`freecell`) {#freecell}
 
 - **Pack:** 1 pack
@@ -1648,6 +2433,209 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
         2
       ],
       "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Penguin (`penguin`) {#penguin}
+
+- **Pack:** 1 pack
+- **Groups:** 7 cell, 4 foundation, 7 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for penguin</summary>
+
+```json
+{
+  "name": "Penguin",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "cell",
+      "kind": "cell",
+      "count": 7,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "build": {
+        "by": "suit",
+        "dir": "up",
+        "wrap": true,
+        "step": 1
+      },
+      "empty": "dealt_base",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 7,
+      "build": {
+        "by": "suit",
+        "dir": "down",
+        "wrap": true,
+        "step": 1
+      },
+      "empty": {
+        "dealt_base_offset": -1
+      },
+      "moves": "run",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "tableau",
+      "piles": [
+        0
+      ],
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": true,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        0,
+        1,
+        2
+      ],
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": true,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "tableau",
+      "counts": [
+        6,
+        7,
+        7,
+        7,
+        7,
+        7,
+        7
+      ],
       "rest": false,
       "face_up": true,
       "kings_to_bottom": false,
@@ -2497,6 +3485,141 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
 
 </details>
 
+### Simple Simon (`simple-simon`) {#simple-simon}
+
+- **Pack:** 1 pack
+- **Groups:** 4 foundation, 10 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for simple-simon</summary>
+
+```json
+{
+  "name": "Simple Simon",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": true,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 10,
+      "build": {
+        "by": "any",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "moves": "suit_run",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "tableau",
+      "counts": [
+        8,
+        8,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1
+      ],
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
 ### Scorpion (`scorpion`) {#scorpion}
 
 - **Pack:** 1 pack
@@ -2602,6 +3725,214 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       },
       "empty": {
         "rank": 13
+      },
+      "moves": "any_face_up",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "stock": {
+    "to": "tableau",
+    "count": 1,
+    "redeals": 0,
+    "unlimited_redeals": false,
+    "require_no_empty": false,
+    "auto": false,
+    "first_empty": false,
+    "only_when_empty": false,
+    "skip_empty": false,
+    "face_up": false,
+    "deal_per_pile": false,
+    "redeal_reverse": false,
+    "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
+    "deal_empty_first": false
+  },
+  "deal": [
+    {
+      "to": "tableau",
+      "piles": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "count": 3,
+      "rest": false,
+      "face_up": false,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "tableau",
+      "counts": [
+        4,
+        4,
+        4,
+        4,
+        7,
+        7,
+        7
+      ],
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "stock",
+      "rest": true,
+      "face_up": false,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Wasp (`wasp`) {#wasp}
+
+- **Pack:** 1 pack
+- **Groups:** 1 stock, 4 foundation, 7 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for wasp</summary>
+
+```json
+{
+  "name": "Wasp",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "stock",
+      "kind": "stock",
+      "count": 1,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": true,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 7,
+      "build": {
+        "by": "suit",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
       },
       "moves": "any_face_up",
       "complete_runs": false,
@@ -3937,6 +5268,863 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
 
 </details>
 
+### Flower Garden (`flower-garden`) {#flower-garden}
+
+- **Pack:** 1 pack
+- **Groups:** 4 foundation, 16 reserve, 6 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for flower-garden</summary>
+
+```json
+{
+  "name": "Flower Garden",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "reserve",
+      "kind": "reserve",
+      "count": 16,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 6,
+      "build": {
+        "by": "any",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "tableau",
+      "count": 6,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "reserve",
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Grandfather's Clock (`grandfathers-clock`) {#grandfathers-clock}
+
+- **Pack:** 1 pack
+- **Groups:** 12 foundation, 8 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for grandfathers-clock</summary>
+
+```json
+{
+  "name": "Grandfather's Clock",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 12,
+      "build": {
+        "by": "suit",
+        "dir": "up",
+        "wrap": true,
+        "step": 1
+      },
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "piles": [
+        {
+          "piles": [
+            0
+          ],
+          "empty": {
+            "rank": 10
+          },
+          "max_cards": 5,
+          "empty_suit": "clubs"
+        },
+        {
+          "piles": [
+            1
+          ],
+          "empty": {
+            "rank": 11
+          },
+          "max_cards": 5,
+          "empty_suit": "hearts"
+        },
+        {
+          "piles": [
+            2
+          ],
+          "empty": {
+            "rank": 12
+          },
+          "max_cards": 5,
+          "empty_suit": "spades"
+        },
+        {
+          "piles": [
+            3
+          ],
+          "empty": {
+            "rank": 13
+          },
+          "max_cards": 5,
+          "empty_suit": "diamonds"
+        },
+        {
+          "piles": [
+            4
+          ],
+          "empty": {
+            "rank": 2
+          },
+          "max_cards": 4,
+          "empty_suit": "clubs"
+        },
+        {
+          "piles": [
+            5
+          ],
+          "empty": {
+            "rank": 3
+          },
+          "max_cards": 4,
+          "empty_suit": "hearts"
+        },
+        {
+          "piles": [
+            6
+          ],
+          "empty": {
+            "rank": 4
+          },
+          "max_cards": 4,
+          "empty_suit": "spades"
+        },
+        {
+          "piles": [
+            7
+          ],
+          "empty": {
+            "rank": 5
+          },
+          "max_cards": 4,
+          "empty_suit": "diamonds"
+        },
+        {
+          "piles": [
+            8
+          ],
+          "empty": {
+            "rank": 6
+          },
+          "max_cards": 4,
+          "empty_suit": "clubs"
+        },
+        {
+          "piles": [
+            9
+          ],
+          "empty": {
+            "rank": 7
+          },
+          "max_cards": 4,
+          "empty_suit": "hearts"
+        },
+        {
+          "piles": [
+            10
+          ],
+          "empty": {
+            "rank": 8
+          },
+          "max_cards": 4,
+          "empty_suit": "spades"
+        },
+        {
+          "piles": [
+            11
+          ],
+          "empty": {
+            "rank": 9
+          },
+          "max_cards": 4,
+          "empty_suit": "diamonds"
+        }
+      ],
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 8,
+      "build": {
+        "by": "any",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "foundation",
+      "piles": [
+        0
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        10
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        1
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        11
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        2
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        12
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        3
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        13
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        4
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        2
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        5
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        3
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        6
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        4
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        7
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        5
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        8
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        6
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        9
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        7
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        10
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        8
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "foundation",
+      "piles": [
+        11
+      ],
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        9
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "tableau",
+      "count": 5,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Little Spider (`little-spider`) {#little-spider}
+
+- **Pack:** 1 pack
+- **Groups:** 1 stock, 4 foundation, 8 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for little-spider</summary>
+
+```json
+{
+  "name": "Little Spider",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "stock",
+      "kind": "stock",
+      "count": 1,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "piles": [
+        {
+          "piles": [
+            0,
+            1
+          ],
+          "build": {
+            "by": "suit",
+            "dir": "up",
+            "wrap": false,
+            "step": 1
+          },
+          "empty": {
+            "rank": 1
+          },
+          "color": "red"
+        },
+        {
+          "piles": [
+            2,
+            3
+          ],
+          "build": {
+            "by": "suit",
+            "dir": "down",
+            "wrap": false,
+            "step": 1
+          },
+          "empty": {
+            "rank": 13
+          },
+          "color": "black"
+        }
+      ],
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 8,
+      "build": {
+        "by": "any",
+        "dir": "either",
+        "wrap": true,
+        "step": 1
+      },
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "stock": {
+    "to": "tableau",
+    "count": 1,
+    "redeals": 0,
+    "unlimited_redeals": false,
+    "require_no_empty": false,
+    "auto": false,
+    "first_empty": false,
+    "only_when_empty": false,
+    "skip_empty": false,
+    "face_up": false,
+    "deal_per_pile": false,
+    "redeal_reverse": false,
+    "redeal_shuffle": false,
+    "redeal_deal_all_alternating": false,
+    "deal_empty_first": false
+  },
+  "deal": [
+    {
+      "to": "tableau",
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "stock",
+      "rest": true,
+      "face_up": false,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
 ### Canfield (`canfield`) {#canfield}
 
 - **Pack:** 1 pack
@@ -4424,6 +6612,151 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
       "tableau"
     ]
   },
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Black Hole (`black-hole`) {#black-hole}
+
+- **Pack:** 1 pack
+- **Groups:** 1 foundation, 17 tableau
+- **Win:** All cards on foundations
+
+<details>
+<summary>View JSON rules for black-hole</summary>
+
+```json
+{
+  "name": "Black Hole",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 1,
+      "build": {
+        "by": "any",
+        "dir": "either",
+        "wrap": true,
+        "step": 1
+      },
+      "empty": "any",
+      "accepts_from": [
+        "tableau"
+      ],
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "empty_suit": "spades",
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 17,
+      "empty": "none",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "foundation",
+      "count": 1,
+      "rest": false,
+      "ranks": [
+        1
+      ],
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "tableau",
+      "count": 3,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "win": "all_on_foundations",
   "auto_flip": true,
   "safe_autoplay": true
 }
@@ -5121,6 +7454,391 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
 
 </details>
 
+### Elevens (`elevens`) {#elevens}
+
+- **Pack:** 1 pack
+- **Groups:** 1 stock, 1 discard, 9 tableau
+- **Win:** 52 cards on discard
+
+<details>
+<summary>View JSON rules for elevens</summary>
+
+```json
+{
+  "name": "Elevens",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "stock",
+      "kind": "stock",
+      "count": 1,
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "discard",
+      "kind": "foundation",
+      "count": 1,
+      "build": {
+        "by": "none",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "empty": "none",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 9,
+      "empty": "none",
+      "moves": "none",
+      "refill_from": [
+        "stock"
+      ],
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "tableau",
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "stock",
+      "rest": true,
+      "face_up": false,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "removal": [
+    {
+      "kind": {
+        "pairs_sum": {
+          "total": 11
+        }
+      },
+      "from": [
+        "tableau"
+      ],
+      "to": "discard"
+    },
+    {
+      "kind": {
+        "rank_set": {
+          "ranks": [
+            11,
+            12,
+            13
+          ]
+        }
+      },
+      "from": [
+        "tableau"
+      ],
+      "to": "discard"
+    }
+  ],
+  "win": {
+    "count": {
+      "group": "discard",
+      "cards": 52
+    }
+  },
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
+### Nestor (`nestor`) {#nestor}
+
+- **Pack:** 1 pack
+- **Groups:** 1 discard, 4 reserve, 8 tableau
+- **Win:** 52 cards on discard
+
+<details>
+<summary>View JSON rules for nestor</summary>
+
+```json
+{
+  "name": "Nestor",
+  "pack": {
+    "copies": 1,
+    "suits": [
+      "clubs",
+      "diamonds",
+      "hearts",
+      "spades"
+    ],
+    "ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "groups": [
+    {
+      "name": "discard",
+      "kind": "foundation",
+      "count": 1,
+      "build": {
+        "by": "none",
+        "dir": "down",
+        "wrap": false,
+        "step": 1
+      },
+      "empty": "none",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "reserve",
+      "kind": "reserve",
+      "count": 4,
+      "moves": "none",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    },
+    {
+      "name": "tableau",
+      "kind": "tableau",
+      "count": 8,
+      "empty": "none",
+      "moves": "none",
+      "complete_runs": false,
+      "reach_both_ways": false,
+      "compact": false,
+      "requires_rank_on_prev": false,
+      "match_longest_rank": false,
+      "accept_only_when_empty": false,
+      "accept_when_stock_empty": false,
+      "compact_face_up": false,
+      "refill_largest": false,
+      "refill_on_empty": false,
+      "requires_prev_non_empty": false,
+      "moves_when_stock_empty": false,
+      "flip_only_last": false,
+      "lock_build_dir": false,
+      "no_flip": false,
+      "refill_same_index": false,
+      "refill_nearest": false,
+      "require_valid_base": false,
+      "supermove_complete_run": false,
+      "lock_pile_dir": false,
+      "unique_suits": false,
+      "no_build_single_while_stock": false,
+      "refill_first_face_down": false
+    }
+  ],
+  "deal": [
+    {
+      "to": "tableau",
+      "count": 6,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    },
+    {
+      "to": "reserve",
+      "count": 1,
+      "rest": false,
+      "face_up": true,
+      "kings_to_bottom": false,
+      "one_each": false,
+      "set_base": false,
+      "of_base": false,
+      "one_per_suit": false,
+      "auto_foundation": false,
+      "drain_foundations": false
+    }
+  ],
+  "removal": [
+    {
+      "kind": "same_rank",
+      "from": [
+        "tableau",
+        "reserve"
+      ],
+      "to": "discard"
+    }
+  ],
+  "win": {
+    "count": {
+      "group": "discard",
+      "cards": 52
+    }
+  },
+  "auto_flip": true,
+  "safe_autoplay": true
+}
+```
+
+</details>
+
 ### Calculation (`calculation`) {#calculation}
 
 - **Pack:** 1 pack
@@ -5769,391 +8487,6 @@ Dealbreaker ships with **39 built-in games**. Every preset is a standard [Rules 
     }
   ],
   "win": "all_on_foundations",
-  "auto_flip": true,
-  "safe_autoplay": true
-}
-```
-
-</details>
-
-### Elevens (`elevens`) {#elevens}
-
-- **Pack:** 1 pack
-- **Groups:** 1 stock, 1 discard, 9 tableau
-- **Win:** 52 cards on discard
-
-<details>
-<summary>View JSON rules for elevens</summary>
-
-```json
-{
-  "name": "Elevens",
-  "pack": {
-    "copies": 1,
-    "suits": [
-      "clubs",
-      "diamonds",
-      "hearts",
-      "spades"
-    ],
-    "ranks": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13
-    ]
-  },
-  "groups": [
-    {
-      "name": "stock",
-      "kind": "stock",
-      "count": 1,
-      "complete_runs": false,
-      "reach_both_ways": false,
-      "compact": false,
-      "requires_rank_on_prev": false,
-      "match_longest_rank": false,
-      "accept_only_when_empty": false,
-      "accept_when_stock_empty": false,
-      "compact_face_up": false,
-      "refill_largest": false,
-      "refill_on_empty": false,
-      "requires_prev_non_empty": false,
-      "moves_when_stock_empty": false,
-      "flip_only_last": false,
-      "lock_build_dir": false,
-      "no_flip": false,
-      "refill_same_index": false,
-      "refill_nearest": false,
-      "require_valid_base": false,
-      "supermove_complete_run": false,
-      "lock_pile_dir": false,
-      "unique_suits": false,
-      "no_build_single_while_stock": false,
-      "refill_first_face_down": false
-    },
-    {
-      "name": "discard",
-      "kind": "foundation",
-      "count": 1,
-      "build": {
-        "by": "none",
-        "dir": "down",
-        "wrap": false,
-        "step": 1
-      },
-      "empty": "none",
-      "complete_runs": false,
-      "reach_both_ways": false,
-      "compact": false,
-      "requires_rank_on_prev": false,
-      "match_longest_rank": false,
-      "accept_only_when_empty": false,
-      "accept_when_stock_empty": false,
-      "compact_face_up": false,
-      "refill_largest": false,
-      "refill_on_empty": false,
-      "requires_prev_non_empty": false,
-      "moves_when_stock_empty": false,
-      "flip_only_last": false,
-      "lock_build_dir": false,
-      "no_flip": false,
-      "refill_same_index": false,
-      "refill_nearest": false,
-      "require_valid_base": false,
-      "supermove_complete_run": false,
-      "lock_pile_dir": false,
-      "unique_suits": false,
-      "no_build_single_while_stock": false,
-      "refill_first_face_down": false
-    },
-    {
-      "name": "tableau",
-      "kind": "tableau",
-      "count": 9,
-      "empty": "none",
-      "moves": "none",
-      "refill_from": [
-        "stock"
-      ],
-      "complete_runs": false,
-      "reach_both_ways": false,
-      "compact": false,
-      "requires_rank_on_prev": false,
-      "match_longest_rank": false,
-      "accept_only_when_empty": false,
-      "accept_when_stock_empty": false,
-      "compact_face_up": false,
-      "refill_largest": false,
-      "refill_on_empty": false,
-      "requires_prev_non_empty": false,
-      "moves_when_stock_empty": false,
-      "flip_only_last": false,
-      "lock_build_dir": false,
-      "no_flip": false,
-      "refill_same_index": false,
-      "refill_nearest": false,
-      "require_valid_base": false,
-      "supermove_complete_run": false,
-      "lock_pile_dir": false,
-      "unique_suits": false,
-      "no_build_single_while_stock": false,
-      "refill_first_face_down": false
-    }
-  ],
-  "deal": [
-    {
-      "to": "tableau",
-      "count": 1,
-      "rest": false,
-      "face_up": true,
-      "kings_to_bottom": false,
-      "one_each": false,
-      "set_base": false,
-      "of_base": false,
-      "one_per_suit": false,
-      "auto_foundation": false,
-      "drain_foundations": false
-    },
-    {
-      "to": "stock",
-      "rest": true,
-      "face_up": false,
-      "kings_to_bottom": false,
-      "one_each": false,
-      "set_base": false,
-      "of_base": false,
-      "one_per_suit": false,
-      "auto_foundation": false,
-      "drain_foundations": false
-    }
-  ],
-  "removal": [
-    {
-      "kind": {
-        "pairs_sum": {
-          "total": 11
-        }
-      },
-      "from": [
-        "tableau"
-      ],
-      "to": "discard"
-    },
-    {
-      "kind": {
-        "rank_set": {
-          "ranks": [
-            11,
-            12,
-            13
-          ]
-        }
-      },
-      "from": [
-        "tableau"
-      ],
-      "to": "discard"
-    }
-  ],
-  "win": {
-    "count": {
-      "group": "discard",
-      "cards": 52
-    }
-  },
-  "auto_flip": true,
-  "safe_autoplay": true
-}
-```
-
-</details>
-
-### Nestor (`nestor`) {#nestor}
-
-- **Pack:** 1 pack
-- **Groups:** 1 discard, 4 reserve, 8 tableau
-- **Win:** 52 cards on discard
-
-<details>
-<summary>View JSON rules for nestor</summary>
-
-```json
-{
-  "name": "Nestor",
-  "pack": {
-    "copies": 1,
-    "suits": [
-      "clubs",
-      "diamonds",
-      "hearts",
-      "spades"
-    ],
-    "ranks": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13
-    ]
-  },
-  "groups": [
-    {
-      "name": "discard",
-      "kind": "foundation",
-      "count": 1,
-      "build": {
-        "by": "none",
-        "dir": "down",
-        "wrap": false,
-        "step": 1
-      },
-      "empty": "none",
-      "complete_runs": false,
-      "reach_both_ways": false,
-      "compact": false,
-      "requires_rank_on_prev": false,
-      "match_longest_rank": false,
-      "accept_only_when_empty": false,
-      "accept_when_stock_empty": false,
-      "compact_face_up": false,
-      "refill_largest": false,
-      "refill_on_empty": false,
-      "requires_prev_non_empty": false,
-      "moves_when_stock_empty": false,
-      "flip_only_last": false,
-      "lock_build_dir": false,
-      "no_flip": false,
-      "refill_same_index": false,
-      "refill_nearest": false,
-      "require_valid_base": false,
-      "supermove_complete_run": false,
-      "lock_pile_dir": false,
-      "unique_suits": false,
-      "no_build_single_while_stock": false,
-      "refill_first_face_down": false
-    },
-    {
-      "name": "reserve",
-      "kind": "reserve",
-      "count": 4,
-      "moves": "none",
-      "complete_runs": false,
-      "reach_both_ways": false,
-      "compact": false,
-      "requires_rank_on_prev": false,
-      "match_longest_rank": false,
-      "accept_only_when_empty": false,
-      "accept_when_stock_empty": false,
-      "compact_face_up": false,
-      "refill_largest": false,
-      "refill_on_empty": false,
-      "requires_prev_non_empty": false,
-      "moves_when_stock_empty": false,
-      "flip_only_last": false,
-      "lock_build_dir": false,
-      "no_flip": false,
-      "refill_same_index": false,
-      "refill_nearest": false,
-      "require_valid_base": false,
-      "supermove_complete_run": false,
-      "lock_pile_dir": false,
-      "unique_suits": false,
-      "no_build_single_while_stock": false,
-      "refill_first_face_down": false
-    },
-    {
-      "name": "tableau",
-      "kind": "tableau",
-      "count": 8,
-      "empty": "none",
-      "moves": "none",
-      "complete_runs": false,
-      "reach_both_ways": false,
-      "compact": false,
-      "requires_rank_on_prev": false,
-      "match_longest_rank": false,
-      "accept_only_when_empty": false,
-      "accept_when_stock_empty": false,
-      "compact_face_up": false,
-      "refill_largest": false,
-      "refill_on_empty": false,
-      "requires_prev_non_empty": false,
-      "moves_when_stock_empty": false,
-      "flip_only_last": false,
-      "lock_build_dir": false,
-      "no_flip": false,
-      "refill_same_index": false,
-      "refill_nearest": false,
-      "require_valid_base": false,
-      "supermove_complete_run": false,
-      "lock_pile_dir": false,
-      "unique_suits": false,
-      "no_build_single_while_stock": false,
-      "refill_first_face_down": false
-    }
-  ],
-  "deal": [
-    {
-      "to": "tableau",
-      "count": 6,
-      "rest": false,
-      "face_up": true,
-      "kings_to_bottom": false,
-      "one_each": false,
-      "set_base": false,
-      "of_base": false,
-      "one_per_suit": false,
-      "auto_foundation": false,
-      "drain_foundations": false
-    },
-    {
-      "to": "reserve",
-      "count": 1,
-      "rest": false,
-      "face_up": true,
-      "kings_to_bottom": false,
-      "one_each": false,
-      "set_base": false,
-      "of_base": false,
-      "one_per_suit": false,
-      "auto_foundation": false,
-      "drain_foundations": false
-    }
-  ],
-  "removal": [
-    {
-      "kind": "same_rank",
-      "from": [
-        "tableau",
-        "reserve"
-      ],
-      "to": "discard"
-    }
-  ],
-  "win": {
-    "count": {
-      "group": "discard",
-      "cards": 52
-    }
-  },
   "auto_flip": true,
   "safe_autoplay": true
 }

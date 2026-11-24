@@ -78,5 +78,5 @@ Edit `my-klondike.json`—for example, change `"redeals"` or add `"jokers": 2` t
 ## Where to Go Next
 
 - **Reference:** [Rules Schema Reference](/reference/rules-schema) — every field, enum, and default
-- **Reference:** [Built-in Presets](/reference/presets) — inspect the JSON of all 39 presets for inspiration
+- **Reference:** [Built-in Presets](/reference/presets) — inspect the JSON of all 50 presets for inspiration
 - **How-to:** [Custom Rust Hooks](/how-to/custom-rust-hooks) — for exotic rules that don't fit JSON

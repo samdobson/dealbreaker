@@ -1,0 +1,13 @@
+{
+  "name": "Penguin",
+  "groups": [
+    {"name": "cell", "kind": "cell", "count": 7},
+    {"name": "foundation", "kind": "foundation", "count": 4, "build": {"by": "suit", "dir": "up", "wrap": true}, "empty": "dealt_base"},
+    {"name": "tableau", "kind": "tableau", "count": 7, "build": {"by": "suit", "dir": "down", "wrap": true}, "empty": {"dealt_base_offset": -1}, "moves": "run"}
+  ],
+  "deal": [
+    {"to": "tableau", "piles": [0], "count": 1, "set_base": true},
+    {"to": "foundation", "piles": [0, 1, 2], "of_base": true},
+    {"to": "tableau", "counts": [6, 7, 7, 7, 7, 7, 7]}
+  ]
+}

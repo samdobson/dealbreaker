@@ -1,0 +1,16 @@
+{
+  "name": "Spider",
+  "pack": {"copies": 2},
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "foundation", "kind": "foundation", "count": 8, "complete_runs": true},
+    {"name": "tableau", "kind": "tableau", "count": 10, "build": {"by": "any", "dir": "down"}, "moves": "suit_run"}
+  ],
+  "stock": {"to": "tableau", "require_no_empty": true},
+  "deal": [
+    {"to": "tableau", "counts": [5, 5, 5, 5, 4, 4, 4, 4, 4, 4], "face_up": false},
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "search": {"down_weight": 5, "disorder_weight": 3, "fast_share": 90}
+}

@@ -20,7 +20,7 @@
 //! }
 //! ```
 //!
-//! The [`presets`] module has 39 built-in games written in the same model, and
+//! The [`presets`] module has 50 built-in games written in the same model, and
 //! every preset round-trips through JSON, so rules can live in files.
 //!
 //! ## What the solver assumes

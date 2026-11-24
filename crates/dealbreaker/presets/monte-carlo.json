@@ -1,0 +1,17 @@
+{
+  "name": "Monte Carlo",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "discard", "kind": "foundation", "build": {"by": "none", "dir": "down"}, "empty": "none"},
+    {"name": "tableau", "kind": "tableau", "count": 25, "empty": "none", "moves": "none", "max_cards": 1, "layout": {"grid": {"columns": 5}}}
+  ],
+  "redeal": {"group": "tableau", "times": 0, "unlimited": true, "how": {"compact": {"refill_from": "stock"}}},
+  "deal": [
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "removal": [
+    {"kind": "same_rank", "from": ["tableau"], "to": "discard", "adjacent": "eight"}
+  ],
+  "win": {"count": {"group": "discard", "cards": 52}}
+}

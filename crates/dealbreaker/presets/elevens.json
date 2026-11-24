@@ -1,0 +1,17 @@
+{
+  "name": "Elevens",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "discard", "kind": "foundation", "build": {"by": "none", "dir": "down"}, "empty": "none"},
+    {"name": "tableau", "kind": "tableau", "count": 9, "empty": "none", "moves": "none", "refill_from": ["stock"]}
+  ],
+  "deal": [
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "removal": [
+    {"kind": {"pairs_sum": {"total": 11}}, "from": ["tableau"], "to": "discard"},
+    {"kind": {"rank_set": {"ranks": [11, 12, 13]}}, "from": ["tableau"], "to": "discard"}
+  ],
+  "win": {"count": {"group": "discard", "cards": 52}}
+}

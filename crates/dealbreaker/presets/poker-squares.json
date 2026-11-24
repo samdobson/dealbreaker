@@ -1,0 +1,14 @@
+{
+  "name": "Poker Squares",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "waste", "kind": "waste"},
+    {"name": "tableau", "kind": "tableau", "count": 25, "moves": "none", "max_cards": 1, "accepts_from": ["waste"], "layout": {"grid": {"columns": 5}}}
+  ],
+  "stock": {"to": "waste", "auto": true, "only_when_empty": true},
+  "deal": [
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "score": {"group": "tableau", "hands": {"poker": "american"}},
+  "win": {"score": {"at_least": 200}}
+}

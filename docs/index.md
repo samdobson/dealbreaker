@@ -30,7 +30,7 @@ features:
     link: /how-to/
     linkText: Browse guides
   - title: Reference
-    details: Auto-generated specs for all 39 presets, Rules JSON Schema, CLI flags, JS/TS, Python, and C ABI.
+    details: Auto-generated specs for all 50 presets, Rules JSON Schema, CLI flags, JS/TS, Python, and C ABI.
     link: /reference/
     linkText: Explore reference
   - title: Explanation

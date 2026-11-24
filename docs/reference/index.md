@@ -4,7 +4,7 @@ Technical specifications for Dealbreaker's rules, data formats, CLI, and languag
 
 ## Games & Data Formats
 
-- [Built-in Presets](/reference/presets) — all 39 presets with summaries and full JSON rules
+- [Built-in Presets](/reference/presets) — all 50 presets with summaries and full JSON rules
 - [Rules Schema](/reference/rules-schema) — complete JSON Schema reference for defining games
 - [Data Formats](/reference/data-formats) — JSON schemas for positions (`StateData`), moves (`Step`), `SolveOptions`, and `HintOptions`
 

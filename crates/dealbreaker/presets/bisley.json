@@ -1,0 +1,11 @@
+{
+  "name": "Bisley",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 8, "piles": [{"piles": [4, 5, 6, 7], "build": {"by": "suit", "dir": "down", "wrap": false, "step": 1}, "empty": {"rank": 13}}]},
+    {"name": "tableau", "kind": "tableau", "count": 13, "build": {"by": "suit", "dir": "either"}, "empty": "none"}
+  ],
+  "deal": [
+    {"to": "foundation", "piles": [0, 1, 2, 3], "ranks": [1]},
+    {"to": "tableau", "counts": [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4]}
+  ]
+}

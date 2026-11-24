@@ -8,7 +8,7 @@
 
 Dealbreaker models solitaire variants as small JSON files and solves them with a single Rust engine — finding winning lines, proving unsolvability, suggesting fair hints, and maximising scores in points games. All search calls release the Python GIL.
 
-- **39 built-in games** — Klondike, FreeCell, Spider, Yukon, TriPeaks, Poker Squares, and [more](https://samdobson.github.io/dealbreaker/reference/presets), plus custom games in JSON.
+- **50 built-in games** — Klondike, FreeCell, Spider, Yukon, TriPeaks, Poker Squares, and [more](https://samdobson.github.io/dealbreaker/reference/presets), plus custom games in JSON.
 - **Fast** — solves 31,980 of 32,000 Microsoft FreeCell deals in 13.1 ms mean time, proving `#11982` unsolvable in 0.26 s.
 
 ## Quick start

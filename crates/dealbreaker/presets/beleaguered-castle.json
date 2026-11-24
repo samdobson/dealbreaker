@@ -1,0 +1,11 @@
+{
+  "name": "Beleaguered Castle",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 8, "build": {"by": "any", "dir": "down"}}
+  ],
+  "deal": [
+    {"to": "foundation", "ranks": [1]},
+    {"to": "tableau", "count": 6}
+  ]
+}

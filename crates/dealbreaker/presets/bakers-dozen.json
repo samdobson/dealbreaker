@@ -1,0 +1,11 @@
+{
+  "name": "Baker's Dozen",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 13, "build": {"by": "any", "dir": "down"}, "empty": "none"}
+  ],
+  "deal": [
+    {"to": "tableau", "count": 4, "kings_to_bottom": true}
+  ],
+  "search": {"blocker_weight": 4}
+}

@@ -1,0 +1,21 @@
+{
+  "name": "Little Spider",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {
+      "name": "foundation",
+      "kind": "foundation",
+      "count": 4,
+      "piles": [
+        {"piles": [0, 1], "build": {"by": "suit", "dir": "up"}, "empty": {"rank": 1}, "color": "red"},
+        {"piles": [2, 3], "build": {"by": "suit", "dir": "down"}, "empty": {"rank": 13}, "color": "black"}
+      ]
+    },
+    {"name": "tableau", "kind": "tableau", "count": 8, "build": {"by": "any", "dir": "either", "wrap": true}}
+  ],
+  "stock": {"to": "tableau"},
+  "deal": [
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ]
+}

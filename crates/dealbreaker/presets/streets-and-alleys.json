@@ -1,0 +1,10 @@
+{
+  "name": "Streets and Alleys",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 8, "build": {"by": "any", "dir": "down"}}
+  ],
+  "deal": [
+    {"to": "tableau", "rest": true}
+  ]
+}

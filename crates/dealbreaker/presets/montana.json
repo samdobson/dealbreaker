@@ -1,0 +1,13 @@
+{
+  "name": "Montana",
+  "groups": [
+    {"name": "discard", "kind": "foundation", "build": {"by": "none", "dir": "down"}, "empty": "none"},
+    {"name": "tableau", "kind": "tableau", "count": 52, "build": {"by": "suit", "dir": "up"}, "empty": {"after_left": {"first": 2}}, "max_cards": 1, "layout": {"grid": {"columns": 13}}}
+  ],
+  "redeal": {"group": "tableau", "times": 2, "how": "grid_shuffle"},
+  "deal": [
+    {"to": "tableau", "rest": true},
+    {"to": "discard", "collect": [1]}
+  ],
+  "win": {"rows": {"group": "tableau", "length": 12}}
+}

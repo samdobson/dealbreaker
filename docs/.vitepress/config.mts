@@ -67,7 +67,7 @@ export default defineConfig({
           text: 'Reference (Auto-generated)',
           items: [
             { text: 'Overview', link: '/reference/' },
-            { text: 'Built-in Presets (39)', link: '/reference/presets' },
+            { text: 'Built-in Presets (50)', link: '/reference/presets' },
             { text: 'Rules Schema (JSON)', link: '/reference/rules-schema' },
             { text: 'Data Formats', link: '/reference/data-formats' },
             { text: 'CLI Reference', link: '/reference/cli' },

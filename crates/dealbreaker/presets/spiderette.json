@@ -1,0 +1,15 @@
+{
+  "name": "Spiderette",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "foundation", "kind": "foundation", "count": 4, "complete_runs": true},
+    {"name": "tableau", "kind": "tableau", "count": 7, "build": {"by": "any", "dir": "down"}, "moves": "suit_run"}
+  ],
+  "stock": {"to": "tableau", "require_no_empty": true},
+  "deal": [
+    {"to": "tableau", "counts": [0, 1, 2, 3, 4, 5, 6], "face_up": false},
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "search": {"down_weight": 5, "disorder_weight": 3, "fast_share": 90}
+}

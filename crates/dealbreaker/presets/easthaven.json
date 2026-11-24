@@ -1,0 +1,14 @@
+{
+  "name": "Easthaven",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "tableau", "kind": "tableau", "count": 7, "build": {"by": "alternate", "dir": "down"}, "moves": "run"}
+  ],
+  "stock": {"to": "tableau"},
+  "deal": [
+    {"to": "tableau", "count": 2, "face_up": false},
+    {"to": "tableau", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ]
+}

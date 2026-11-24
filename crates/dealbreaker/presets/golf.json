@@ -1,0 +1,15 @@
+{
+  "name": "Golf",
+  "groups": [
+    {"name": "stock", "kind": "stock"},
+    {"name": "foundation", "kind": "foundation", "build": {"by": "any", "dir": "either", "blocked_ranks": [13]}, "empty": "any", "accepts_from": ["tableau"]},
+    {"name": "tableau", "kind": "tableau", "count": 7, "empty": "none"}
+  ],
+  "stock": {"to": "foundation"},
+  "deal": [
+    {"to": "tableau", "count": 5},
+    {"to": "foundation", "count": 1},
+    {"to": "stock", "rest": true, "face_up": false}
+  ],
+  "win": {"empty": ["tableau"]}
+}

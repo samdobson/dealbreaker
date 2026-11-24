@@ -1,0 +1,12 @@
+{
+  "name": "King Albert",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "count": 4},
+    {"name": "reserve", "kind": "reserve", "count": 7},
+    {"name": "tableau", "kind": "tableau", "count": 9, "build": {"by": "alternate", "dir": "down"}}
+  ],
+  "deal": [
+    {"to": "tableau", "counts": [1, 2, 3, 4, 5, 6, 7, 8, 9]},
+    {"to": "reserve", "count": 1}
+  ]
+}

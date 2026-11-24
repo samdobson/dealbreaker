@@ -1,0 +1,11 @@
+{
+  "name": "Black Hole",
+  "groups": [
+    {"name": "foundation", "kind": "foundation", "build": {"by": "any", "dir": "either", "wrap": true}, "empty": "any", "empty_suit": "spades", "accepts_from": ["tableau"]},
+    {"name": "tableau", "kind": "tableau", "count": 17, "empty": "none"}
+  ],
+  "deal": [
+    {"to": "foundation", "ranks": [1], "count": 1},
+    {"to": "tableau", "count": 3}
+  ]
+}

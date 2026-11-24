@@ -31,6 +31,19 @@ fn presets_compile_and_round_trip() {
 
 #[test]
 fn preset_solutions_replay() {
+    let mut presets_solved = 0usize;
+    let must_solve = [
+        "freecell",
+        "klondike",
+        "spider-1suit",
+        "yukon",
+        "golf",
+        "pyramid",
+        "montana",
+        "canfield",
+        "poker-squares",
+        "cribbage-squares",
+    ];
     for p in presets::PRESETS {
         let g = Game::new((p.rules)()).unwrap();
         let mut solved = 0;
@@ -44,7 +57,21 @@ fn preset_solutions_replay() {
             }
         }
         println!("{:<20} {solved}/4 solved within budget", p.id);
+        if solved > 0 {
+            presets_solved += 1;
+        }
+        if must_solve.contains(&p.id) {
+            assert!(
+                solved >= 1,
+                "bellwether preset {} solved 0/4 within 60k states",
+                p.id
+            );
+        }
     }
+    assert!(
+        presets_solved >= 30,
+        "expected at least 30 presets to solve >=1/4 seeds, got {presets_solved}"
+    );
 }
 
 #[test]

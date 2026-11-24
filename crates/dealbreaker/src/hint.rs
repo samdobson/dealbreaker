@@ -422,4 +422,27 @@ mod tests {
         let h2 = hint(&kl, &ks, &opts);
         assert_eq!(h1, h2);
     }
+
+    #[test]
+    fn scored_hint_is_deterministic_across_repeated_calls() {
+        let ps = Game::new(presets::poker_squares()).unwrap();
+        let mut s = ps.deal(5);
+        for i in 0..3 {
+            let to = ps.pile_index("tableau", i * 6).unwrap();
+            let from = ps.pile_index("waste", 0).unwrap();
+            ps.play(
+                &mut s,
+                crate::game::Move::new(crate::game::Action::Transfer { from, to, count: 1 }),
+            )
+            .unwrap();
+        }
+        let opts = HintOptions::default()
+            .samples(4)
+            .seed(11)
+            .solve(SolveOptions::default().max_states(2_000));
+        let h1 = hint(&ps, &s, &opts);
+        let h2 = hint(&ps, &s, &opts);
+        assert_eq!(h1, h2);
+        assert!(h1.is_some());
+    }
 }

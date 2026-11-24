@@ -69,3 +69,66 @@ def test_concurrent_threads_release_gil():
     with ThreadPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(lambda d: fc.solve(d, max_states=200_000), deals))
     assert all(r["outcome"] == "solved" for r in results)
+
+
+def test_deal_ordered_and_json_string_inputs():
+    import json
+
+    fc = Solver.from_preset("freecell")
+    cards = [
+        f"{r}{s}"
+        for s in ("C", "D", "H", "S")
+        for r in ("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K")
+    ]
+    state = fc.deal_ordered(cards)
+    fc.validate(state)
+    fc.validate(json.dumps(state))
+
+    with pytest.raises(ValueError):
+        fc.deal_ordered(cards[:10])
+    with pytest.raises(ValueError):
+        fc.deal_ordered(["ZZ"])
+
+    # Solver accepts raw JSON string rules as well as dicts.
+    fc_from_str = Solver(json.dumps(fc.rules()))
+    assert fc_from_str.deal(1) == fc.deal(1)
+
+
+def test_options_strategies_and_error_paths():
+    fc = Solver.from_preset("freecell")
+    deal = fc.deal_microsoft(1)
+
+    for strat in ("dfs", "best-first"):
+        res = fc.solve(deal, max_states=200_000, strategy=strat, autoplay=False, shorten=False)
+        assert res["outcome"] == "solved"
+
+    with pytest.raises(ValueError):
+        fc.solve(deal, strategy="bogus")
+    with pytest.raises(ValueError):
+        Solver("{not json")
+    with pytest.raises(ValueError):
+        fc.play_step(deal, {"type": "deal"})
+
+    # deal_microsoft rejects non-52-card games.
+    sp = Solver.from_preset("spider")
+    with pytest.raises(ValueError):
+        sp.deal_microsoft(1)
+
+
+def test_hint_unknown_cards_and_none_on_tiny_budget():
+    fc = Solver.from_preset("freecell")
+    assert fc.hint(fc.deal_microsoft(1), max_states=1) is None
+
+    kl = Solver.from_preset("klondike")
+    state = kl.deal(2)
+    for piles in state["piles"].values():
+        for pile in piles:
+            for i, card in enumerate(pile):
+                if card.startswith("~"):
+                    pile[i] = "~?" if i % 2 else "?"
+
+    # Strict validate rejects "?", while hint accepts it.
+    with pytest.raises(ValueError):
+        kl.validate(state)
+    h = kl.hint(state, samples=2, seed=1, max_states=5_000)
+    assert h is None or isinstance(h["step"]["type"], str)

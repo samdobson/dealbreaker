@@ -194,6 +194,9 @@ impl Game {
                     && !g.requires_prev_non_empty
                     && !g.match_longest_rank
                     && !g.lock_build_dir
+                    && !g.lock_pile_dir
+                    && g.rank_sequence.is_empty()
+                    && g.unrestricted_from.is_none()
                     && g.final_from_same_index.is_none()
                     && build.by == BuildBy::Suit
                     && matches!(build.dir, Dir::Up | Dir::Down)
@@ -218,6 +221,8 @@ impl Game {
                         && !g.requires_rank_on_prev
                         && !g.match_longest_rank
                         && !g.lock_build_dir
+                        && !g.lock_pile_dir
+                        && g.rank_sequence.is_empty()
                         && g.max_same_rank.is_none(),
                     admits,
                     empty_suit,
@@ -239,6 +244,16 @@ impl Game {
             };
             let empty_accepts_from = match &g.empty_accepts_from {
                 None => accepts_from,
+                Some(names) => {
+                    let mut m = 0u64;
+                    for n in names {
+                        m |= 1 << find(n)?;
+                    }
+                    m
+                }
+            };
+            let unrestricted_from = match &g.unrestricted_from {
+                None => 0u64,
                 Some(names) => {
                     let mut m = 0u64;
                     for n in names {
@@ -330,6 +345,10 @@ impl Game {
                 refill_nearest: g.refill_nearest,
                 require_valid_base: g.require_valid_base,
                 swap_bases: g.swap_bases,
+                supermove_complete_run: g.supermove_complete_run,
+                unrestricted_from,
+                lock_pile_dir: g.lock_pile_dir,
+                rank_sequence: g.rank_sequence.clone(),
             };
             grp.symmetric = g.layout.is_none()
                 && g.piles.is_empty()
@@ -664,7 +683,11 @@ impl Game {
                 spread,
             } => Win::CountAndSpread(find(group)?, *cards, find(spread)?),
             WinRule::AtMostPiles { group, piles } => Win::AtMostPiles(find(group)?, *piles),
-            WinRule::Rows { group, length } => {
+            WinRule::Rows {
+                group,
+                length,
+                build,
+            } => {
                 let gi = find(group)?;
                 let g = &groups[gi as usize];
                 let cols = g.columns.ok_or_else(|| {
@@ -681,6 +704,7 @@ impl Game {
                 if len > cols {
                     return err("rows win: length longer than a row");
                 }
+                let _ = build;
                 Win::Rows(gi, len, first)
             }
             WinRule::Score { at_least } => {
@@ -745,6 +769,7 @@ impl Game {
             redeal,
             removal,
             win,
+            row_win_fits: None,
             rank_idx,
             nranks,
             copies,
@@ -808,6 +833,17 @@ impl Game {
                 }
             }
             self.pile_rules[p].fits = t;
+        }
+        if let WinRule::Rows { build: Some(b), .. } = &self.rules.win {
+            let mut t = [0u64; FACES];
+            for (u, row) in t.iter_mut().enumerate() {
+                for o in 0..FACES {
+                    if self.fits(b, Card::from_face(u as u8), Card::from_face(o as u8)) {
+                        *row |= 1 << o;
+                    }
+                }
+            }
+            self.row_win_fits = Some(t);
         }
     }
 
@@ -1021,6 +1057,7 @@ impl Game {
                         let tr = &self.pile_rules[to as usize];
                         let allowed_from = tg.accepts_from
                             | tg.empty_accepts_from
+                            | tg.unrestricted_from
                             | tg.final_from_same_index.map_or(0, |r| 1u64 << r);
                         if tg.kind == PileKind::Stock || allowed_from & (1 << fg) == 0 {
                             return false;
@@ -1032,6 +1069,8 @@ impl Game {
                             return false;
                         }
                         tr.complete_runs
+                            || !tg.rank_sequence.is_empty()
+                            || tg.unrestricted_from & (1 << fg) != 0
                             || tr.empty != EmptyRule::None
                             || tr.build.by != BuildBy::None
                     })

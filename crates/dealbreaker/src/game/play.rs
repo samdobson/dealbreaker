@@ -1083,7 +1083,19 @@ impl Game {
                     }
                     _ => 0,
                 },
-                Some(set) => self.step_set(r, set, false),
+                Some(set) => match &self.row_win_fits {
+                    Some(fits) => {
+                        let mut out = 0u64;
+                        let mut m = set;
+                        while m != 0 {
+                            let f = m.trailing_zeros() as usize;
+                            m &= m - 1;
+                            out |= fits[f];
+                        }
+                        out
+                    }
+                    None => self.step_set(r, set, false),
+                },
             };
             let id = if c.is_joker() {
                 if !r.wild || allowed == 0 {

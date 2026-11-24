@@ -37,6 +37,7 @@ impl Game {
         };
         match b.dir {
             Dir::Up => up(u, o),
+            Dir::UpAny => o > u,
             Dir::Down => up(o, u),
             Dir::Either => up(u, o) || up(o, u),
             Dir::Same => u == o,
@@ -612,6 +613,7 @@ impl Game {
         if self.can_swap(s, from, to) {
             return n == 1 && self.available(s, to);
         }
+        let unrestricted = tg.unrestricted_from & (1 << fgi) != 0;
         let is_final_same_index =
             tg.final_from_same_index.is_some() && dst.len() + n == tr.max_cards as usize;
         if let Some(ref_gi) = tg.final_from_same_index.filter(|_| is_final_same_index) {
@@ -625,7 +627,7 @@ impl Game {
             } else {
                 tg.accepts_from
             };
-            if mask & (1 << fgi) == 0 {
+            if (mask | tg.unrestricted_from) & (1 << fgi) == 0 {
                 return false;
             }
         }
@@ -679,7 +681,38 @@ impl Game {
         if tr.complete_runs {
             return dst.is_empty() && self.is_complete_run(src, n, tr.build.by, tr.build.wrap);
         }
-        let ok = if self.jokers == 0 {
+        let ok = if unrestricted {
+            true
+        } else if !tg.rank_sequence.is_empty() {
+            let Some(&want_rank) = tg.rank_sequence.get(dst.len()) else {
+                return false;
+            };
+            let ok_admit = tr.admits >> card.face() & 1 != 0;
+            let ok_rank = card.is_joker() || card.rank() == want_rank;
+            if !ok_admit || !ok_rank {
+                false
+            } else if let Some(&top) = dst.last() {
+                if !top.is_face_up() {
+                    false
+                } else if card.is_joker() || top.is_joker() {
+                    tr.wild
+                } else {
+                    match tr.build.by {
+                        BuildBy::None => false,
+                        BuildBy::Any => true,
+                        BuildBy::Suit => top.suit() == card.suit(),
+                        BuildBy::Alternate => top.color() != card.color(),
+                        BuildBy::SameColor => top.color() == card.color(),
+                        BuildBy::OtherSuit => top.suit() != card.suit(),
+                        BuildBy::SuitOrRank => {
+                            top.suit() == card.suit() || top.rank() == card.rank()
+                        }
+                    }
+                }
+            } else {
+                card.is_joker() || tr.empty_suit.is_none_or(|es| card.suit() == es)
+            }
+        } else if self.jokers == 0 {
             match dst.last() {
                 None => self.empty_accepts(to, card, s),
                 Some(&top) => {
@@ -700,7 +733,11 @@ impl Game {
         if !ok {
             return false;
         }
-        if tg.lock_build_dir && !dst.is_empty() && !card.is_joker() {
+        if (tg.lock_build_dir || tg.lock_pile_dir)
+            && !unrestricted
+            && !dst.is_empty()
+            && !card.is_joker()
+        {
             let n = self.nranks as i16;
             let step = tr.build.step as i16;
             let is_up = |a: Card, b: Card| -> bool {
@@ -708,14 +745,20 @@ impl Game {
                     - self.rank_idx[a.rank() as usize] as i16;
                 d == step || (tr.build.wrap && d == step - n)
             };
-            let locked = tg.piles().find_map(|p| {
-                let pile = &s.piles[p as usize];
-                if pile.len() >= 2 && !pile[0].is_joker() && !pile[1].is_joker() {
-                    Some(is_up(pile[0], pile[1]))
-                } else {
-                    None
-                }
-            });
+            let locked = if tg.lock_build_dir {
+                tg.piles().find_map(|p| {
+                    let pile = &s.piles[p as usize];
+                    if pile.len() >= 2 && !pile[0].is_joker() && !pile[1].is_joker() {
+                        Some(is_up(pile[0], pile[1]))
+                    } else {
+                        None
+                    }
+                })
+            } else if dst.len() >= 2 && !dst[0].is_joker() && !dst[1].is_joker() {
+                Some(is_up(dst[0], dst[1]))
+            } else {
+                None
+            };
             if let Some(want_up) = locked {
                 let top = *dst.last().unwrap();
                 if !top.is_joker() && is_up(top, card) != want_up {
@@ -780,7 +823,10 @@ impl Game {
                 }
             }
         }
-        if self.rule(from).moves == MoveUnit::Supermove && n > 1 {
+        if self.rule(from).moves == MoveUnit::Supermove
+            && n > 1
+            && !(self.groups[fgi as usize].supermove_complete_run && n == self.nranks as usize)
+        {
             let cap = supermove_cap.unwrap_or_else(|| self.supermove_limit(s, from, to));
             return n <= cap;
         }
@@ -949,6 +995,7 @@ impl Game {
                     continue;
                 }
                 let tr = self.rule(to);
+                let unrestricted = tg.unrestricted_from & (1 << fg) != 0;
                 if no_hooks {
                     if tg.replace_on_drop.is_none()
                         && tg.swap_bases.is_none()
@@ -956,7 +1003,7 @@ impl Game {
                     {
                         continue;
                     }
-                    if !tr.complete_runs {
+                    if !tr.complete_runs && !unrestricted && tg.rank_sequence.is_empty() {
                         if dst_empty {
                             if tr.empty == EmptyRule::None {
                                 continue;
@@ -1002,6 +1049,8 @@ impl Game {
                     && self.jokers == 0
                     && !tr.complete_runs
                     && !dst_empty
+                    && !unrestricted
+                    && tg.rank_sequence.is_empty()
                     && tg.swap_bases.is_none()
                 {
                     let top = *dst.last().unwrap();

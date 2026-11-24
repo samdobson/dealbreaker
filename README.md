@@ -7,6 +7,15 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/samdobson/dealbreaker/actions/workflows/ci.yml"><img src="https://github.com/samdobson/dealbreaker/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://crates.io/crates/dealbreaker"><img src="https://img.shields.io/crates/v/dealbreaker.svg" alt="crates.io"></a>
+  <a href="https://docs.rs/dealbreaker"><img src="https://docs.rs/dealbreaker/badge.svg" alt="docs.rs"></a>
+  <a href="https://pypi.org/project/dealbreaker/"><img src="https://img.shields.io/pypi/v/dealbreaker.svg" alt="PyPI"></a>
+  <a href="https://www.npmjs.com/package/dealbreaker"><img src="https://img.shields.io/npm/v/dealbreaker.svg" alt="npm"></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg" alt="License: MIT OR Apache-2.0"></a>
+</p>
+
+<p align="center">
   <a href="https://samdobson.github.io/dealbreaker/"><strong>Documentation</strong></a> &nbsp;·&nbsp;
   <a href="https://samdobson.github.io/dealbreaker/demo/"><strong>Live Web Demo</strong></a> &nbsp;·&nbsp;
   <a href="https://github.com/samdobson/dealbreaker/releases"><strong>Releases</strong></a>

@@ -483,6 +483,23 @@ pub struct GroupRules {
     /// of building.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub swap_bases: Option<SwapBases>,
+    /// With `moves: supermove`, also allow moving a complete suit-length built run regardless of
+    /// empty cells and columns.
+    #[serde(default)]
+    pub supermove_complete_run: bool,
+    /// Cards coming from these groups are accepted onto empty or non-empty piles without checking
+    /// `build` or `empty` rules (capacity limits still apply).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unrestricted_from: Option<Vec<String>>,
+    /// When `build.dir` is `either`, each pile locks its own build direction (up or down) once it
+    /// holds two cards.
+    #[serde(default)]
+    pub lock_pile_dir: bool,
+    /// Fixed sequence of ranks required at each pile depth (index 0 for the bottom card, index 1
+    /// for the second, etc.). Replaces the rank check of `empty` and `build.dir`; `build.by`,
+    /// `suit`, `empty_suit`, `color`, and `max_cards` still apply.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rank_sequence: Vec<u8>,
 }
 
 /// When two piles in the same group may swap their contents on a move from one to the other.
@@ -625,6 +642,10 @@ impl GroupRules {
             refill_nearest: false,
             require_valid_base: false,
             swap_bases: None,
+            supermove_complete_run: false,
+            unrestricted_from: None,
+            lock_pile_dir: false,
+            rank_sequence: Vec::new(),
         }
     }
 
@@ -822,6 +843,26 @@ impl GroupRules {
         self.swap_bases = Some(mode);
         self
     }
+
+    pub fn supermove_complete_run(mut self) -> Self {
+        self.supermove_complete_run = true;
+        self
+    }
+
+    pub fn unrestricted_from(mut self, groups: &[&str]) -> Self {
+        self.unrestricted_from = Some(groups.iter().map(|s| s.to_string()).collect());
+        self
+    }
+
+    pub fn lock_pile_dir(mut self) -> Self {
+        self.lock_pile_dir = true;
+        self
+    }
+
+    pub fn rank_sequence(mut self, ranks: &[u8]) -> Self {
+        self.rank_sequence = ranks.to_vec();
+        self
+    }
 }
 
 /// How cards are built on one another.
@@ -913,6 +954,8 @@ pub enum Dir {
     #[default]
     Down,
     Up,
+    /// Any strictly higher rank in the pack's rank sequence (no wrap).
+    UpAny,
     /// Up or down.
     Either,
     /// Same rank.
@@ -1410,6 +1453,9 @@ pub enum WinRule {
         group: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         length: Option<u16>,
+        /// Optional build rule used to check ordered row prefixes (defaults to the group's build).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        build: Option<Build>,
     },
     /// The position scores at least this many points (see [`Rules::score`]).
     Score { at_least: u32 },

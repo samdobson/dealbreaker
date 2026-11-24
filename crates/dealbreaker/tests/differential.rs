@@ -246,6 +246,7 @@ fn mini_montana() -> Rules {
     r.win = WinRule::Rows {
         group: "tableau".into(),
         length: Some(5),
+        build: None,
     };
     r.redeal.as_mut().unwrap().times = 1;
     r
@@ -1929,6 +1930,7 @@ fn grid_shuffle_random_gaps_and_after_pile_final() {
     r_gap.win = WinRule::Rows {
         group: "tableau".into(),
         length: Some(3),
+        build: None,
     };
     check(r_gap, 0..40);
 
@@ -2180,6 +2182,7 @@ fn neighbor_refill_nearest_and_final_split() {
     r_nb.win = WinRule::Rows {
         group: "tableau".into(),
         length: Some(4),
+        build: None,
     };
     check(r_nb, 0..40);
 
@@ -2412,4 +2415,103 @@ fn stock_redeal_shuffle_and_final_to() {
     st2.final_to = Some("reserve".into());
     r2.stock = Some(st2);
     check(r2, 0..40);
+}
+
+#[test]
+fn wave3_mechanics() {
+    // 1) Dir::UpAny + WinRule::Rows with custom build (2 suits x 4 ranks in 2x5 grid).
+    let pack1 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r1 = Rules::new(
+        "mini-up-any-rows",
+        pack1,
+        vec![GroupRules::new("tableau", PileKind::Tableau, 10)
+            .layout(Layout::Grid { columns: 5 })
+            .build(BuildBy::Suit, Dir::UpAny)
+            .empty(EmptyRule::AfterLeft { first: 1 })
+            .moves(MoveUnit::Top)
+            .max_cards(1)],
+        vec![DealStep::to("tableau")
+            .piles(&[1, 2, 3, 4, 6, 7, 8, 9])
+            .each(1)],
+    );
+    r1.win = WinRule::Rows {
+        group: "tableau".into(),
+        length: Some(4),
+        build: Some(Build::new(BuildBy::Suit, Dir::Up)),
+    };
+    check(r1, 0..40);
+
+    // 2) GroupRules::unrestricted_from (2 suits x 4 ranks, waste drops anywhere on tableau).
+    let pack2 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r2 = Rules::new(
+        "mini-unrestricted-from",
+        pack2,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .empty(EmptyRule::Rank(4))
+                .moves(MoveUnit::Top)
+                .max_accept(1)
+                .accepts_from(&["tableau"])
+                .unrestricted_from(&["waste"]),
+        ],
+        vec![
+            DealStep::to("waste").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r2.stock = Some(StockRules::to("waste"));
+    check(r2, 0..40);
+
+    // 3) GroupRules::lock_pile_dir + GroupRules::rank_sequence (2 copies x 1 suit x 3 ranks = 6 cards).
+    let pack3 = Pack::new(&[Suit::Clubs], &[1, 2, 3]).with_copies(2);
+    let mut r3 = Rules::new(
+        "mini-lock-pile-and-rank-seq",
+        pack3,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::Suit, Dir::Any)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::None)
+                .max_cards(6)
+                .rank_sequence(&[1, 2, 3, 3, 2, 1]),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Suit, Dir::Either)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top)
+                .max_accept(1)
+                .lock_pile_dir(),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("waste").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r3.stock = Some(StockRules::to("waste"));
+    check(r3, 0..40);
+
+    // 4) GroupRules::supermove_complete_run (2 suits x 3 ranks = 6 cards, 0 cells, 3 columns).
+    let pack4 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let r4 = Rules::new(
+        "mini-supermove-complete",
+        pack4,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Alternate, Dir::Down)
+                .complete_runs(),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Supermove)
+                .supermove_complete_run(),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    check(r4, 0..40);
 }

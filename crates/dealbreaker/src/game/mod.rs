@@ -179,6 +179,14 @@ pub(crate) struct Group {
     pub require_valid_base: bool,
     /// Swap-on-drop mode for piles within this group.
     pub swap_bases: Option<SwapBases>,
+    /// Allow moving a complete suit-length run regardless of supermove capacity.
+    pub supermove_complete_run: bool,
+    /// Source groups whose cards bypass `build` and `empty` rules when dropped onto this group.
+    pub unrestricted_from: u64,
+    /// When `build.dir` is `either`, each pile locks its own build direction once it has 2 cards.
+    pub lock_pile_dir: bool,
+    /// Fixed rank sequence required by pile depth.
+    pub rank_sequence: Vec<u8>,
 }
 
 #[derive(Clone, Debug)]
@@ -335,6 +343,10 @@ impl Group {
             refill_nearest: false,
             require_valid_base: false,
             swap_bases: None,
+            supermove_complete_run: false,
+            unrestricted_from: 0,
+            lock_pile_dir: false,
+            rank_sequence: Vec::new(),
         }
     }
 }
@@ -438,6 +450,8 @@ pub struct Game {
     pub(crate) redeal: Option<Redeal>,
     pub(crate) removal: Vec<Removal>,
     pub(crate) win: Win,
+    /// Optional compiled fits table overriding the group's build rule in `row_prefix`.
+    pub(crate) row_win_fits: Option<[u64; FACES]>,
     /// Position of each rank (1..=13) in the pack's sequence; 255 if not in the pack.
     pub(crate) rank_idx: [u8; 14],
     pub(crate) nranks: u8,

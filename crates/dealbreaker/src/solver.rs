@@ -580,8 +580,10 @@ impl<'g, 'c> Ctx<'g, 'c> {
         let ordered_foundations: Vec<u16> = (0..g.num_piles() as u16)
             .filter(|&p| {
                 let r = g.rule(p);
+                let gi = g.pile_group[p as usize] as usize;
                 g.pile_kind(p) == PileKind::Foundation
                     && !r.complete_runs
+                    && g.groups[gi].rank_sequence.is_empty()
                     && r.build.by != BuildBy::None
                     && matches!(r.build.dir, crate::rules::Dir::Up | crate::rules::Dir::Down)
             })

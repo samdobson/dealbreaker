@@ -7,766 +7,859 @@ use super::{
     err, CompiledChooseBase, Game, Group, PileRules, Redeal, Removal, RulesError, Stock, Win,
 };
 
-impl Game {
-    /// Check and compile rules.
-    pub fn new(rules: Rules) -> Result<Game, RulesError> {
-        let pack = &rules.pack;
-        if pack.copies == 0 || pack.suits.is_empty() || pack.ranks.is_empty() {
-            return err("the pack is empty");
-        }
-        let mut rank_idx = [255u8; 14];
-        for (i, &r) in pack.ranks.iter().enumerate() {
-            if !(1..=13).contains(&r) {
-                return err(format!("rank {r} is not 1..=13"));
-            }
-            if rank_idx[r as usize] != 255 {
-                return err(format!("rank {r} listed twice"));
-            }
-            rank_idx[r as usize] = i as u8;
-        }
-        let mut in_pack = [false; FACES];
-        for &s in &pack.suits {
-            for &r in &pack.ranks {
-                in_pack[Card::new(s, r).face() as usize] = true;
-            }
-        }
-        in_pack[JOKER as usize] = pack.jokers > 0;
-        let mut rank_faces = [0u64; 14];
-        let mut suit_faces = [0u64; 4];
-        for f in 0..JOKER {
-            let c = Card::from_face(f);
-            rank_faces[c.rank() as usize] |= 1 << f;
-            suit_faces[c.suit() as usize] |= 1 << f;
-        }
-        let nranks = pack.ranks.len() as u8;
-        let total = pack.len();
-        if total > u16::MAX as usize || pack.copies as usize * pack.suits.len() > 255 {
-            return err("pack too large");
-        }
-        if rules.groups.len() > 64 {
-            return err("at most 64 groups");
-        }
+struct CompiledPack {
+    rank_idx: [u8; 14],
+    in_pack: [bool; FACES],
+    rank_faces: [u64; 14],
+    suit_faces: [u64; 4],
+    nranks: u8,
+    total_cards: u16,
+    first_rank: u8,
+    last_rank: u8,
+}
 
-        let find = |name: &str| -> Result<u16, RulesError> {
-            rules
+fn compile_pack(pack: &Pack) -> Result<CompiledPack, RulesError> {
+    if pack.copies == 0 || pack.suits.is_empty() || pack.ranks.is_empty() {
+        return err("the pack is empty");
+    }
+    let mut rank_idx = [255u8; 14];
+    for (i, &r) in pack.ranks.iter().enumerate() {
+        if !(1..=13).contains(&r) {
+            return err(format!("rank {r} is not 1..=13"));
+        }
+        if rank_idx[r as usize] != 255 {
+            return err(format!("rank {r} listed twice"));
+        }
+        rank_idx[r as usize] = i as u8;
+    }
+    let mut in_pack = [false; FACES];
+    for &s in &pack.suits {
+        for &r in &pack.ranks {
+            in_pack[Card::new(s, r).face() as usize] = true;
+        }
+    }
+    in_pack[JOKER as usize] = pack.jokers > 0;
+    let mut rank_faces = [0u64; 14];
+    let mut suit_faces = [0u64; 4];
+    for f in 0..JOKER {
+        let c = Card::from_face(f);
+        rank_faces[c.rank() as usize] |= 1 << f;
+        suit_faces[c.suit() as usize] |= 1 << f;
+    }
+    let nranks = pack.ranks.len() as u8;
+    let total = pack.len();
+    if total > u16::MAX as usize || pack.copies as usize * pack.suits.len() > 255 {
+        return err("pack too large");
+    }
+    let first_rank = pack.ranks[0];
+    let last_rank = *pack.ranks.last().expect("pack.ranks is non-empty");
+    Ok(CompiledPack {
+        rank_idx,
+        in_pack,
+        rank_faces,
+        suit_faces,
+        nranks,
+        total_cards: total as u16,
+        first_rank,
+        last_rank,
+    })
+}
+
+fn find_group(rules: &Rules, name: &str) -> Result<u16, RulesError> {
+    rules
+        .groups
+        .iter()
+        .position(|g| g.name == name)
+        .map(|i| i as u16)
+        .ok_or_else(|| RulesError(format!("no group named {name:?}")))
+}
+
+fn resolve_group_mask(rules: &Rules, names: &[String]) -> Result<u64, RulesError> {
+    let mut m = 0u64;
+    for n in names {
+        m |= 1 << find_group(rules, n)?;
+    }
+    Ok(m)
+}
+
+fn compile_pile_rules(
+    rules: &Rules,
+    g: &GroupRules,
+    pile_index: u16,
+    pack: &CompiledPack,
+    autoplay_globally_allowed: bool,
+) -> Result<PileRules, RulesError> {
+    // Later overrides win over earlier ones; any override wins over the group.
+    let mut build = g.build.clone();
+    let mut empty = g.empty.clone();
+    let mut moves = g.moves;
+    let mut max_cards = g.max_cards;
+    let mut min_cards = g.min_cards;
+    let mut max_accept = g.max_accept;
+    let mut empty_max_accept = g.empty_max_accept;
+    let mut non_empty_max_accept = g.non_empty_max_accept;
+    let mut suit = g.suit;
+    let mut empty_suit = g.empty_suit;
+    let mut color = g.color;
+    for o in g.piles.iter().filter(|o| o.piles.contains(&pile_index)) {
+        build = o.build.clone().or(build);
+        empty = o.empty.clone().or(empty);
+        moves = o.moves.or(moves);
+        max_cards = o.max_cards.or(max_cards);
+        min_cards = o.min_cards.or(min_cards);
+        max_accept = o.max_accept.or(max_accept);
+        empty_max_accept = o.empty_max_accept.or(empty_max_accept);
+        non_empty_max_accept = o.non_empty_max_accept.or(non_empty_max_accept);
+        suit = o.suit.or(suit);
+        empty_suit = o.empty_suit.or(empty_suit);
+        color = o.color.or(color);
+    }
+    let build = build.unwrap_or_else(|| match g.kind {
+        PileKind::Foundation => Build {
+            by: BuildBy::Suit,
+            dir: Dir::Up,
+            ..Build::default()
+        },
+        _ => Build::default(),
+    });
+    if build.step == 0 || build.step >= pack.nranks.max(2) {
+        return err(format!("{:?}: build step out of range", g.name));
+    }
+    let empty = empty.unwrap_or(match g.kind {
+        PileKind::Foundation => EmptyRule::Rank(if build.dir == Dir::Down {
+            pack.last_rank
+        } else {
+            pack.first_rank
+        }),
+        PileKind::Tableau | PileKind::Cell => EmptyRule::Any,
+        _ => EmptyRule::None,
+    });
+    let moves = moves.unwrap_or(match g.kind {
+        PileKind::Foundation | PileKind::Stock => MoveUnit::None,
+        _ => MoveUnit::Top,
+    });
+    let max_cards = max_cards.unwrap_or(match g.kind {
+        PileKind::Cell => 1,
+        _ if g.complete_runs => pack.nranks as u16,
+        _ => u16::MAX,
+    });
+    let max_accept = max_accept.unwrap_or(match g.kind {
+        PileKind::Foundation if g.complete_runs => pack.nranks as u16,
+        PileKind::Foundation => 1,
+        _ => u16::MAX,
+    });
+    let mut admits = 0u64;
+    for f in 0..JOKER {
+        let c = Card::from_face(f);
+        if suit.is_none_or(|s| c.suit() == s) && color.is_none_or(|k| c.color() == k) {
+            admits |= 1 << f;
+        }
+    }
+    // A joker can stand for a card of any suit.
+    admits |= 1 << JOKER;
+    let after_pile = match &empty {
+        EmptyRule::AfterPile { group, offset } => {
+            let ref_gi = find_group(rules, group)?;
+            if rules.groups[ref_gi as usize].count != g.count {
+                return err(format!(
+                    "{:?}: after_pile group {:?} must have the same pile count",
+                    g.name, group
+                ));
+            }
+            Some((ref_gi, *offset))
+        }
+        _ => None,
+    };
+    // Competing foundations with different rules are filtered out after `fits` is compiled.
+    let autoplay = autoplay_globally_allowed
+        && g.kind == PileKind::Foundation
+        && !g.complete_runs
+        && !g.requires_rank_on_prev
+        && !g.requires_prev_non_empty
+        && !g.match_longest_rank
+        && !g.lock_build_dir
+        && !g.lock_pile_dir
+        && !g.unique_suits
+        && g.rank_sequence.is_empty()
+        && g.unrestricted_from.is_none()
+        && g.final_from_same_index.is_none()
+        && build.by == BuildBy::Suit
+        && matches!(build.dir, Dir::Up | Dir::Down)
+        && (!build.wrap || max_cards <= pack.nranks as u16)
+        && build.blocked_ranks.is_empty()
+        && matches!(
+            empty,
+            EmptyRule::Rank(_) | EmptyRule::DealtBase | EmptyRule::DealtBaseOffset(_)
+        );
+    Ok(PileRules {
+        build,
+        empty,
+        moves,
+        max_cards,
+        min_cards: min_cards.unwrap_or(0),
+        max_accept,
+        empty_max_accept: empty_max_accept.unwrap_or(max_accept),
+        non_empty_max_accept: non_empty_max_accept.unwrap_or(max_accept),
+        complete_runs: g.complete_runs,
+        autoplay,
+        sink: moves == MoveUnit::None
+            && g.kind != PileKind::Stock
+            && !g.requires_rank_on_prev
+            && !g.match_longest_rank
+            && !g.lock_build_dir
+            && !g.lock_pile_dir
+            && g.rank_sequence.is_empty()
+            && g.max_same_rank.is_none(),
+        admits,
+        empty_suit,
+        fits: [0; FACES],
+        wild: g.wild.unwrap_or(g.kind != PileKind::Foundation),
+        after_pile,
+    })
+}
+
+struct CompiledGroups {
+    groups: Vec<Group>,
+    pile_group: Vec<u16>,
+    pile_rules: Vec<PileRules>,
+    start: u16,
+}
+
+fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, RulesError> {
+    if rules.groups.len() > 64 {
+        return err("at most 64 groups");
+    }
+    let stock_redeals_non_waste = rules.stock.as_ref().is_some_and(|sr| {
+        (sr.redeals > 0 || sr.unlimited_redeals)
+            && rules
                 .groups
                 .iter()
-                .position(|g| g.name == name)
-                .map(|i| i as u16)
-                .ok_or_else(|| RulesError(format!("no group named {name:?}")))
-        };
+                .any(|gr| gr.name == sr.to && gr.kind != PileKind::Waste)
+    });
+    let stock_sensitive_to_empty = rules.stock.as_ref().is_some_and(|sr| {
+        sr.require_no_empty
+            || sr.require_no_empty_group.is_some()
+            || sr.skip_empty
+            || sr.first_empty
+            || sr.deal_empty_first
+    });
+    // With a tableau redeal, which cards are still out decides how the rest are regathered and
+    // dealt, so no foundation play is free of consequences. A joker can stand on any card, so
+    // with jokers about no card is ever done with.
+    let autoplay_globally_allowed = rules.safe_autoplay
+        && rules.redeal.is_none()
+        && !stock_redeals_non_waste
+        && !stock_sensitive_to_empty
+        && rules.pack.jokers == 0
+        && !rules.groups.iter().any(|gr| gr.no_build_single_while_stock);
 
-        let stock_redeals_non_waste = rules.stock.as_ref().is_some_and(|sr| {
-            (sr.redeals > 0 || sr.unlimited_redeals)
-                && rules
-                    .groups
-                    .iter()
-                    .any(|gr| gr.name == sr.to && gr.kind != PileKind::Waste)
-        });
-        let stock_sensitive_to_empty = rules.stock.as_ref().is_some_and(|sr| {
-            sr.require_no_empty
-                || sr.require_no_empty_group.is_some()
-                || sr.skip_empty
-                || sr.first_empty
-                || sr.deal_empty_first
-        });
-        let mut groups = Vec::new();
-        let mut pile_group = Vec::new();
-        let mut pile_rules = Vec::new();
-        let mut start = 0u16;
-        let first = pack.ranks[0];
-        let last = *pack.ranks.last().unwrap();
-        for (gi, g) in rules.groups.iter().enumerate() {
-            if rules.groups[..gi].iter().any(|h| h.name == g.name) {
-                return err(format!("two groups named {:?}", g.name));
-            }
-            if g.count == 0 {
-                return err(format!("group {:?} has no piles", g.name));
-            }
-            if matches!(g.kind, PileKind::Stock | PileKind::Waste) && g.count != 1 {
+    let mut groups = Vec::new();
+    let mut pile_group = Vec::new();
+    let mut pile_rules = Vec::new();
+    let mut start = 0u16;
+    for (gi, g) in rules.groups.iter().enumerate() {
+        if rules.groups[..gi].iter().any(|h| h.name == g.name) {
+            return err(format!("two groups named {:?}", g.name));
+        }
+        if g.count == 0 {
+            return err(format!("group {:?} has no piles", g.name));
+        }
+        if matches!(g.kind, PileKind::Stock | PileKind::Waste) && g.count != 1 {
+            return err(format!(
+                "{:?}: stock and waste groups have exactly one pile",
+                g.name
+            ));
+        }
+        if g.complete_runs && g.kind != PileKind::Foundation {
+            return err(format!("{:?}: complete_runs is for foundations", g.name));
+        }
+        for o in &g.piles {
+            if let Some(&i) = o.piles.iter().find(|&&i| i >= g.count) {
                 return err(format!(
-                    "{:?}: stock and waste groups have exactly one pile",
+                    "{:?}: override names pile {i}, which doesn't exist",
                     g.name
                 ));
             }
-            if g.complete_runs && g.kind != PileKind::Foundation {
-                return err(format!("{:?}: complete_runs is for foundations", g.name));
-            }
-            for o in &g.piles {
-                if let Some(&i) = o.piles.iter().find(|&&i| i >= g.count) {
+        }
+        for i in 0..g.count {
+            pile_rules.push(compile_pile_rules(
+                rules,
+                g,
+                i,
+                pack,
+                autoplay_globally_allowed,
+            )?);
+            pile_group.push(gi as u16);
+        }
+        let accepts_from = match &g.accepts_from {
+            None => u64::MAX,
+            Some(names) => resolve_group_mask(rules, names)?,
+        };
+        let empty_accepts_from = match &g.empty_accepts_from {
+            None => accepts_from,
+            Some(names) => resolve_group_mask(rules, names)?,
+        };
+        let unrestricted_from = match &g.unrestricted_from {
+            None => 0u64,
+            Some(names) => resolve_group_mask(rules, names)?,
+        };
+        let refill_count = g.refill_count.unwrap_or(1);
+        if refill_count == 0 {
+            return err(format!("{:?}: refill_count must be at least 1", g.name));
+        }
+        let refill_from = g
+            .refill_from
+            .iter()
+            .map(|n| find_group(rules, n))
+            .collect::<Result<Vec<_>, _>>()?;
+        let final_from_same_index = match &g.final_from_same_index {
+            None => None,
+            Some(name) => {
+                let ref_gi = find_group(rules, name)?;
+                if rules.groups[ref_gi as usize].count != g.count {
                     return err(format!(
-                        "{:?}: override names pile {i}, which doesn't exist",
-                        g.name
+                        "{:?}: final_from_same_index group {:?} must have the same pile count",
+                        g.name, name
                     ));
                 }
+                Some(ref_gi)
             }
-            for i in 0..g.count {
-                // Later overrides win over earlier ones; any override wins over the group.
-                let mut build = g.build.clone();
-                let mut empty = g.empty.clone();
-                let mut moves = g.moves;
-                let mut max_cards = g.max_cards;
-                let mut min_cards = g.min_cards;
-                let mut max_accept = g.max_accept;
-                let mut empty_max_accept = g.empty_max_accept;
-                let mut non_empty_max_accept = g.non_empty_max_accept;
-                let mut suit = g.suit;
-                let mut empty_suit = g.empty_suit;
-                let mut color = g.color;
-                for o in g.piles.iter().filter(|o| o.piles.contains(&i)) {
-                    build = o.build.clone().or(build);
-                    empty = o.empty.clone().or(empty);
-                    moves = o.moves.or(moves);
-                    max_cards = o.max_cards.or(max_cards);
-                    min_cards = o.min_cards.or(min_cards);
-                    max_accept = o.max_accept.or(max_accept);
-                    empty_max_accept = o.empty_max_accept.or(empty_max_accept);
-                    non_empty_max_accept = o.non_empty_max_accept.or(non_empty_max_accept);
-                    suit = o.suit.or(suit);
-                    empty_suit = o.empty_suit.or(empty_suit);
-                    color = o.color.or(color);
-                }
-                let build = build.unwrap_or_else(|| match g.kind {
-                    PileKind::Foundation => Build {
-                        by: BuildBy::Suit,
-                        dir: Dir::Up,
-                        ..Build::default()
-                    },
-                    _ => Build::default(),
-                });
-                if build.step == 0 || build.step >= nranks.max(2) {
-                    return err(format!("{:?}: build step out of range", g.name));
-                }
-                let empty = empty.unwrap_or(match g.kind {
-                    PileKind::Foundation => {
-                        EmptyRule::Rank(if build.dir == Dir::Down { last } else { first })
-                    }
-                    PileKind::Tableau | PileKind::Cell => EmptyRule::Any,
-                    _ => EmptyRule::None,
-                });
-                let moves = moves.unwrap_or(match g.kind {
-                    PileKind::Foundation | PileKind::Stock => MoveUnit::None,
-                    _ => MoveUnit::Top,
-                });
-                let max_cards = max_cards.unwrap_or(match g.kind {
-                    PileKind::Cell => 1,
-                    _ if g.complete_runs => nranks as u16,
-                    _ => u16::MAX,
-                });
-                let max_accept = max_accept.unwrap_or(match g.kind {
-                    PileKind::Foundation if g.complete_runs => nranks as u16,
-                    PileKind::Foundation => 1,
-                    _ => u16::MAX,
-                });
-                let mut admits = 0u64;
-                for f in 0..JOKER {
-                    let c = Card::from_face(f);
-                    if suit.is_none_or(|s| c.suit() == s) && color.is_none_or(|k| c.color() == k) {
-                        admits |= 1 << f;
-                    }
-                }
-                // A joker can stand for a card of any suit.
-                admits |= 1 << JOKER;
-                // With a tableau redeal, which cards are still out decides how the rest are
-                // regathered and dealt, so no foundation play is free of consequences. A joker
-                // can stand on any card, so with jokers about no card is ever done with.
-                // Competing foundations with different rules are filtered out after `fits` is
-                // compiled below.
-                let after_pile = match &empty {
-                    EmptyRule::AfterPile { group, offset } => {
-                        let ref_gi = find(group)?;
-                        if rules.groups[ref_gi as usize].count != g.count {
-                            return err(format!(
-                                "{:?}: after_pile group {:?} must have the same pile count",
-                                g.name, group
-                            ));
-                        }
-                        Some((ref_gi, *offset))
-                    }
-                    _ => None,
-                };
-                let autoplay = rules.safe_autoplay
-                    && rules.redeal.is_none()
-                    && !stock_redeals_non_waste
-                    && !stock_sensitive_to_empty
-                    && pack.jokers == 0
-                    && g.kind == PileKind::Foundation
-                    && !g.complete_runs
-                    && !g.requires_rank_on_prev
-                    && !g.requires_prev_non_empty
-                    && !g.match_longest_rank
-                    && !g.lock_build_dir
-                    && !g.lock_pile_dir
-                    && !g.unique_suits
-                    && !rules.groups.iter().any(|gr| gr.no_build_single_while_stock)
-                    && g.rank_sequence.is_empty()
-                    && g.unrestricted_from.is_none()
-                    && g.final_from_same_index.is_none()
-                    && build.by == BuildBy::Suit
-                    && matches!(build.dir, Dir::Up | Dir::Down)
-                    && (!build.wrap || max_cards <= nranks as u16)
-                    && build.blocked_ranks.is_empty()
-                    && matches!(
-                        empty,
-                        EmptyRule::Rank(_) | EmptyRule::DealtBase | EmptyRule::DealtBaseOffset(_)
-                    );
-                pile_rules.push(PileRules {
-                    build,
-                    empty,
-                    moves,
-                    max_cards,
-                    min_cards: min_cards.unwrap_or(0),
-                    max_accept,
-                    empty_max_accept: empty_max_accept.unwrap_or(max_accept),
-                    non_empty_max_accept: non_empty_max_accept.unwrap_or(max_accept),
-                    complete_runs: g.complete_runs,
-                    autoplay,
-                    sink: moves == MoveUnit::None
-                        && g.kind != PileKind::Stock
-                        && !g.requires_rank_on_prev
-                        && !g.match_longest_rank
-                        && !g.lock_build_dir
-                        && !g.lock_pile_dir
-                        && g.rank_sequence.is_empty()
-                        && g.max_same_rank.is_none(),
-                    admits,
-                    empty_suit,
-                    fits: [0; FACES],
-                    wild: g.wild.unwrap_or(g.kind != PileKind::Foundation),
-                    after_pile,
-                });
-                pile_group.push(gi as u16);
-            }
-            let accepts_from = match &g.accepts_from {
-                None => u64::MAX,
-                Some(names) => {
-                    let mut m = 0u64;
-                    for n in names {
-                        m |= 1 << find(n)?;
-                    }
-                    m
-                }
-            };
-            let empty_accepts_from = match &g.empty_accepts_from {
-                None => accepts_from,
-                Some(names) => {
-                    let mut m = 0u64;
-                    for n in names {
-                        m |= 1 << find(n)?;
-                    }
-                    m
-                }
-            };
-            let unrestricted_from = match &g.unrestricted_from {
-                None => 0u64,
-                Some(names) => {
-                    let mut m = 0u64;
-                    for n in names {
-                        m |= 1 << find(n)?;
-                    }
-                    m
-                }
-            };
-            let refill_count = g.refill_count.unwrap_or(1);
-            if refill_count == 0 {
-                return err(format!("{:?}: refill_count must be at least 1", g.name));
-            }
-            let refill_from = g
-                .refill_from
-                .iter()
-                .map(|n| find(n))
-                .collect::<Result<Vec<_>, _>>()?;
-            let final_from_same_index = match &g.final_from_same_index {
-                None => None,
-                Some(name) => {
-                    let ref_gi = find(name)?;
-                    if rules.groups[ref_gi as usize].count != g.count {
-                        return err(format!(
-                            "{:?}: final_from_same_index group {:?} must have the same pile count",
-                            g.name, name
-                        ));
-                    }
-                    Some(ref_gi)
-                }
-            };
-            let moves_when_any_empty = match &g.moves_when_any_empty {
-                None => None,
-                Some(name) => Some(find(name)?),
-            };
-            let moves_when_same_index_empty = match &g.moves_when_same_index_empty {
-                None => None,
-                Some(name) => {
-                    let ref_gi = find(name)?;
-                    if rules.groups[ref_gi as usize].count != g.count {
-                        return err(format!(
-                            "{:?}: moves_when_same_index_empty group {:?} must have the same pile count",
-                            g.name, name
-                        ));
-                    }
-                    Some(ref_gi)
-                }
-            };
-            let has_after_pile = (start as usize..start as usize + g.count as usize)
-                .any(|p| pile_rules[p].after_pile.is_some());
-            let mut grp = Group {
-                name: g.name.clone(),
-                kind: g.kind,
-                start,
-                count: g.count,
-                accepts_from,
-                empty_accepts_from,
-                refill_from,
-                refill_count,
-                symmetric: false,
-                symmetric_when_no_stock: false,
-                symmetric_when_no_redeal: false,
-                sym_classes: Vec::new(),
-                columns: match g.layout {
-                    Some(Layout::Grid { columns }) => Some(columns),
-                    _ => None,
-                },
-                hidden: false,
-                reach: g.reach.clone(),
-                reach_both_ways: g.reach_both_ways,
-                replace_on_drop: None,
-                compact: g.compact,
-                requires_rank_on_prev: g.requires_rank_on_prev,
-                match_longest_rank: g.match_longest_rank,
-                accept_only_when_empty: g.accept_only_when_empty,
-                accept_when_stock_empty: g.accept_when_stock_empty,
-                compact_face_up: g.compact_face_up,
-                refill_largest: g.refill_largest,
-                refill_on_empty: g.refill_on_empty,
-                requires_prev_non_empty: g.requires_prev_non_empty,
-                max_same_rank: g.max_same_rank,
-                moves_when_stock_empty: g.moves_when_stock_empty,
-                moves_when_any_empty,
-                moves_when_same_index_empty,
-                flip_only_last: g.flip_only_last,
-                final_from_same_index,
-                lock_build_dir: g.lock_build_dir,
-                no_flip: g.no_flip,
-                refill_same_index: g.refill_same_index,
-                refill_nearest: g.refill_nearest,
-                require_valid_base: g.require_valid_base,
-                swap_bases: g.swap_bases,
-                supermove_complete_run: g.supermove_complete_run,
-                unrestricted_from,
-                lock_pile_dir: g.lock_pile_dir,
-                rank_sequence: g.rank_sequence.clone(),
-                unique_suits: g.unique_suits,
-                no_build_single_while_stock: g.no_build_single_while_stock,
-                refill_first_face_down: g.refill_first_face_down,
-            };
-            grp.symmetric = g.layout.is_none()
-                && g.piles.is_empty()
-                && !grp.has_positional_rules()
-                && !has_after_pile;
-            groups.push(grp);
-            start = start
-                .checked_add(g.count)
-                .ok_or_else(|| RulesError("too many piles".into()))?;
-        }
-        // A redeal gathers cards on a hidden scratch pile.
-        let redeal = match &rules.redeal {
+        };
+        let moves_when_any_empty = match &g.moves_when_any_empty {
             None => None,
-            Some(rd) => {
-                if rules.stock.is_some() {
-                    return err("a game can't have both stock rules and a tableau redeal");
+            Some(name) => Some(find_group(rules, name)?),
+        };
+        let moves_when_same_index_empty = match &g.moves_when_same_index_empty {
+            None => None,
+            Some(name) => {
+                let ref_gi = find_group(rules, name)?;
+                if rules.groups[ref_gi as usize].count != g.count {
+                    return err(format!(
+                        "{:?}: moves_when_same_index_empty group {:?} must have the same pile count",
+                        g.name, name
+                    ));
                 }
-                let gi = find(&rd.group)?;
-                if groups[gi as usize].symmetric && groups[gi as usize].count > 1 {
-                    groups[gi as usize].symmetric_when_no_redeal = true;
-                }
-                groups[gi as usize].symmetric = false;
-                if matches!(
-                    rd.how,
-                    RedealHow::GridShuffle | RedealHow::GridShuffleRandomGaps
-                ) && groups[gi as usize].columns.is_none()
-                {
-                    return err("grid_shuffle redeals need a grid layout");
-                }
-                if let RedealHow::Regroup { per_pile: 0 } | RedealHow::Shuffle { per_pile: 0 } =
-                    rd.how
-                {
-                    return err("redeal per_pile must be at least 1");
-                }
-                groups.push(Group::hidden_scratch("__gather", start));
-                pile_rules.push(PileRules {
-                    build: Build::default(),
-                    empty: EmptyRule::None,
-                    moves: MoveUnit::None,
-                    max_cards: u16::MAX,
-                    min_cards: 0,
-                    max_accept: 0,
-                    empty_max_accept: 0,
-                    non_empty_max_accept: 0,
-                    complete_runs: false,
-                    autoplay: false,
-                    sink: false,
-                    admits: 0,
-                    empty_suit: None,
-                    fits: [0; FACES],
-                    wild: false,
-                    after_pile: None,
-                });
-                pile_group.push(groups.len() as u16 - 1);
-                start += 1;
-                Some(Redeal {
-                    group: gi,
-                    times: if rd.unlimited { u32::MAX } else { rd.times },
-                    how: rd.how.clone(),
-                    gather: start - 1,
-                    refill: match &rd.how {
-                        RedealHow::Compact {
-                            refill_from: Some(n),
-                        } => Some(find(n)?),
-                        _ => None,
-                    },
-                })
+                Some(ref_gi)
             }
         };
-        let npiles = start as usize;
-        for (gi, g) in rules.groups.iter().enumerate() {
-            if let Some(name) = &g.replace_on_drop {
-                let dgi = find(name)?;
-                groups[gi].replace_on_drop = Some(groups[dgi as usize].start);
-            }
-        }
-
-        // Covering layouts.
-        let mut covered_by = vec![Vec::new(); npiles];
-        let mut has_covers = false;
-        for (gi, g) in rules.groups.iter().enumerate() {
-            let Some(layout) = &g.layout else { continue };
-            if let Layout::Grid { columns } = layout {
-                if *columns == 0 || g.count % columns != 0 {
-                    return err(format!("{:?}: a grid's piles must fill whole rows", g.name));
-                }
-                continue;
-            }
-            has_covers = true;
-            let base = groups[gi].start;
-            let local = layout_covers(layout, g.count)
-                .map_err(|e| RulesError(format!("{:?}: {e}", g.name)))?;
-            for (i, cov) in local.into_iter().enumerate() {
-                covered_by[base as usize + i] = cov.into_iter().map(|c| base + c).collect();
-            }
-        }
-
-        // Stock.
-        let stock_groups: Vec<usize> = groups
-            .iter()
-            .enumerate()
-            .filter(|(_, g)| g.kind == PileKind::Stock)
-            .map(|(i, _)| i)
-            .collect();
-        if stock_groups.len() > 1 {
-            return err("at most one stock group");
-        }
-        let stock = match (&rules.stock, stock_groups.first()) {
-            (Some(sr), Some(&sg)) => {
-                let target = find(&sr.to)?;
-                let tk = groups[target as usize].kind;
-                if matches!(tk, PileKind::Stock) {
-                    return err("the stock can't deal to itself");
-                }
-                if sr.count == 0 {
-                    return err("stock count must be at least 1");
-                }
-                if sr.count_per_round.contains(&0) {
-                    return err("stock count_per_round entries must be at least 1");
-                }
-                let final_to = match &sr.final_to {
-                    None => None,
-                    Some(name) => {
-                        let ft = find(name)?;
-                        let ftk = groups[ft as usize].kind;
-                        if matches!(ftk, PileKind::Stock) {
-                            return err("stock final_to can't be the stock");
-                        }
-                        if ftk != PileKind::Waste && ftk != PileKind::Foundation {
-                            if groups[ft as usize].symmetric && groups[ft as usize].count > 1 {
-                                groups[ft as usize].symmetric_when_no_stock = true;
-                            }
-                            groups[ft as usize].symmetric = false;
-                        }
-                        Some(ft)
-                    }
-                };
-                let targets = match &sr.piles {
-                    None => groups[target as usize].piles().collect(),
-                    Some(ix) => resolve_group_piles(&groups[target as usize], ix, "stock piles")?,
-                };
-                let piles_per_round = sr
-                    .piles_per_round
-                    .iter()
-                    .map(|ix| {
-                        resolve_group_piles(&groups[target as usize], ix, "stock piles_per_round")
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                let final_piles = match &sr.final_piles {
-                    None => None,
-                    Some(ix) => Some(resolve_group_piles(
-                        &groups[target as usize],
-                        ix,
-                        "stock final_piles",
-                    )?),
-                };
-                let final_split_to = match &sr.final_split_to {
-                    None => None,
-                    Some(name) => {
-                        let ft = find(name)?;
-                        if matches!(groups[ft as usize].kind, PileKind::Stock) {
-                            return err("stock final_split_to can't be the stock");
-                        }
-                        Some(groups[ft as usize].start)
-                    }
-                };
-                let require_no_empty_group = match &sr.require_no_empty_group {
-                    None => None,
-                    Some(name) => Some(find(name)?),
-                };
-                if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
-                    return err(
-                        "stock skip_empty can't be combined with require_no_empty or first_empty",
-                    );
-                }
-                // A group that receives one card per pile from the stock isn't symmetric while
-                // the stock can still deal: which pile gets which card depends on its position.
-                // Once the stock is empty (and cannot redeal), the group becomes symmetric.
-                if tk != PileKind::Waste && tk != PileKind::Foundation {
-                    if groups[target as usize].symmetric && groups[target as usize].count > 1 {
-                        groups[target as usize].symmetric_when_no_stock = true;
-                    }
-                    groups[target as usize].symmetric = false;
-                }
-                if let Some(ft) = final_to {
-                    if groups[ft as usize].symmetric && groups[ft as usize].count > 1 {
-                        groups[ft as usize].symmetric_when_no_stock = true;
-                    }
-                    groups[ft as usize].symmetric = false;
-                }
-                Some(Stock {
-                    pile: groups[sg].start,
-                    target,
-                    target_kind: tk,
-                    count: sr.count,
-                    count_per_round: sr.count_per_round.clone(),
-                    final_to,
-                    targets,
-                    piles_per_round,
-                    final_piles,
-                    redeals: if sr.unlimited_redeals {
-                        u32::MAX
-                    } else {
-                        sr.redeals
-                    },
-                    require_no_empty: sr.require_no_empty,
-                    auto: sr.auto,
-                    only_when_empty: sr.only_when_empty,
-                    first_empty: sr.first_empty,
-                    skip_empty: sr.skip_empty,
-                    face_up: sr.face_up,
-                    deal_per_pile: sr.deal_per_pile,
-                    redeal_reverse: sr.redeal_reverse,
-                    redeal_shuffle: sr.redeal_shuffle,
-                    redeal_deal_all_alternating: sr.redeal_deal_all_alternating,
-                    deal_empty_first: sr.deal_empty_first,
-                    divert_ranks: sr.divert_ranks.clone(),
-                    final_split_to,
-                    require_no_empty_group,
-                })
-            }
-            (None, _) => None,
-            (Some(_), None) => return err("stock rules given but no stock group"),
+        let has_after_pile = (start as usize..start as usize + g.count as usize)
+            .any(|p| pile_rules[p].after_pile.is_some());
+        let mut grp = Group {
+            name: g.name.clone(),
+            kind: g.kind,
+            start,
+            count: g.count,
+            accepts_from,
+            empty_accepts_from,
+            refill_from,
+            refill_count,
+            symmetric: false,
+            symmetric_when_no_stock: false,
+            symmetric_when_no_redeal: false,
+            sym_classes: Vec::new(),
+            columns: match g.layout {
+                Some(Layout::Grid { columns }) => Some(columns),
+                _ => None,
+            },
+            hidden: false,
+            reach: g.reach.clone(),
+            reach_both_ways: g.reach_both_ways,
+            replace_on_drop: None,
+            compact: g.compact,
+            requires_rank_on_prev: g.requires_rank_on_prev,
+            match_longest_rank: g.match_longest_rank,
+            accept_only_when_empty: g.accept_only_when_empty,
+            accept_when_stock_empty: g.accept_when_stock_empty,
+            compact_face_up: g.compact_face_up,
+            refill_largest: g.refill_largest,
+            refill_on_empty: g.refill_on_empty,
+            requires_prev_non_empty: g.requires_prev_non_empty,
+            max_same_rank: g.max_same_rank,
+            moves_when_stock_empty: g.moves_when_stock_empty,
+            moves_when_any_empty,
+            moves_when_same_index_empty,
+            flip_only_last: g.flip_only_last,
+            final_from_same_index,
+            lock_build_dir: g.lock_build_dir,
+            no_flip: g.no_flip,
+            refill_same_index: g.refill_same_index,
+            refill_nearest: g.refill_nearest,
+            require_valid_base: g.require_valid_base,
+            swap_bases: g.swap_bases,
+            supermove_complete_run: g.supermove_complete_run,
+            unrestricted_from,
+            lock_pile_dir: g.lock_pile_dir,
+            rank_sequence: g.rank_sequence.clone(),
+            unique_suits: g.unique_suits,
+            no_build_single_while_stock: g.no_build_single_while_stock,
+            refill_first_face_down: g.refill_first_face_down,
         };
-        let stock_pile = stock_groups.first().map(|&sg| groups[sg].start);
-        if let Some(s) = &stock {
+        grp.symmetric = g.layout.is_none()
+            && g.piles.is_empty()
+            && !grp.has_positional_rules()
+            && !has_after_pile;
+        groups.push(grp);
+        start = start
+            .checked_add(g.count)
+            .ok_or_else(|| RulesError("too many piles".into()))?;
+    }
+    Ok(CompiledGroups {
+        groups,
+        pile_group,
+        pile_rules,
+        start,
+    })
+}
+
+fn compile_redeal(
+    rules: &Rules,
+    groups: &mut Vec<Group>,
+    pile_group: &mut Vec<u16>,
+    pile_rules: &mut Vec<PileRules>,
+    start: &mut u16,
+) -> Result<Option<Redeal>, RulesError> {
+    let Some(rd) = &rules.redeal else {
+        return Ok(None);
+    };
+    if rules.stock.is_some() {
+        return err("a game can't have both stock rules and a tableau redeal");
+    }
+    let gi = find_group(rules, &rd.group)?;
+    if groups[gi as usize].symmetric && groups[gi as usize].count > 1 {
+        groups[gi as usize].symmetric_when_no_redeal = true;
+    }
+    groups[gi as usize].symmetric = false;
+    if matches!(
+        rd.how,
+        RedealHow::GridShuffle | RedealHow::GridShuffleRandomGaps
+    ) && groups[gi as usize].columns.is_none()
+    {
+        return err("grid_shuffle redeals need a grid layout");
+    }
+    if let RedealHow::Regroup { per_pile: 0 } | RedealHow::Shuffle { per_pile: 0 } = rd.how {
+        return err("redeal per_pile must be at least 1");
+    }
+    // A redeal gathers cards on a hidden scratch pile.
+    groups.push(Group::hidden_scratch("__gather", *start));
+    pile_rules.push(PileRules {
+        build: Build::default(),
+        empty: EmptyRule::None,
+        moves: MoveUnit::None,
+        max_cards: u16::MAX,
+        min_cards: 0,
+        max_accept: 0,
+        empty_max_accept: 0,
+        non_empty_max_accept: 0,
+        complete_runs: false,
+        autoplay: false,
+        sink: false,
+        admits: 0,
+        empty_suit: None,
+        fits: [0; FACES],
+        wild: false,
+        after_pile: None,
+    });
+    pile_group.push(groups.len() as u16 - 1);
+    *start += 1;
+    Ok(Some(Redeal {
+        group: gi,
+        times: if rd.unlimited { u32::MAX } else { rd.times },
+        how: rd.how.clone(),
+        gather: *start - 1,
+        refill: match &rd.how {
+            RedealHow::Compact {
+                refill_from: Some(n),
+            } => Some(find_group(rules, n)?),
+            _ => None,
+        },
+    }))
+}
+
+fn compile_covers(
+    rules: &Rules,
+    groups: &[Group],
+    npiles: usize,
+) -> Result<(Vec<Vec<u16>>, bool), RulesError> {
+    let mut covered_by = vec![Vec::new(); npiles];
+    let mut has_covers = false;
+    for (gi, g) in rules.groups.iter().enumerate() {
+        let Some(layout) = &g.layout else { continue };
+        if let Layout::Grid { columns } = layout {
+            if *columns == 0 || g.count % columns != 0 {
+                return err(format!("{:?}: a grid's piles must fill whole rows", g.name));
+            }
+            continue;
+        }
+        has_covers = true;
+        let base = groups[gi].start;
+        let local =
+            layout_covers(layout, g.count).map_err(|e| RulesError(format!("{:?}: {e}", g.name)))?;
+        for (i, cov) in local.into_iter().enumerate() {
+            covered_by[base as usize + i] = cov.into_iter().map(|c| base + c).collect();
+        }
+    }
+    Ok((covered_by, has_covers))
+}
+
+fn compile_stock(
+    rules: &Rules,
+    groups: &mut [Group],
+) -> Result<(Option<Stock>, Option<u16>), RulesError> {
+    let stock_groups: Vec<usize> = groups
+        .iter()
+        .enumerate()
+        .filter(|(_, g)| g.kind == PileKind::Stock)
+        .map(|(i, _)| i)
+        .collect();
+    if stock_groups.len() > 1 {
+        return err("at most one stock group");
+    }
+    let stock_pile = stock_groups.first().map(|&sg| groups[sg].start);
+    let stock = match (&rules.stock, stock_groups.first()) {
+        (Some(sr), Some(&sg)) => {
+            let target = find_group(rules, &sr.to)?;
+            let tk = groups[target as usize].kind;
+            if matches!(tk, PileKind::Stock) {
+                return err("the stock can't deal to itself");
+            }
+            if sr.count == 0 {
+                return err("stock count must be at least 1");
+            }
+            if sr.count_per_round.contains(&0) {
+                return err("stock count_per_round entries must be at least 1");
+            }
+            let final_to = match &sr.final_to {
+                None => None,
+                Some(name) => {
+                    let ft = find_group(rules, name)?;
+                    let ftk = groups[ft as usize].kind;
+                    if matches!(ftk, PileKind::Stock) {
+                        return err("stock final_to can't be the stock");
+                    }
+                    if ftk != PileKind::Waste && ftk != PileKind::Foundation {
+                        if groups[ft as usize].symmetric && groups[ft as usize].count > 1 {
+                            groups[ft as usize].symmetric_when_no_stock = true;
+                        }
+                        groups[ft as usize].symmetric = false;
+                    }
+                    Some(ft)
+                }
+            };
+            let targets = match &sr.piles {
+                None => groups[target as usize].piles().collect(),
+                Some(ix) => resolve_group_piles(&groups[target as usize], ix, "stock piles")?,
+            };
+            let piles_per_round = sr
+                .piles_per_round
+                .iter()
+                .map(|ix| {
+                    resolve_group_piles(&groups[target as usize], ix, "stock piles_per_round")
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let final_piles = match &sr.final_piles {
+                None => None,
+                Some(ix) => Some(resolve_group_piles(
+                    &groups[target as usize],
+                    ix,
+                    "stock final_piles",
+                )?),
+            };
+            let final_split_to = match &sr.final_split_to {
+                None => None,
+                Some(name) => {
+                    let ft = find_group(rules, name)?;
+                    if matches!(groups[ft as usize].kind, PileKind::Stock) {
+                        return err("stock final_split_to can't be the stock");
+                    }
+                    Some(groups[ft as usize].start)
+                }
+            };
+            let require_no_empty_group = match &sr.require_no_empty_group {
+                None => None,
+                Some(name) => Some(find_group(rules, name)?),
+            };
+            if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
+                return err(
+                    "stock skip_empty can't be combined with require_no_empty or first_empty",
+                );
+            }
+            // A group that receives one card per pile from the stock isn't symmetric while the
+            // stock can still deal: which pile gets which card depends on its position. Once the
+            // stock is empty (and cannot redeal), the group becomes symmetric.
+            if tk != PileKind::Waste && tk != PileKind::Foundation {
+                if groups[target as usize].symmetric && groups[target as usize].count > 1 {
+                    groups[target as usize].symmetric_when_no_stock = true;
+                }
+                groups[target as usize].symmetric = false;
+            }
+            if let Some(ft) = final_to {
+                if groups[ft as usize].symmetric && groups[ft as usize].count > 1 {
+                    groups[ft as usize].symmetric_when_no_stock = true;
+                }
+                groups[ft as usize].symmetric = false;
+            }
+            let s = Stock {
+                pile: groups[sg].start,
+                target,
+                target_kind: tk,
+                count: sr.count,
+                count_per_round: sr.count_per_round.clone(),
+                final_to,
+                targets,
+                piles_per_round,
+                final_piles,
+                redeals: if sr.unlimited_redeals {
+                    u32::MAX
+                } else {
+                    sr.redeals
+                },
+                require_no_empty: sr.require_no_empty,
+                auto: sr.auto,
+                only_when_empty: sr.only_when_empty,
+                first_empty: sr.first_empty,
+                skip_empty: sr.skip_empty,
+                face_up: sr.face_up,
+                deal_per_pile: sr.deal_per_pile,
+                redeal_reverse: sr.redeal_reverse,
+                redeal_shuffle: sr.redeal_shuffle,
+                redeal_deal_all_alternating: sr.redeal_deal_all_alternating,
+                deal_empty_first: sr.deal_empty_first,
+                divert_ranks: sr.divert_ranks.clone(),
+                final_split_to,
+                require_no_empty_group,
+            };
             if s.redeals > 0 && s.target_kind == PileKind::Foundation {
                 return err("redeals can't gather from a foundation group");
             }
+            Some(s)
         }
-        // Groups that refill others or are referenced by index (after_pile / final_from_same_index)
-        // are read by pile position, so their order matters.
-        let mut is_refill_source = vec![false; groups.len()];
-        for i in 0..groups.len() {
-            for r in groups[i].refill_from.clone() {
-                if groups[r as usize].count > 1 {
-                    groups[r as usize].symmetric = false;
-                    groups[r as usize].symmetric_when_no_stock = false;
-                    groups[r as usize].symmetric_when_no_redeal = false;
-                    is_refill_source[r as usize] = true;
-                }
-            }
-            if let Some(r) = groups[i].final_from_same_index {
-                if groups[r as usize].count > 1 {
-                    groups[r as usize].symmetric = false;
-                    groups[r as usize].symmetric_when_no_stock = false;
-                    groups[r as usize].symmetric_when_no_redeal = false;
-                    is_refill_source[r as usize] = true;
-                }
-            }
-            if let Some(r) = groups[i].moves_when_same_index_empty {
-                if groups[r as usize].count > 1 {
-                    groups[r as usize].symmetric = false;
-                    groups[r as usize].symmetric_when_no_stock = false;
-                    groups[r as usize].symmetric_when_no_redeal = false;
-                    is_refill_source[r as usize] = true;
-                }
-            }
-            for p in groups[i].piles() {
-                if let Some((r, _)) = pile_rules[p as usize].after_pile {
-                    if groups[r as usize].count > 1 {
-                        groups[r as usize].symmetric = false;
-                        groups[r as usize].symmetric_when_no_stock = false;
-                        groups[r as usize].symmetric_when_no_redeal = false;
-                        is_refill_source[r as usize] = true;
-                    }
-                    groups[i].symmetric = false;
-                    groups[i].symmetric_when_no_stock = false;
-                    groups[i].symmetric_when_no_redeal = false;
-                    is_refill_source[i] = true;
-                }
-            }
-        }
+        (None, _) => None,
+        (Some(_), None) => return err("stock rules given but no stock group"),
+    };
+    Ok((stock, stock_pile))
+}
 
-        let mut removal = Vec::new();
-        for r in &rules.removal {
-            match &r.kind {
-                RemovalKind::BetweenMatch { max_len } => {
-                    if *max_len == 0 || *max_len > 4 {
-                        return err("between_match max_len must be 1..=4");
-                    }
-                }
-                RemovalKind::ContiguousSumMultiple { divisor, max_len } => {
-                    if *divisor == 0 {
-                        return err("contiguous_sum_multiple divisor must be at least 1");
-                    }
-                    if *max_len == 0 || *max_len > 4 {
-                        return err("contiguous_sum_multiple max_len must be 1..=4");
-                    }
-                }
-                _ => {}
-            }
-            let mut from = 0u64;
-            for n in &r.from {
-                from |= 1 << find(n)?;
-            }
-            let adjacent = match r.adjacent {
-                None => None,
-                Some(a) => {
-                    let [name] = r.from.as_slice() else {
-                        return err("adjacent removal takes cards from exactly one grid group");
-                    };
-                    let gi = find(name)?;
-                    if groups[gi as usize].columns.is_none() {
-                        return err(format!(
-                            "adjacent removal needs {name:?} to have a grid layout"
-                        ));
-                    }
-                    Some((a, gi))
-                }
-            };
-            removal.push(Removal {
-                kind: r.kind.clone(),
-                from,
-                to: groups[find(&r.to)? as usize].start,
-                adjacent,
-            });
+/// Groups that refill others or are referenced by index (`after_pile` / `final_from_same_index` /
+/// `moves_when_same_index_empty`) are read by pile position, so their order matters.
+fn mark_positional_sources(groups: &mut [Group], pile_rules: &[PileRules]) -> Vec<bool> {
+    let mut is_refill_source = vec![false; groups.len()];
+    let mut mark = |groups: &mut [Group], gi: usize, require_multi: bool| {
+        if !require_multi || groups[gi].count > 1 {
+            groups[gi].symmetric = false;
+            groups[gi].symmetric_when_no_stock = false;
+            groups[gi].symmetric_when_no_redeal = false;
+            is_refill_source[gi] = true;
         }
+    };
+    for i in 0..groups.len() {
+        for r in groups[i].refill_from.clone() {
+            mark(groups, r as usize, true);
+        }
+        if let Some(r) = groups[i].final_from_same_index {
+            mark(groups, r as usize, true);
+        }
+        if let Some(r) = groups[i].moves_when_same_index_empty {
+            mark(groups, r as usize, true);
+        }
+        for p in groups[i].piles() {
+            if let Some((r, _)) = pile_rules[p as usize].after_pile {
+                mark(groups, r as usize, true);
+                mark(groups, i, false);
+            }
+        }
+    }
+    is_refill_source
+}
 
-        let win = match &rules.win {
-            WinRule::AllOnFoundations => {
-                if !groups.iter().any(|g| g.kind == PileKind::Foundation) {
-                    return err("win is all_on_foundations but there are no foundations");
+fn compile_removals(rules: &Rules, groups: &[Group]) -> Result<Vec<Removal>, RulesError> {
+    let mut removal = Vec::new();
+    for r in &rules.removal {
+        match &r.kind {
+            RemovalKind::BetweenMatch { max_len } => {
+                if *max_len == 0 || *max_len > 4 {
+                    return err("between_match max_len must be 1..=4");
                 }
-                Win::AllOnFoundations
             }
-            WinRule::Empty(names) => {
-                Win::Empty(names.iter().map(|n| find(n)).collect::<Result<_, _>>()?)
+            RemovalKind::ContiguousSumMultiple { divisor, max_len } => {
+                if *divisor == 0 {
+                    return err("contiguous_sum_multiple divisor must be at least 1");
+                }
+                if *max_len == 0 || *max_len > 4 {
+                    return err("contiguous_sum_multiple max_len must be 1..=4");
+                }
             }
-            WinRule::Count { group, cards } => Win::Count(find(group)?, *cards),
-            WinRule::CountAndSpread {
-                group,
-                cards,
-                spread,
-            } => Win::CountAndSpread(find(group)?, *cards, find(spread)?),
-            WinRule::AtMostPiles { group, piles } => Win::AtMostPiles(find(group)?, *piles),
-            WinRule::Rows {
-                group,
-                length,
-                build,
-            } => {
-                let gi = find(group)?;
-                let g = &groups[gi as usize];
-                let cols = g.columns.ok_or_else(|| {
-                    RulesError(format!("win by rows needs {group:?} to have a grid layout"))
-                })?;
-                let (EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first }) =
-                    pile_rules[g.start as usize].empty
-                else {
-                    return err(format!(
-                        "win by rows needs {group:?} to use the after_left or after_neighbor empty rule"
-                    ));
+            _ => {}
+        }
+        let from = resolve_group_mask(rules, &r.from)?;
+        let adjacent = match r.adjacent {
+            None => None,
+            Some(a) => {
+                let [name] = r.from.as_slice() else {
+                    return err("adjacent removal takes cards from exactly one grid group");
                 };
-                let len = length.unwrap_or(cols - 1);
-                if len > cols {
-                    return err("rows win: length longer than a row");
+                let gi = find_group(rules, name)?;
+                if groups[gi as usize].columns.is_none() {
+                    return err(format!(
+                        "adjacent removal needs {name:?} to have a grid layout"
+                    ));
                 }
-                let _ = build;
-                Win::Rows(gi, len, first)
+                Some((a, gi))
             }
-            WinRule::Score { at_least } => {
-                if rules.score.is_none() {
-                    return err("win by score needs a score rule");
-                }
-                Win::Score(*at_least)
-            }
-            WinRule::AllFull { group } => Win::AllFull(find(group)?),
         };
+        removal.push(Removal {
+            kind: r.kind.clone(),
+            from,
+            to: groups[find_group(rules, &r.to)? as usize].start,
+            adjacent,
+        });
+    }
+    Ok(removal)
+}
+
+fn compile_win(
+    rules: &Rules,
+    groups: &[Group],
+    pile_rules: &[PileRules],
+) -> Result<Win, RulesError> {
+    match &rules.win {
+        WinRule::AllOnFoundations => {
+            if !groups.iter().any(|g| g.kind == PileKind::Foundation) {
+                return err("win is all_on_foundations but there are no foundations");
+            }
+            Ok(Win::AllOnFoundations)
+        }
+        WinRule::Empty(names) => Ok(Win::Empty(
+            names
+                .iter()
+                .map(|n| find_group(rules, n))
+                .collect::<Result<_, _>>()?,
+        )),
+        WinRule::Count { group, cards } => Ok(Win::Count(find_group(rules, group)?, *cards)),
+        WinRule::CountAndSpread {
+            group,
+            cards,
+            spread,
+        } => Ok(Win::CountAndSpread(
+            find_group(rules, group)?,
+            *cards,
+            find_group(rules, spread)?,
+        )),
+        WinRule::AtMostPiles { group, piles } => {
+            Ok(Win::AtMostPiles(find_group(rules, group)?, *piles))
+        }
+        WinRule::Rows {
+            group,
+            length,
+            build,
+        } => {
+            let gi = find_group(rules, group)?;
+            let g = &groups[gi as usize];
+            let cols = g.columns.ok_or_else(|| {
+                RulesError(format!("win by rows needs {group:?} to have a grid layout"))
+            })?;
+            let (EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first }) =
+                pile_rules[g.start as usize].empty
+            else {
+                return err(format!(
+                    "win by rows needs {group:?} to use the after_left or after_neighbor empty rule"
+                ));
+            };
+            let len = length.unwrap_or(cols - 1);
+            if len > cols {
+                return err("rows win: length longer than a row");
+            }
+            let _ = build;
+            Ok(Win::Rows(gi, len, first))
+        }
+        WinRule::Score { at_least } => {
+            if rules.score.is_none() {
+                return err("win by score needs a score rule");
+            }
+            Ok(Win::Score(*at_least))
+        }
+        WinRule::AllFull { group } => Ok(Win::AllFull(find_group(rules, group)?)),
+    }
+}
+
+fn can_compress_talon(
+    stock: &Option<Stock>,
+    waste: Option<u16>,
+    groups: &[Group],
+    pile_group: &[u16],
+    pile_rules: &[PileRules],
+    removal: &[Removal],
+) -> bool {
+    match (stock, waste) {
+        (Some(s), Some(w))
+            if s.target_kind == PileKind::Waste
+                && !s.face_up
+                && !groups.iter().any(|g| g.depends_on_stock_empty()) =>
+        {
+            let wg = &groups[s.target as usize];
+            let sg = pile_group[s.pile as usize];
+            debug_assert_eq!(w, wg.start);
+            let feeds_refill = groups
+                .iter()
+                .any(|g| g.refill_from.contains(&s.target) || g.refill_from.contains(&sg));
+            let stock_playable = pile_rules[s.pile as usize].moves != MoveUnit::None
+                || removal.iter().any(|r| r.from & (1 << sg) != 0);
+            !feeds_refill
+                && !stock_playable
+                && (pile_rules[w as usize].moves != MoveUnit::None
+                    || removal.iter().any(|r| r.from & (1 << s.target) != 0))
+        }
+        _ => false,
+    }
+}
+
+impl Game {
+    /// Check and compile rules.
+    pub fn new(rules: Rules) -> Result<Game, RulesError> {
+        let pack = compile_pack(&rules.pack)?;
+        let CompiledGroups {
+            mut groups,
+            mut pile_group,
+            mut pile_rules,
+            mut start,
+        } = compile_groups(&rules, &pack)?;
+        let redeal = compile_redeal(
+            &rules,
+            &mut groups,
+            &mut pile_group,
+            &mut pile_rules,
+            &mut start,
+        )?;
+        let npiles = start as usize;
+        for (gi, g) in rules.groups.iter().enumerate() {
+            if let Some(name) = &g.replace_on_drop {
+                let dgi = find_group(&rules, name)?;
+                groups[gi].replace_on_drop = Some(groups[dgi as usize].start);
+            }
+        }
+        let (covered_by, has_covers) = compile_covers(&rules, &groups, npiles)?;
+        let (stock, stock_pile) = compile_stock(&rules, &mut groups)?;
+        let is_refill_source = mark_positional_sources(&mut groups, &pile_rules);
+        let removal = compile_removals(&rules, &groups)?;
+        let win = compile_win(&rules, &groups, &pile_rules)?;
 
         let waste = groups
             .iter()
             .find(|g| g.kind == PileKind::Waste)
             .map(|g| g.start);
-        let compress_talon = match (&stock, waste) {
-            (Some(s), Some(w))
-                if s.target_kind == PileKind::Waste
-                    && !s.face_up
-                    && !groups.iter().any(|g| g.depends_on_stock_empty()) =>
-            {
-                let wg = &groups[s.target as usize];
-                let sg = pile_group[s.pile as usize];
-                debug_assert_eq!(w, wg.start);
-                let feeds_refill = groups
-                    .iter()
-                    .any(|g| g.refill_from.contains(&s.target) || g.refill_from.contains(&sg));
-                let stock_playable = pile_rules[s.pile as usize].moves != MoveUnit::None
-                    || removal.iter().any(|r| r.from & (1 << sg) != 0);
-                !feeds_refill
-                    && !stock_playable
-                    && (pile_rules[w as usize].moves != MoveUnit::None
-                        || removal.iter().any(|r| r.from & (1 << s.target) != 0))
-            }
-            _ => false,
-        };
-
+        let compress_talon =
+            can_compress_talon(&stock, waste, &groups, &pile_group, &pile_rules, &removal);
         let choose_base = match &rules.choose_base {
             None => None,
-            Some(cb) => {
-                let from_group = find(&cb.from)?;
-                Some(CompiledChooseBase {
-                    from_group,
-                    refill_from_stock: cb.refill_from_stock,
-                    deal_waste: cb.deal_waste,
-                })
-            }
+            Some(cb) => Some(CompiledChooseBase {
+                from_group: find_group(&rules, &cb.from)?,
+                refill_from_stock: cb.refill_from_stock,
+                deal_waste: cb.deal_waste,
+            }),
         };
         let simple_settle =
             !groups.iter().any(|g| g.needs_settle()) && !stock.as_ref().is_some_and(|st| st.auto);
-        let copies = pack.copies;
-        let jokers = pack.jokers;
+        let copies = rules.pack.copies;
+        let jokers = rules.pack.jokers;
         let mut game = Game {
             rules,
             groups,
@@ -780,14 +873,14 @@ impl Game {
             removal,
             win,
             row_win_fits: None,
-            rank_idx,
-            nranks,
+            rank_idx: pack.rank_idx,
+            nranks: pack.nranks,
             copies,
-            total_cards: total as u16,
+            total_cards: pack.total_cards,
             jokers,
-            in_pack,
-            rank_faces,
-            suit_faces,
+            in_pack: pack.in_pack,
+            rank_faces: pack.rank_faces,
+            suit_faces: pack.suit_faces,
             dependents: vec![Vec::new(); FACES],
             any_autoplay: false,
             compress_talon,

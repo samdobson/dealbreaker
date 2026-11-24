@@ -103,97 +103,6 @@ function sameStep(a, b) {
   return a && b && JSON.stringify(a) === JSON.stringify(b);
 }
 
-const DEFAULT_SUITS = ["clubs", "diamonds", "hearts", "spades"];
-const DEFAULT_RANKS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-
-function eqArr(a, b) {
-  return Array.isArray(a) && a.length === b.length && a.every((v, i) => v === b[i]);
-}
-
-function stripDefaults(obj, defaults) {
-  const out = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (k in defaults && v === defaults[k]) continue;
-    out[k] = v;
-  }
-  return out;
-}
-
-function compactBuild(b) {
-  return stripDefaults(b, { dir: "down", wrap: false, step: 1 });
-}
-
-function compactGroup(g) {
-  const out = stripDefaults(g, {
-    count: 1,
-    complete_runs: false,
-    compact: false,
-    requires_rank_on_prev: false,
-    match_longest_rank: false,
-    accept_only_when_empty: false,
-    accept_when_stock_empty: false,
-    compact_face_up: false,
-    refill_largest: false,
-    refill_on_empty: false,
-  });
-  if (out.build) out.build = compactBuild(out.build);
-  if (Array.isArray(out.piles)) {
-    out.piles = out.piles.map((p) => {
-      const po = { ...p };
-      if (po.build) po.build = compactBuild(po.build);
-      return po;
-    });
-  }
-  return out;
-}
-
-/** Strip fields matching their exact serde defaults so the Rules JSON editor stays concise. */
-function compactRules(rules) {
-  const out = stripDefaults(rules, {
-    win: "all_on_foundations",
-    auto_flip: true,
-    safe_autoplay: true,
-  });
-  if (out.pack) {
-    const p = { ...out.pack };
-    if (p.copies === 1) delete p.copies;
-    if (eqArr(p.suits, DEFAULT_SUITS)) delete p.suits;
-    if (eqArr(p.ranks, DEFAULT_RANKS)) delete p.ranks;
-    if (p.jokers === 0) delete p.jokers;
-    if (Object.keys(p).length === 0) delete out.pack;
-    else out.pack = p;
-  }
-  if (Array.isArray(out.groups)) {
-    out.groups = out.groups.map(compactGroup);
-  }
-  if (out.stock) {
-    out.stock = stripDefaults(out.stock, {
-      count: 1,
-      redeals: 0,
-      unlimited_redeals: false,
-      require_no_empty: false,
-      auto: false,
-      first_empty: false,
-      only_when_empty: false,
-      skip_empty: false,
-      face_up: false,
-    });
-  }
-  if (Array.isArray(out.deal)) {
-    out.deal = out.deal.map((d) =>
-      stripDefaults(d, {
-        rest: false,
-        face_up: true,
-        kings_to_bottom: false,
-        one_each: false,
-        set_base: false,
-        of_base: false,
-      }),
-    );
-  }
-  return out;
-}
-
 function maskFaceDown(st) {
   const piles = {};
   for (const [group, list] of Object.entries(st.piles)) {
@@ -453,7 +362,7 @@ async function respawnWorker(fromCustomRules = false) {
     ? await WorkerSolver.fromRules(currentRules)
     : await WorkerSolver.fromPreset(currentPreset);
   currentRules = await worker.rules();
-  elRulesEditor.value = JSON.stringify(compactRules(currentRules), null, 2);
+  elRulesEditor.value = JSON.stringify(currentRules, null, 2);
   btnSolve.textContent = isScored() ? "Best Score" : "Solve";
   elMsWrap.classList.toggle("hidden", currentPreset !== "freecell");
 }
@@ -474,7 +383,7 @@ function fromBase64Url(str) {
 }
 
 async function encodeRulesParam(rulesObj) {
-  const bytes = new TextEncoder().encode(JSON.stringify(compactRules(rulesObj)));
+  const bytes = new TextEncoder().encode(JSON.stringify(rulesObj));
   if (typeof CompressionStream === "function") {
     const cs = new CompressionStream("deflate-raw");
     const writer = cs.writable.getWriter();

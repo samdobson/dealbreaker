@@ -51,7 +51,7 @@ pub struct Rules {
     _schema: IgnoredSchema,
     /// Human-readable name, e.g. "FreeCell".
     pub name: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default_pack")]
     pub pack: Pack,
     /// The piles on the table, in groups of identical piles.
     pub groups: Vec<GroupRules>,
@@ -64,7 +64,7 @@ pub struct Rules {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub redeal: Option<RedealRules>,
     /// The opening deal, step by step. Cards come off a shuffled pack.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub deal: Vec<DealStep>,
     /// Card-removal mechanics, for games that discard cards instead of (or as well as)
     /// building. One object or a list.
@@ -77,14 +77,14 @@ pub struct Rules {
     /// Points for the position, for games played for a score (Poker Squares).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub score: Option<ScoreRules>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default_win")]
     pub win: WinRule,
     /// Turn up a face-down card when it becomes the top of an uncovered pile. Default true.
-    #[serde(default = "yes")]
+    #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub auto_flip: bool,
     /// Let the solver play cards to foundations automatically when it can prove nothing could
     /// ever need to be built on them. Sound for in-suit foundations; default true.
-    #[serde(default = "yes")]
+    #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub safe_autoplay: bool,
     /// Tuning for the solver's heuristic. Changes how fast a win is found, never whether a
     /// position is judged winnable.
@@ -207,15 +207,15 @@ fn one() -> u16 {
 #[non_exhaustive]
 pub struct Pack {
     /// Copies of each (suit, rank) card. Two-pack games use 2; one-suit Spider uses 8.
-    #[serde(default = "one_u8")]
+    #[serde(default = "one_u8", skip_serializing_if = "is_one_u8")]
     pub copies: u8,
     /// Suits in use. Default: all four.
-    #[serde(default = "all_suits")]
+    #[serde(default = "all_suits", skip_serializing_if = "is_all_suits")]
     pub suits: Vec<Suit>,
     /// Ranks in use, in sequence order: building goes from each rank to the next one in this
     /// list. Default `[1..=13]` (ace low). Aces high is `[2, 3, …, 13, 1]`; a stripped pack
     /// leaves ranks out.
-    #[serde(default = "all_ranks")]
+    #[serde(default = "all_ranks", skip_serializing_if = "is_all_ranks")]
     pub ranks: Vec<u8>,
     /// Jokers in play, in all (not per copy). Jokers are wild: see [`GroupRules::wild`],
     /// [`RemovalKind`] and [`Hands`] for what they stand for where.
@@ -223,8 +223,44 @@ pub struct Pack {
     pub jokers: u8,
 }
 
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
+fn is_true(b: &bool) -> bool {
+    *b
+}
+
 fn is_zero_u8(n: &u8) -> bool {
     *n == 0
+}
+
+fn is_zero_u32(n: &u32) -> bool {
+    *n == 0
+}
+
+fn is_one_u8(n: &u8) -> bool {
+    *n == 1
+}
+
+fn is_one_u16(n: &u16) -> bool {
+    *n == 1
+}
+
+fn is_default_pack(p: &Pack) -> bool {
+    *p == Pack::default()
+}
+
+fn is_default_win(w: &WinRule) -> bool {
+    *w == WinRule::AllOnFoundations
+}
+
+fn is_all_suits(s: &[Suit]) -> bool {
+    s == Suit::ALL
+}
+
+fn is_all_ranks(r: &[u8]) -> bool {
+    r.len() == 13 && r.iter().enumerate().all(|(i, &x)| x == (i + 1) as u8)
 }
 
 fn one_u8() -> u8 {
@@ -319,7 +355,7 @@ pub struct GroupRules {
     /// Name used in deal steps, solutions and states, e.g. "tableau".
     pub name: String,
     pub kind: PileKind,
-    #[serde(default = "one")]
+    #[serde(default = "one", skip_serializing_if = "is_one_u16")]
     pub count: u16,
     /// What may be placed on a pile's top card. Default: foundations build up in suit; every
     /// other kind accepts nothing on a non-empty pile.
@@ -367,21 +403,21 @@ pub struct GroupRules {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout: Option<Layout>,
     /// Foundation only accepts a whole suit sequence at once, moved together (Spider).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub complete_runs: bool,
     /// A pile accepts cards only from piles of its own group exactly this many places after
     /// it (Accordion: 1 and 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reach: Option<Vec<u16>>,
     /// With `reach`: also accept from piles this many places before the destination pile.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub reach_both_ways: bool,
     /// When a card is placed on a non-empty pile of this group, first move the destination pile's
     /// existing cards to this group's first pile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replace_on_drop: Option<String>,
     /// Keep the group packed: whenever a pile empties, the piles after it slide forward.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub compact: bool,
     /// Piles accept only cards of this suit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -407,42 +443,42 @@ pub struct GroupRules {
     pub wild: Option<bool>,
     /// Each pile after the first only accepts a card whose rank is already present on the
     /// previous pile in the group (when empty, it must match the previous pile's bottom card).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub requires_rank_on_prev: bool,
     /// A pile with fewer cards than the longest pile in this group only accepts a card whose rank
     /// matches the card at the same index in the longest pile.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub match_longest_rank: bool,
     /// Most cards that may be placed onto an empty pile in one move. Default: same as `max_accept`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub empty_max_accept: Option<u16>,
     /// Accept cards only when the destination pile is empty (even if `build` is set for moving runs).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub accept_only_when_empty: bool,
     /// Accept cards only when the stock pile is empty.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub accept_when_stock_empty: bool,
     /// When a pile in this group becomes empty, shift the movable face-up run from the next pile
     /// into it, leaving any face-down cards behind.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub compact_face_up: bool,
     /// When refilling from a multi-pile group in `refill_from`, take from the pile with the most
     /// cards (ties broken by lowest index) rather than the first non-empty pile.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub refill_largest: bool,
     /// Refill a pile in this group only when a move just emptied it, rather than also filling
     /// pre-existing empty piles when a refill source later receives a card.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub refill_on_empty: bool,
     /// Each pile after the first may only be started (while empty) once the previous pile in the
     /// group is non-empty.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub requires_prev_non_empty: bool,
     /// Most consecutive face-up cards of the same rank allowed at the top of a pile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_same_rank: Option<u8>,
     /// Cards may leave piles of this group only once the stock pile is empty.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub moves_when_stock_empty: bool,
     /// Cards may leave piles of this group only once at least one pile in the named group is empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -452,7 +488,7 @@ pub struct GroupRules {
     pub moves_when_same_index_empty: Option<String>,
     /// Only automatically turn a pile's face-down top card face up when it is the sole card left
     /// in the pile.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub flip_only_last: bool,
     /// When a pile is one card shy of `max_cards`, its final card must come from the pile at the
     /// same index within this group (overriding `accepts_from`).
@@ -460,24 +496,24 @@ pub struct GroupRules {
     pub final_from_same_index: Option<String>,
     /// When `build.dir` is `either`, the first two-card pile in this group locks the build
     /// direction (up or down) for every pile in the group.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub lock_build_dir: bool,
     /// Never automatically turn face-down cards in this group face up (cards may still be drawn
     /// face up by `refill_from`).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub no_flip: bool,
     /// When refilling an emptied pile from `refill_from`, take from the pile at the same index
     /// within the source group rather than the first non-empty pile.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub refill_same_index: bool,
     /// When refilling an emptied pile from `refill_from`, take from the pile at index `i % m`
     /// within the source group (where `m` is the source group's size), falling back to the nearest
     /// non-empty pile (`+1`, `-1`, `+2`, `-2`, ...).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub refill_nearest: bool,
     /// Only allow building onto a non-empty pile if its bottom card satisfies the pile's `empty`
     /// rule.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub require_valid_base: bool,
     /// When set, moving from one pile of this group onto another may swap the two piles instead
     /// of building.
@@ -485,7 +521,7 @@ pub struct GroupRules {
     pub swap_bases: Option<SwapBases>,
     /// With `moves: supermove`, also allow moving a complete suit-length built run regardless of
     /// empty cells and columns.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub supermove_complete_run: bool,
     /// Cards coming from these groups are accepted onto empty or non-empty piles without checking
     /// `build` or `empty` rules (capacity limits still apply).
@@ -493,7 +529,7 @@ pub struct GroupRules {
     pub unrestricted_from: Option<Vec<String>>,
     /// When `build.dir` is `either`, each pile locks its own build direction (up or down) once it
     /// holds two cards.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub lock_pile_dir: bool,
     /// Fixed sequence of ranks required at each pile depth (index 0 for the bottom card, index 1
     /// for the second, etc.). Replaces the rank check of `empty` and `build.dir`; `build.by`,
@@ -505,16 +541,16 @@ pub struct GroupRules {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub non_empty_max_accept: Option<u16>,
     /// No two non-empty piles in this group may share the same suit on their bottom card.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub unique_suits: bool,
     /// While the stock is non-empty, forbid building onto a single-card pile in this group and
     /// forbid moving a card from a single-card pile in this group onto another non-empty pile of
     /// this group.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub no_build_single_while_stock: bool,
     /// When refilling an emptied pile from the stock with `refill_count > 1`, deal the first card
     /// face down unless it is the last card in the stock, and the remaining cards face up.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub refill_first_face_down: bool,
 }
 
@@ -897,10 +933,10 @@ pub struct Build {
     #[serde(default)]
     pub dir: Dir,
     /// The sequence wraps: king to ace and ace to king.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub wrap: bool,
     /// Ranks between consecutive cards (default 1).
-    #[serde(default = "one_u8")]
+    #[serde(default = "one_u8", skip_serializing_if = "is_one_u8")]
     pub step: u8,
     /// Nothing may be built on cards of these ranks (Golf: kings).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1075,34 +1111,34 @@ pub struct StockRules {
     /// turn while cards remain.
     pub to: String,
     /// Cards per deal (or rounds per deal for multi-pile targets).
-    #[serde(default = "one")]
+    #[serde(default = "one", skip_serializing_if = "is_one_u16")]
     pub count: u16,
     /// Times the waste may be turned back into the stock.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
     pub redeals: u32,
     /// The waste may be turned back any number of times (overrides `redeals`).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub unlimited_redeals: bool,
     /// The stock may not deal while any pile of the target group is empty (Spider).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub require_no_empty: bool,
     /// Deal by itself whenever the waste is empty (and the stock isn't).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub auto: bool,
     /// For a multi-pile target: deal `count` cards into the first empty pile instead of one to
     /// every pile (Accordion).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub first_empty: bool,
     /// Deal only when the target pile is empty: each card must be played before the next is
     /// turned (Calculation, Sir Tommy).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub only_when_empty: bool,
     /// For a multi-pile target: deal only to non-empty piles (or to the first pile if all are
     /// empty).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub skip_empty: bool,
     /// Keep the top card of the stock turned face up so it may be played or removed directly.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub face_up: bool,
     /// Cards per deal on each round (0-indexed by redeals used). When non-empty, overrides `count`;
     /// rounds past the end reuse the last entry.
@@ -1121,23 +1157,23 @@ pub struct StockRules {
     pub final_piles: Option<Vec<u16>>,
     /// For a multi-pile target with `count > 1`: deal `count` cards to each pile in turn rather
     /// than `count` rounds of one card per pile.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub deal_per_pile: bool,
     /// When gathering a multi-pile target back into the stock on redeal, gather piles in reverse
     /// order.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub redeal_reverse: bool,
     /// When gathering a multi-pile target back into the stock on redeal, shuffle the gathered
     /// cards before dealing them out again.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub redeal_shuffle: bool,
     /// On a multi-pile stock redeal, deal all gathered cards back out in rows alternating face-up
     /// and face-down (ending face-up), honoring `divert_ranks`.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub redeal_deal_all_alternating: bool,
     /// For a multi-pile target: if any target piles are empty, deal only to the empty piles;
     /// otherwise deal to every target pile.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub deal_empty_first: bool,
     /// When dealing to a multi-pile target, divert cards of these ranks to the first accepting
     /// foundation and keep dealing until a non-diverted card lands on the current target pile.
@@ -1197,10 +1233,10 @@ pub struct RedealRules {
     /// The group gathered and redealt.
     pub group: String,
     /// How many redeals are allowed.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
     pub times: u32,
     /// Any number of redeals (overrides `times`).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub unlimited: bool,
     pub how: RedealHow,
 }
@@ -1275,7 +1311,7 @@ pub struct DealStep {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counts: Option<Vec<u16>>,
     /// Deal every remaining card, round-robin over the selected piles.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub rest: bool,
     /// Take every card of these ranks out of the pack and put one on each selected pile in
     /// turn (Beleaguered Castle's aces).
@@ -1286,36 +1322,36 @@ pub struct DealStep {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<u16>,
     /// Face up (default) or face down.
-    #[serde(default = "yes")]
+    #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub face_up: bool,
     /// After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub kings_to_bottom: bool,
     /// With `ranks`: take only the first card of each listed rank, in the listed order
     /// (Calculation's A, 2, 3, 4).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub one_each: bool,
     /// After this step, take every card of these ranks off the table and put them on this
     /// step's group (Montana: deal all 52, then remove the aces to leave gaps).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub collect: Option<Vec<u8>>,
     /// The first card this step deals sets the base rank for [`EmptyRule::DealtBase`].
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub set_base: bool,
     /// Take every remaining card of the dealt base rank out of the pack and put one on each
     /// selected pile in turn (requires an earlier step with `set_base`).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub of_base: bool,
     /// Pull one card of each suit (in pack suit order) from the deck per round (repeated `count`
     /// times, default 1), placing them on the selected piles in turn.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub one_per_suit: bool,
     /// With `rest`: deal sequentially into each selected pile, advancing to the next pile whenever
     /// a card of this rank is dealt to a non-empty pile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub split_on_rank: Option<u8>,
     /// During this step, place any dealt card directly on the first foundation that accepts it.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub auto_foundation: bool,
     /// During this step, divert dealt cards of these ranks to the first foundation that accepts
     /// them; with `drain_foundations`, restrict draining to these ranks.
@@ -1323,7 +1359,7 @@ pub struct DealStep {
     pub divert_ranks: Option<Vec<u8>>,
     /// After each dealt row, repeatedly move exposed top cards of the selected piles onto any
     /// accepting foundation (restricted to `divert_ranks` if set).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub drain_foundations: bool,
 }
 

@@ -445,6 +445,18 @@ pub struct GroupRules {
     /// same index within this group (overriding `accepts_from`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub final_from_same_index: Option<String>,
+    /// When `build.dir` is `either`, the first two-card pile in this group locks the build
+    /// direction (up or down) for every pile in the group.
+    #[serde(default)]
+    pub lock_build_dir: bool,
+    /// Never automatically turn face-down cards in this group face up (cards may still be drawn
+    /// face up by `refill_from`).
+    #[serde(default)]
+    pub no_flip: bool,
+    /// When refilling an emptied pile from `refill_from`, take from the pile at the same index
+    /// within the source group rather than the first non-empty pile.
+    #[serde(default)]
+    pub refill_same_index: bool,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -564,6 +576,9 @@ impl GroupRules {
             moves_when_stock_empty: false,
             flip_only_last: false,
             final_from_same_index: None,
+            lock_build_dir: false,
+            no_flip: false,
+            refill_same_index: false,
         }
     }
 
@@ -719,6 +734,21 @@ impl GroupRules {
 
     pub fn final_from_same_index(mut self, group: &str) -> Self {
         self.final_from_same_index = Some(group.to_string());
+        self
+    }
+
+    pub fn lock_build_dir(mut self) -> Self {
+        self.lock_build_dir = true;
+        self
+    }
+
+    pub fn no_flip(mut self) -> Self {
+        self.no_flip = true;
+        self
+    }
+
+    pub fn refill_same_index(mut self) -> Self {
+        self.refill_same_index = true;
         self
     }
 }
@@ -966,6 +996,10 @@ pub struct StockRules {
     /// foundation and keep dealing until a non-diverted card lands on the current target pile.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub divert_ranks: Vec<u8>,
+    /// Target pile indices within `to` for each round (0-indexed by redeals used). When non-empty,
+    /// overrides `piles`; rounds past the end reuse the last entry.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub piles_per_round: Vec<Vec<u16>>,
 }
 
 impl StockRules {
@@ -990,6 +1024,7 @@ impl StockRules {
             redeal_reverse: false,
             deal_empty_first: false,
             divert_ranks: Vec::new(),
+            piles_per_round: Vec::new(),
         }
     }
 }

@@ -593,6 +593,29 @@ impl Game {
         if !ok {
             return false;
         }
+        if tg.lock_build_dir && !dst.is_empty() && !card.is_joker() {
+            let n = self.nranks as i16;
+            let step = tr.build.step as i16;
+            let is_up = |a: Card, b: Card| -> bool {
+                let d = self.rank_idx[b.rank() as usize] as i16
+                    - self.rank_idx[a.rank() as usize] as i16;
+                d == step || (tr.build.wrap && d == step - n)
+            };
+            let locked = tg.piles().find_map(|p| {
+                let pile = &s.piles[p as usize];
+                if pile.len() >= 2 && !pile[0].is_joker() && !pile[1].is_joker() {
+                    Some(is_up(pile[0], pile[1]))
+                } else {
+                    None
+                }
+            });
+            if let Some(want_up) = locked {
+                let top = *dst.last().unwrap();
+                if !top.is_joker() && is_up(top, card) != want_up {
+                    return false;
+                }
+            }
+        }
         if tg.requires_prev_non_empty
             && dst.is_empty()
             && to > tg.start
@@ -1074,8 +1097,9 @@ impl Game {
         }
         let Some(st) = &self.stock else { return false };
         if !s.piles[st.pile as usize].is_empty() {
-            let any_non_empty = || st.targets.iter().any(|&p| !s.piles[p as usize].is_empty());
-            let any_empty = || st.targets.iter().any(|&p| s.piles[p as usize].is_empty());
+            let rtargets = st.round_targets(s.redeals_used);
+            let any_non_empty = || rtargets.iter().any(|&p| !s.piles[p as usize].is_empty());
+            let any_empty = || rtargets.iter().any(|&p| s.piles[p as usize].is_empty());
             if st.only_when_empty && any_non_empty() {
                 return false;
             }

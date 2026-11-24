@@ -190,13 +190,17 @@ impl Game {
                     }
                 }
             }
-            if st.redeals != u32::MAX || (s.redeals_used as usize) + 1 < st.count_per_round.len() {
+            if st.redeals != u32::MAX
+                || (s.redeals_used as usize) + 1 < st.count_per_round.len()
+                || (s.redeals_used as usize) + 1 < st.piles_per_round.len()
+            {
                 self.push(s, j, Op::Redeal);
             }
         }
         let stock_len = s.piles[st.pile as usize].len() as u16;
         if stock_len > 0 {
             let count = st.deal_count(s.redeals_used);
+            let round_targets = st.round_targets(s.redeals_used);
             if let Some(ft) = st
                 .final_to
                 .filter(|&ft| stock_len <= self.groups[ft as usize].count)
@@ -223,11 +227,10 @@ impl Game {
                 match st.target_kind {
                     PileKind::Waste | PileKind::Foundation => {
                         let n = count.min(stock_len);
-                        self.deal_from_stock(s, j, st.pile, st.targets[0], n);
+                        self.deal_from_stock(s, j, st.pile, round_targets[0], n);
                     }
                     _ if st.first_empty => {
-                        if let Some(p) = st
-                            .targets
+                        if let Some(p) = round_targets
                             .iter()
                             .copied()
                             .find(|&p| s.piles[p as usize].is_empty())
@@ -237,14 +240,13 @@ impl Game {
                         }
                     }
                     _ if st.skip_empty => {
-                        let mut targets: Vec<u16> = st
-                            .targets
+                        let mut targets: Vec<u16> = round_targets
                             .iter()
                             .copied()
                             .filter(|&p| !s.piles[p as usize].is_empty())
                             .collect();
                         if targets.is_empty() {
-                            targets.push(st.targets[0]);
+                            targets.push(round_targets[0]);
                         }
                         for _ in 0..count {
                             for &p in &targets {
@@ -256,14 +258,13 @@ impl Game {
                         }
                     }
                     _ if st.deal_empty_first => {
-                        let empties: Vec<u16> = st
-                            .targets
+                        let empties: Vec<u16> = round_targets
                             .iter()
                             .copied()
                             .filter(|&p| s.piles[p as usize].is_empty())
                             .collect();
                         let targets: &[u16] = if empties.is_empty() {
-                            &st.targets
+                            round_targets
                         } else {
                             &empties
                         };
@@ -277,7 +278,7 @@ impl Game {
                         }
                     }
                     _ if st.deal_per_pile => {
-                        for &p in &st.targets {
+                        for &p in round_targets {
                             let rem = s.piles[st.pile as usize].len() as u16;
                             if rem == 0 {
                                 break;
@@ -288,7 +289,7 @@ impl Game {
                     }
                     _ => {
                         for _ in 0..count {
-                            for &p in &st.targets {
+                            for &p in round_targets {
                                 if s.piles[st.pile as usize].is_empty() {
                                     break;
                                 }
@@ -607,6 +608,7 @@ impl Game {
                 for &p in initial_emptied {
                     let g = self.group_of(p);
                     if s.piles[p as usize].last().is_some_and(|c| !c.is_face_up())
+                        && !g.no_flip
                         && (g.kind != PileKind::Stock
                             || self.stock.as_ref().is_some_and(|st| st.face_up))
                         && (!g.flip_only_last || s.piles[p as usize].len() == 1)
@@ -619,6 +621,7 @@ impl Game {
             for p in 0..s.piles.len() as u16 {
                 let g = self.group_of(p);
                 let flip = s.piles[p as usize].last().is_some_and(|c| !c.is_face_up())
+                    && !g.no_flip
                     && (g.kind != PileKind::Stock
                         || self.stock.as_ref().is_some_and(|st| st.face_up))
                     && (!g.flip_only_last || s.piles[p as usize].len() == 1)
@@ -691,10 +694,21 @@ impl Game {
                         let rg = &self.groups[rg as usize];
                         let eligible = |q: u16| {
                             s.piles[q as usize].last().is_some_and(|c| {
-                                c.is_face_up() || rg.kind == PileKind::Stock || rg.flip_only_last
+                                c.is_face_up()
+                                    || rg.kind == PileKind::Stock
+                                    || rg.flip_only_last
+                                    || rg.no_flip
                             })
                         };
-                        if g.refill_largest {
+                        if g.refill_same_index {
+                            let idx = p - g.start;
+                            if idx < rg.count {
+                                let q = rg.start + idx;
+                                eligible(q).then_some(q)
+                            } else {
+                                None
+                            }
+                        } else if g.refill_largest {
                             let mut best: Option<(u16, usize)> = None;
                             for q in rg.piles() {
                                 if eligible(q) {
@@ -755,7 +769,7 @@ impl Game {
                                             count: 1,
                                         },
                                     );
-                                } else if rg.flip_only_last {
+                                } else if rg.flip_only_last || rg.no_flip {
                                     self.push(
                                         s,
                                         j,
@@ -798,6 +812,7 @@ impl Game {
                 for p in 0..s.piles.len() as u16 {
                     let g = self.group_of(p);
                     let flip = s.piles[p as usize].last().is_some_and(|c| !c.is_face_up())
+                        && !g.no_flip
                         && (g.kind != PileKind::Stock
                             || self.stock.as_ref().is_some_and(|st| st.face_up))
                         && (!g.flip_only_last || s.piles[p as usize].len() == 1)

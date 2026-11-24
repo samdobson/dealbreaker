@@ -185,6 +185,7 @@ impl Game {
                     && !g.requires_rank_on_prev
                     && !g.requires_prev_non_empty
                     && !g.match_longest_rank
+                    && !g.lock_build_dir
                     && g.final_from_same_index.is_none()
                     && build.by == BuildBy::Suit
                     && matches!(build.dir, Dir::Up | Dir::Down)
@@ -208,6 +209,7 @@ impl Game {
                         && g.kind != PileKind::Stock
                         && !g.requires_rank_on_prev
                         && !g.match_longest_rank
+                        && !g.lock_build_dir
                         && g.max_same_rank.is_none(),
                     admits,
                     empty_suit,
@@ -293,6 +295,9 @@ impl Game {
                 moves_when_stock_empty: g.moves_when_stock_empty,
                 flip_only_last: g.flip_only_last,
                 final_from_same_index,
+                lock_build_dir: g.lock_build_dir,
+                no_flip: g.no_flip,
+                refill_same_index: g.refill_same_index,
             };
             grp.symmetric = g.layout.is_none()
                 && g.piles.is_empty()
@@ -427,6 +432,13 @@ impl Game {
                     None => groups[target as usize].piles().collect(),
                     Some(ix) => resolve_group_piles(&groups[target as usize], ix, "stock piles")?,
                 };
+                let piles_per_round = sr
+                    .piles_per_round
+                    .iter()
+                    .map(|ix| {
+                        resolve_group_piles(&groups[target as usize], ix, "stock piles_per_round")
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
                 let final_piles = match &sr.final_piles {
                     None => None,
                     Some(ix) => Some(resolve_group_piles(
@@ -457,6 +469,7 @@ impl Game {
                     count_per_round: sr.count_per_round.clone(),
                     final_to,
                     targets,
+                    piles_per_round,
                     final_piles,
                     redeals: if sr.unlimited_redeals {
                         u32::MAX

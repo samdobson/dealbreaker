@@ -1961,3 +1961,67 @@ fn grid_shuffle_random_gaps_and_after_pile_final() {
     r_ap.stock = Some(StockRules::to("tableau"));
     check(r_ap, 0..40);
 }
+
+#[test]
+fn lock_build_dir_no_flip_refill_same_index_and_piles_per_round() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]);
+
+    // lock_build_dir: first 2-card foundation locks direction (up or down, wrapping) for all.
+    let mut r_lbd = Rules::new(
+        "mini-lock-build-dir",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build_rule(Build::new(BuildBy::Suit, Dir::Either).wrap())
+                .empty(EmptyRule::DealtBase)
+                .max_cards(4)
+                .lock_build_dir(),
+            GroupRules::new("reserve", PileKind::Reserve, 1).no_flip(),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any)
+                .max_cards(1)
+                .refill_from(&["reserve"]),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("foundation").piles(&[0]).each(1).set_base(),
+            DealStep::to("reserve").each(2).down(),
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("waste");
+    st.redeals = 1;
+    r_lbd.stock = Some(st);
+    check(r_lbd, 0..40);
+
+    // refill_same_index + piles_per_round (shrinking target piles across rounds).
+    let mut r_well = Rules::new(
+        "mini-piles-per-round",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("reserve", PileKind::Reserve, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Suit, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any)
+                .refill_from(&["reserve"])
+                .refill_same_index(),
+            GroupRules::new("wastes", PileKind::Reserve, 2),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("reserve").each(1),
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st2 = StockRules::to("wastes");
+    st2.redeals = 1;
+    st2.piles_per_round = vec![vec![0, 1], vec![0]];
+    r_well.stock = Some(st2);
+    check(r_well, 0..40);
+}

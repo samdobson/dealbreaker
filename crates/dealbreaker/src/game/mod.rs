@@ -157,6 +157,12 @@ pub(crate) struct Group {
     /// When a pile is one card shy of `max_cards`, its final card must come from the same-index
     /// pile of this group.
     pub final_from_same_index: Option<u16>,
+    /// When `build.dir` is `either`, the first two-card pile locks build direction for the group.
+    pub lock_build_dir: bool,
+    /// Never auto-flip face-down cards in this group.
+    pub no_flip: bool,
+    /// Refill each emptied pile from the same-index pile of `refill_from`.
+    pub refill_same_index: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -257,6 +263,7 @@ impl Group {
             || self.requires_rank_on_prev
             || self.requires_prev_non_empty
             || self.final_from_same_index.is_some()
+            || self.refill_same_index
     }
 
     /// True if moves to or from this group are gated on the stock being empty.
@@ -300,6 +307,9 @@ impl Group {
             moves_when_stock_empty: false,
             flip_only_last: false,
             final_from_same_index: None,
+            lock_build_dir: false,
+            no_flip: false,
+            refill_same_index: false,
         }
     }
 }
@@ -314,6 +324,7 @@ pub(crate) struct Stock {
     pub final_to: Option<u16>,
     /// Resolved target pile indices (either `StockRules::piles` or all piles of `target`).
     pub targets: Vec<u16>,
+    pub piles_per_round: Vec<Vec<u16>>,
     pub final_piles: Option<Vec<u16>>,
     pub redeals: u32,
     pub require_no_empty: bool,
@@ -336,6 +347,16 @@ impl Stock {
         } else {
             let i = (redeals_used as usize).min(self.count_per_round.len() - 1);
             self.count_per_round[i]
+        }
+    }
+
+    #[inline]
+    pub fn round_targets(&self, redeals_used: u32) -> &[u16] {
+        if self.piles_per_round.is_empty() {
+            &self.targets
+        } else {
+            let i = (redeals_used as usize).min(self.piles_per_round.len() - 1);
+            &self.piles_per_round[i]
         }
     }
 

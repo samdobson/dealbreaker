@@ -14,7 +14,7 @@
 
 ---
 
-Dealbreaker models solitaire variants as small JSON files and solves them with a single engine—finding winning lines, proving unsolvability, suggesting fair hints, and maximizing scores in points games.
+Dealbreaker models solitaire variants as small JSON files and solves them with a single engine — finding winning lines, proving unsolvability, suggesting fair hints, and maximising scores in points games.
 
 - **39 built-in games** — Klondike, FreeCell, Spider, Yukon, TriPeaks, Poker Squares, and [more](https://samdobson.github.io/dealbreaker/reference/presets), plus custom games in JSON.
 - **Runs everywhere** — CLI, Rust crate, JavaScript/TypeScript (WebAssembly), Python, and C ABI.

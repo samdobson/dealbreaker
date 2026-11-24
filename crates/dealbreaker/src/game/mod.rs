@@ -156,6 +156,7 @@ pub(crate) struct PileRules {
     pub empty: EmptyRule,
     pub moves: MoveUnit,
     pub max_cards: u16,
+    pub min_cards: u16,
     pub max_accept: u16,
     pub empty_max_accept: u16,
     pub complete_runs: bool,

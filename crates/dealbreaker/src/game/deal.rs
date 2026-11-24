@@ -169,8 +169,9 @@ impl Game {
                     }
                 } else {
                     let mut taken = Vec::new();
+                    let limit = step.limit.map(|l| l as usize);
                     deck.retain(|c| {
-                        if ranks.contains(&c.rank()) {
+                        if ranks.contains(&c.rank()) && limit.is_none_or(|m| taken.len() < m) {
                             taken.push(*c);
                             false
                         } else {

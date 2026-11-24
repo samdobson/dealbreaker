@@ -262,7 +262,7 @@ impl Game {
             return n.min(cards.len());
         }
         let g = self.rule(pile);
-        match g.moves {
+        let n = match g.moves {
             MoveUnit::None => 0,
             MoveUnit::Top => 1,
             MoveUnit::Whole => {
@@ -302,7 +302,8 @@ impl Game {
                     n
                 }
             }
-        }
+        };
+        n.min(cards.len().saturating_sub(g.min_cards as usize))
     }
 
     /// The longest built run on top of `cards` when jokers may be among them. Between two real
@@ -986,6 +987,19 @@ impl Game {
             }
             if st.require_no_empty && any_empty() {
                 return false;
+            }
+            if matches!(st.target_kind, PileKind::Waste | PileKind::Foundation) {
+                let dest = st
+                    .piles
+                    .as_ref()
+                    .and_then(|v| v.first().copied())
+                    .unwrap_or(self.groups[st.target as usize].start);
+                let n = st
+                    .deal_count(s.redeals_used)
+                    .min(s.piles[st.pile as usize].len() as u16);
+                if s.piles[dest as usize].len() + n as usize > self.rule(dest).max_cards as usize {
+                    return false;
+                }
             }
             return true;
         }

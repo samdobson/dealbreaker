@@ -305,6 +305,9 @@ pub struct GroupRules {
     /// Most cards the pile may hold. Default: 1 for cells, unlimited otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_cards: Option<u16>,
+    /// Fewest cards that must remain on the pile (cards at or below this depth cannot leave).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_cards: Option<u16>,
     /// Most cards the pile accepts in one move. Default: 1 for foundations (a whole suit for
     /// `complete_runs`), unlimited otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -413,6 +416,8 @@ pub struct PileOverride {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_cards: Option<u16>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_cards: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_accept: Option<u16>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub empty_max_accept: Option<u16>,
@@ -482,6 +487,7 @@ impl GroupRules {
             empty: None,
             moves: None,
             max_cards: None,
+            min_cards: None,
             max_accept: None,
             accepts_from: None,
             refill_from: Vec::new(),
@@ -533,6 +539,11 @@ impl GroupRules {
 
     pub fn max_cards(mut self, n: u16) -> Self {
         self.max_cards = Some(n);
+        self
+    }
+
+    pub fn min_cards(mut self, n: u16) -> Self {
+        self.min_cards = Some(n);
         self
     }
 
@@ -953,6 +964,10 @@ pub struct DealStep {
     /// turn (Beleaguered Castle's aces).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ranks: Option<Vec<u8>>,
+    /// With `ranks` (and no `count`): take at most this many matching cards in total instead of
+    /// all of them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u16>,
     /// Face up (default) or face down.
     #[serde(default = "yes")]
     pub face_up: bool,

@@ -1552,3 +1552,56 @@ fn card_dependent_deal_steps() {
     );
     check(r2, 0..40);
 }
+
+#[test]
+fn limit_deal_waste_max_and_min_cards() {
+    let mut step_f = DealStep::to("foundation").ranks(&[1]);
+    step_f.limit = Some(2);
+    let mut r_limit = Rules::new(
+        "mini deal limit",
+        Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 3)
+                .pile(PileOverride::on(&[0]).suit(Suit::Spades))
+                .pile(PileOverride::on(&[1]).suit(Suit::Hearts))
+                .pile(PileOverride::on(&[2]).suit(Suit::Clubs)),
+            GroupRules::new("tableau", PileKind::Tableau, 4)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any),
+        ],
+        vec![step_f, DealStep::to("tableau").rest()],
+    );
+    r_limit.groups[0].max_cards = Some(4);
+    check(r_limit, 0..40);
+
+    let mut r_waste = Rules::new(
+        "mini waste max_cards + min_cards",
+        Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1).max_cards(2),
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build_rule(Build::new(BuildBy::Any, Dir::Up).wrap())
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::Top)
+                .min_cards(1)
+                .max_cards(4),
+            GroupRules::new("cell", PileKind::Cell, 1),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::None),
+        ],
+        vec![
+            DealStep::to("foundation").each(1),
+            DealStep::to("tableau").each(2),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("waste");
+    st.count = 2;
+    st.redeals = 1;
+    r_waste.stock = Some(st);
+    check(r_waste, 0..40);
+}

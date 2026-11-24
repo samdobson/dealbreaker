@@ -97,6 +97,7 @@ impl Game {
                 let mut empty = g.empty.clone();
                 let mut moves = g.moves;
                 let mut max_cards = g.max_cards;
+                let mut min_cards = g.min_cards;
                 let mut max_accept = g.max_accept;
                 let mut empty_max_accept = g.empty_max_accept;
                 let mut suit = g.suit;
@@ -107,6 +108,7 @@ impl Game {
                     empty = o.empty.clone().or(empty);
                     moves = o.moves.or(moves);
                     max_cards = o.max_cards.or(max_cards);
+                    min_cards = o.min_cards.or(min_cards);
                     max_accept = o.max_accept.or(max_accept);
                     empty_max_accept = o.empty_max_accept.or(empty_max_accept);
                     suit = o.suit.or(suit);
@@ -181,6 +183,7 @@ impl Game {
                     empty,
                     moves,
                     max_cards,
+                    min_cards: min_cards.unwrap_or(0),
                     max_accept,
                     empty_max_accept: empty_max_accept.unwrap_or(max_accept),
                     complete_runs: g.complete_runs,
@@ -300,6 +303,7 @@ impl Game {
                     empty: EmptyRule::None,
                     moves: MoveUnit::None,
                     max_cards: u16::MAX,
+                    min_cards: 0,
                     max_accept: 0,
                     empty_max_accept: 0,
                     complete_runs: false,

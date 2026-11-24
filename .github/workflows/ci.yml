@@ -125,3 +125,34 @@ jobs:
         run: |
           npm --prefix docs ci
           npm --prefix docs run build
+
+  cross-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --release
+      - name: Compile and run C ABI smoke test (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cargo build --release -p dealbreaker-ffi
+          cc -Wall -Wextra -Werror \
+            -I crates/dealbreaker-ffi/include \
+            crates/dealbreaker-ffi/tests/smoke.c \
+            -L target/release -ldealbreaker_ffi \
+            -Wl,-rpath,"$PWD/target/release" \
+            -o target/release/ffi-smoke
+          ./target/release/ffi-smoke
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@cargo-audit
+      - run: cargo audit
+      - run: cargo audit --file crates/dealbreaker-py/Cargo.lock

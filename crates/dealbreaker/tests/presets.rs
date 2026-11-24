@@ -3,11 +3,12 @@
 
 mod common;
 
-use common::assert_wins;
+use common::{assert_wins, parallel_map};
 use dealbreaker::*;
 
 #[test]
 fn presets_compile_and_round_trip() {
+    assert_eq!(presets::PRESETS.len(), 50);
     for p in presets::PRESETS {
         let rules = (p.rules)();
         let json = rules.to_json();
@@ -44,18 +45,32 @@ fn preset_solutions_replay() {
         "poker-squares",
         "cribbage-squares",
     ];
-    for p in presets::PRESETS {
-        let g = Game::new((p.rules)()).unwrap();
-        let mut solved = 0;
-        for seed in 1..=4 {
-            let s = g.deal(seed);
-            let r = solve(&g, &s, &SolveOptions::default().max_states(60_000));
-            if let Outcome::Solved(m) = &r.outcome {
-                assert_wins(&g, &s, m);
-                assert!(!g.steps(&s, m).is_empty());
-                solved += 1;
-            }
+    let games: Vec<Game> = presets::PRESETS
+        .iter()
+        .map(|p| Game::new((p.rules)()).unwrap())
+        .collect();
+    let jobs: Vec<(usize, u64)> = (0..presets::PRESETS.len())
+        .flat_map(|idx| (1..=4).map(move |seed| (idx, seed)))
+        .collect();
+    let solved_flags = parallel_map(&jobs, |&(idx, seed)| {
+        let g = &games[idx];
+        let s = g.deal(seed);
+        let r = solve(g, &s, &SolveOptions::default().max_states(60_000));
+        if let Outcome::Solved(m) = &r.outcome {
+            assert_wins(g, &s, m);
+            assert!(!g.steps(&s, m).is_empty());
+            true
+        } else {
+            false
         }
+    });
+    let mut solved_per_preset = vec![0usize; presets::PRESETS.len()];
+    for (&(idx, _), &ok) in jobs.iter().zip(&solved_flags) {
+        if ok {
+            solved_per_preset[idx] += 1;
+        }
+    }
+    for (p, &solved) in presets::PRESETS.iter().zip(&solved_per_preset) {
         println!("{:<20} {solved}/4 solved within budget", p.id);
         if solved > 0 {
             presets_solved += 1;
@@ -69,8 +84,8 @@ fn preset_solutions_replay() {
         }
     }
     assert!(
-        presets_solved >= 30,
-        "expected at least 30 presets to solve >=1/4 seeds, got {presets_solved}"
+        presets_solved >= 40,
+        "expected at least 40 presets to solve >=1/4 seeds, got {presets_solved}"
     );
 }
 

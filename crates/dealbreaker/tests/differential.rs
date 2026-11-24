@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::{assert_wins, brute_force, brute_force_max};
+use common::{assert_wins, brute_force, brute_force_max, parallel_map};
 use dealbreaker::*;
 
 fn small(ranks: std::ops::RangeInclusive<u8>, suits: &[Suit], copies: u8) -> Pack {
@@ -281,8 +281,8 @@ fn mini_accordion() -> Rules {
 
 fn check(rules: Rules, seeds: std::ops::Range<u64>) {
     let g = Game::new(rules).unwrap();
-    let (mut won, mut lost) = (0, 0);
-    for seed in seeds {
+    let seeds: Vec<u64> = seeds.collect();
+    let outcomes = parallel_map(&seeds, |&seed| {
         let s = g.deal(seed);
         let truth = brute_force(&g, &s, 2_000_000).expect("mini game too big to brute-force");
         for strategy in [Strategy::Auto, Strategy::DepthFirst, Strategy::BestFirst] {
@@ -299,12 +299,10 @@ fn check(rules: Rules, seeds: std::ops::Range<u64>) {
                 ),
             }
         }
-        if truth {
-            won += 1
-        } else {
-            lost += 1
-        }
-    }
+        truth
+    });
+    let won = outcomes.iter().filter(|&&t| t).count();
+    let lost = outcomes.len() - won;
     println!("{}: {won} won, {lost} lost", g.name());
     assert!(
         won > 0,
@@ -700,8 +698,8 @@ fn odd_points() -> PokerTable {
 
 fn check_max(rules: Rules, seeds: std::ops::Range<u64>) {
     let g = Game::new(rules).unwrap();
-    let mut scores = Vec::new();
-    for seed in seeds {
+    let seeds: Vec<u64> = seeds.collect();
+    let mut scores = parallel_map(&seeds, |&seed| {
         let s = g.deal(seed);
         let truth = brute_force_max(&g, &s, 2_000_000).expect("mini game too big to brute-force");
         for strategy in [Strategy::Auto, Strategy::DepthFirst, Strategy::BestFirst] {
@@ -731,8 +729,8 @@ fn check_max(rules: Rules, seeds: std::ops::Range<u64>) {
                 g.name()
             );
         }
-        scores.push(truth);
-    }
+        truth
+    });
     println!("{}: best scores {scores:?}", g.name());
     scores.sort();
     scores.dedup();
@@ -744,19 +742,36 @@ fn check_max(rules: Rules, seeds: std::ops::Range<u64>) {
 }
 
 #[test]
-fn poker_squares_best() {
-    let american = || PokerTable::Named(PokerScoring::American);
-    check_max(mini_poker(american(), false, 1), 0..12);
-    check_max(mini_poker(american(), true, 1), 12..24);
+fn poker_squares_best_american() {
+    check_max(
+        mini_poker(PokerTable::Named(PokerScoring::American), false, 1),
+        0..12,
+    );
+}
+
+#[test]
+fn poker_squares_best_american_any_pool() {
+    check_max(
+        mini_poker(PokerTable::Named(PokerScoring::American), true, 1),
+        12..24,
+    );
+}
+
+#[test]
+fn poker_squares_best_odd_points() {
     check_max(mini_poker(odd_points(), false, 1), 24..36);
 }
 
 #[test]
-fn poker_squares_target() {
+fn poker_squares_target_american() {
     check(
         mini_poker(PokerTable::Named(PokerScoring::American), false, 15),
         0..16,
     );
+}
+
+#[test]
+fn poker_squares_target_odd_points() {
     check(mini_poker(odd_points(), true, 9), 16..32);
 }
 
@@ -844,19 +859,39 @@ fn jokers_gaps() {
 
 /// Jokers in Poker Squares: wild in every hand, with points that do and don't follow the
 /// hands' ranking (English pays less for a flush than a straight).
+fn joker_poker_rules(table: PokerTable, any_pool: bool, n: u8, target: u32) -> Rules {
+    let mut r = with_jokers(mini_poker(table, any_pool, target), n, &[]);
+    r.deal[0] = DealStep::to("aside").each(6 + n as u16).down();
+    r
+}
+
 #[test]
-fn jokers_poker_squares() {
-    let jokers = |table: PokerTable, any_pool: bool, n: u8, target: u32| {
-        let mut r = with_jokers(mini_poker(table, any_pool, target), n, &[]);
-        r.deal[0] = DealStep::to("aside").each(6 + n as u16).down();
-        r
-    };
-    let american = || PokerTable::Named(PokerScoring::American);
-    let english = || PokerTable::Named(PokerScoring::English);
-    check_max(jokers(american(), false, 1, 1), 0..12);
-    check_max(jokers(english(), false, 2, 1), 12..24);
-    check_max(jokers(odd_points(), true, 1, 1), 24..36);
-    check(jokers(american(), false, 1, 20), 0..16);
+fn jokers_poker_squares_american() {
+    check_max(
+        joker_poker_rules(PokerTable::Named(PokerScoring::American), false, 1, 1),
+        0..12,
+    );
+}
+
+#[test]
+fn jokers_poker_squares_english_two_jokers() {
+    check_max(
+        joker_poker_rules(PokerTable::Named(PokerScoring::English), false, 2, 1),
+        12..24,
+    );
+}
+
+#[test]
+fn jokers_poker_squares_odd_points() {
+    check_max(joker_poker_rules(odd_points(), true, 1, 1), 24..36);
+}
+
+#[test]
+fn jokers_poker_squares_target() {
+    check(
+        joker_poker_rules(PokerTable::Named(PokerScoring::American), false, 1, 20),
+        0..16,
+    );
 }
 
 /// Cribbage Squares in miniature: a four-by-two grid (two four-card rows, four two-card
@@ -892,14 +927,30 @@ fn mini_cribbage(starter: &str, any_pool: bool, target: u32) -> Rules {
 }
 
 #[test]
-fn cribbage_squares_best() {
+fn cribbage_squares_best_waste() {
     check_max(mini_cribbage("waste", false, 1), 0..12);
+}
+
+#[test]
+fn cribbage_squares_best_waste_any_pool() {
     check_max(mini_cribbage("waste", true, 1), 12..24);
+}
+
+#[test]
+fn cribbage_squares_best_fixed() {
     check_max(mini_cribbage("fixed", false, 1), 24..36);
+}
+
+#[test]
+fn cribbage_squares_best_joker() {
     check_max(
         with_jokers(mini_cribbage("waste", false, 1), 1, &[]),
         36..48,
     );
+}
+
+#[test]
+fn cribbage_squares_best_odd_points() {
     let mut odd = mini_cribbage("fixed", true, 1);
     if let Hands::Cribbage(c) = &mut odd.score.as_mut().unwrap().hands {
         let p = &mut c.points;

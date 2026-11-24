@@ -19,3 +19,9 @@ repository = "https://github.com/samdobson/dealbreaker"
 debug = 1
 lto = "thin"
 codegen-units = 1
+
+[profile.fast]
+inherits = "release"
+lto = "off"
+codegen-units = 16
+debug = 0

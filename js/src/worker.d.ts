@@ -1,3 +1,5 @@
+/// <reference lib="esnext.disposable" />
+
 export * from "./types.js";
 
 import type {
@@ -31,7 +33,11 @@ export class WorkerSolver {
   legalSteps(state: StateData | string): Promise<Step[]>;
   playStep(state: StateData | string, step: Step | string): Promise<StateData>;
   isWon(state: StateData | string): Promise<boolean>;
+  render(state: StateData | string): Promise<string>;
 
   /** Terminate the worker immediately (also cancels any in-flight search). */
   terminate(): void;
+
+  /** Alias for `terminate()` supporting explicit resource management (`using solver = ...`). */
+  [Symbol.dispose](): void;
 }

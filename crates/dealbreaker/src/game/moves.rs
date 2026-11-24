@@ -64,6 +64,17 @@ impl Game {
                 return false;
             }
         }
+        let g = self.group_of(pile);
+        if g.unique_suits
+            && g.piles().any(|p| {
+                p != pile
+                    && s.piles[p as usize]
+                        .first()
+                        .is_some_and(|c| c.suit() == card.suit())
+            })
+        {
+            return false;
+        }
         match &r.empty {
             EmptyRule::None => false,
             EmptyRule::Any => true,
@@ -96,6 +107,18 @@ impl Game {
         let mut real = r.admits & REAL_FACES;
         if let Some(es) = r.empty_suit {
             real &= self.suit_faces[es as usize];
+        }
+        let g = self.group_of(pile);
+        if g.unique_suits {
+            for p in g.piles() {
+                if p != pile {
+                    if let Some(&c) = s.piles[p as usize].first() {
+                        if !c.is_joker() {
+                            real &= !self.suit_faces[c.suit() as usize];
+                        }
+                    }
+                }
+            }
         }
         match &r.empty {
             EmptyRule::None => 0,
@@ -607,7 +630,10 @@ impl Game {
             }
         }
         let dst = &s.piles[to as usize];
-        if matches!(tg.kind, PileKind::Stock) {
+        if matches!(tg.kind, PileKind::Stock)
+            && tr.empty == EmptyRule::None
+            && tr.build.by == BuildBy::None
+        {
             return false;
         }
         if self.can_swap(s, from, to) {
@@ -661,10 +687,20 @@ impl Game {
         {
             return false;
         }
+        if tg.no_build_single_while_stock
+            && !dst.is_empty()
+            && self
+                .stock_pile
+                .is_some_and(|sp| !s.piles[sp as usize].is_empty())
+            && (dst.len() == 1 || (fgi == self.pile_group[to as usize] && src.len() == 1))
+        {
+            return false;
+        }
         if n == 0
             || n > src.len()
             || n > tr.max_accept as usize
             || (dst.is_empty() && n > tr.empty_max_accept as usize)
+            || (!dst.is_empty() && n > tr.non_empty_max_accept as usize)
             || (if tg.replace_on_drop.is_some() {
                 0
             } else {
@@ -1031,7 +1067,7 @@ impl Game {
                         let cap = if dst_empty {
                             tr.empty_max_accept.min(tr.max_accept) as usize
                         } else {
-                            tr.max_accept as usize
+                            tr.non_empty_max_accept.min(tr.max_accept) as usize
                         };
                         unit.min(cap).min(room)
                     } else {
@@ -1363,10 +1399,21 @@ impl Game {
                 let g = &self.groups[rd.group as usize];
                 return g.piles().any(|p| s.piles[p as usize].len() > 1);
             }
+            if matches!(rd.how, RedealHow::DealRows | RedealHow::ShuffleRedeal) {
+                let g = &self.groups[rd.group as usize];
+                return g.piles().any(|p| !s.piles[p as usize].is_empty());
+            }
             return true;
         }
         let Some(st) = &self.stock else { return false };
         if !s.piles[st.pile as usize].is_empty() {
+            if !st.face_up
+                && s.piles[st.pile as usize]
+                    .last()
+                    .is_some_and(|c| c.is_face_up())
+            {
+                return false;
+            }
             let stock_len = s.piles[st.pile as usize].len() as u16;
             if st.final_split_to.is_some() && stock_len < 2 {
                 return false;

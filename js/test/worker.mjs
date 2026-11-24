@@ -68,6 +68,7 @@ test("WorkerSolver.fromPreset initializes runtime and runs full lifecycle", asyn
 
     const legal = await ws.legalSteps(state);
     assert.ok(legal.length > 0);
+    assert.ok((await ws.render(state)).includes("tableau"));
 
     const solved = await ws.solve(state, { max_states: 200_000 });
     assert.equal(solved.outcome, "solved");

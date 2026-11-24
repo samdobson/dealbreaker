@@ -30,4 +30,4 @@ function ensureReady() {
   }
 }
 
-export const { presets, Solver } = createBindings(wasm, ensureReady);
+export const { presets, formatStep, Solver } = createBindings(wasm, ensureReady);

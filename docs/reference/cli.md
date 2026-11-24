@@ -14,13 +14,17 @@ dealbreaker: solve patience (solitaire) games
 USAGE:
     dealbreaker list
     dealbreaker rules <GAME>
+    dealbreaker validate <GAME> [--state FILE] [--json]
     dealbreaker deal  <GAME> [DEAL]
     dealbreaker solve <GAME> [DEAL] [SEARCH] [--json]
-    dealbreaker hint  <GAME> [DEAL] [SEARCH] [--samples N]
+    dealbreaker hint  <GAME> [DEAL] [SEARCH] [--samples N] [--json]
     dealbreaker replay <GAME> [DEAL] --steps FILE [--legal] [--json]
     dealbreaker best  <GAME> [DEAL] [SEARCH] [--json]
     dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [--jobs N] [SEARCH] [--json] [--verbose]
     dealbreaker serve <GAME> [--search JSON]
+    dealbreaker --version
+
+`validate` checks that a rules file (and optional `--state` JSON) is valid.
 
 `replay` plays a list of steps (a JSON array, or `solve --json` output) from a deal and prints
 the position after each one; `--legal` adds every legal step at each position.
@@ -31,12 +35,12 @@ the position after each one; `--legal` adds every legal step at each position.
 `hint`, `legal_steps`, `play_step`, `validate`, `is_won`, `score`, `rules`, `quit`), and writes
 one JSON response line per request to stdout.
 
-GAME is a preset id (see `list`) or a path to a rules JSON file.
+GAME is a preset id (see `list`), a path to a rules JSON file, or `-` for stdin.
 
 DEAL (default: --seed 1):
     --seed N          deal from a seed
     --ms N            Microsoft FreeCell deal number (FreeCell-layout games)
-    --state FILE      a position as JSON (`deal` prints the format)
+    --state FILE      a position as JSON (`deal` prints the format; `-` for stdin)
 
 SEARCH:
     --max-states N    budget of distinct positions (default 2000000)

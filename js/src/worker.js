@@ -108,6 +108,10 @@ export class WorkerSolver {
     return this.#call("isWon", [state]);
   }
 
+  render(state) {
+    return this.#call("render", [state]);
+  }
+
   /** Terminate the worker immediately (also cancels any in-flight search). */
   terminate() {
     if (this.#terminated) return;

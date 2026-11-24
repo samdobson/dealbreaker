@@ -22,6 +22,10 @@ a `Solver`.
 
 List all built-in game presets.
 
+### `formatStep(step: Step | string): string`
+
+Format a single step as human-readable text (e.g. `"tableau 4 -> cell 1"`).
+
 ## `class Solver`
 
 One game's compiled rules. Create once, reuse across many positions.
@@ -42,6 +46,7 @@ One game's compiled rules. Create once, reuse across many positions.
 | `legalSteps(state: StateData \| string): Step[]` | Every legal single step in this position. |
 | `playStep(state: StateData \| string, step: Step \| string): StateData` | Play one step and return the resulting position. Throws if the step is illegal. |
 | `isWon(state: StateData \| string): boolean` | Whether the position is won. |
+| `render(state: StateData \| string): string` | Render a position as a human-readable ASCII board. |
 | `free(): void` | Free the underlying WebAssembly instance. |
 
 ## `class WorkerSolver` (`dealbreaker/worker`)
@@ -65,6 +70,7 @@ Call `terminate()` to stop the worker and cancel any in-flight search.
 | `legalSteps(state: StateData \| string): Promise<Step[]>` |  |
 | `playStep(state: StateData \| string, step: Step \| string): Promise<StateData>` |  |
 | `isWon(state: StateData \| string): Promise<boolean>` |  |
+| `render(state: StateData \| string): Promise<string>` |  |
 | `terminate(): void` | Terminate the worker immediately (also cancels any in-flight search). |
 
 ## Core Data & Result Types

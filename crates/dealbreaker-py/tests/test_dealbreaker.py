@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from dealbreaker import Solver, presets
+from dealbreaker import CancelToken, Solver, format_step, presets
 
 
 def test_presets_and_rules_roundtrip():
@@ -132,3 +132,29 @@ def test_hint_unknown_cards_and_none_on_tiny_budget():
         kl.validate(state)
     h = kl.hint(state, samples=2, seed=1, max_states=5_000)
     assert h is None or isinstance(h["step"]["type"], str)
+
+
+def test_cancel_token_and_render_and_format_step():
+    fc = Solver.from_preset("freecell")
+    deal = fc.deal_microsoft(11982)
+
+    board = fc.render(deal)
+    assert "tableau" in board
+    assert "cell" in board
+
+    step = fc.legal_steps(deal)[0]
+    formatted = format_step(step)
+    assert "->" in formatted
+
+    tok = CancelToken()
+    assert not tok.is_cancelled
+    tok.cancel()
+    assert tok.is_cancelled
+    res = fc.solve(deal, cancel=tok)
+    assert res["outcome"] == "gave-up"
+    assert res["states"] == 0
+
+    tok.reset()
+    assert not tok.is_cancelled
+    solved = fc.solve(fc.deal_microsoft(1), max_states=200_000, cancel=tok)
+    assert solved["outcome"] == "solved"

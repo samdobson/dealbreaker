@@ -89,10 +89,22 @@ impl Game {
                 if pile.len() >= tr.max_cards as usize || tr.complete_runs {
                     continue;
                 }
-                let ok = match pile.last() {
-                    None => self.empty_accepts(p, c, s),
-                    Some(&top) => {
-                        top.is_face_up() && tr.fits[top.face() as usize] >> c.face() & 1 != 0
+                let ok = if !g.rank_sequence.is_empty() {
+                    g.rank_sequence.get(pile.len()) == Some(&c.rank())
+                        && (tr.admits >> c.face() & 1 != 0)
+                        && match pile.last() {
+                            None => tr.empty_suit.is_none_or(|es| c.suit() == es),
+                            Some(&top) => {
+                                top.is_face_up()
+                                    && tr.fits[top.face() as usize] >> c.face() & 1 != 0
+                            }
+                        }
+                } else {
+                    match pile.last() {
+                        None => self.empty_accepts(p, c, s),
+                        Some(&top) => {
+                            top.is_face_up() && tr.fits[top.face() as usize] >> c.face() & 1 != 0
+                        }
                     }
                 };
                 if ok {

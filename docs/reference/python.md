@@ -8,11 +8,41 @@
 pip install dealbreaker
 ```
 
+## `class PresetInfo`
+
+Metadata for a built-in game preset.
+
+## `class PileRef`
+
+Reference to a single pile by group name and 0-based index.
+
+## `class StateData`
+
+Serializable game position.
+
+## `class SolveResult`
+
+Result returned by :meth:`Solver.solve`.
+
+## `class MaxResult`
+
+Result returned by :meth:`Solver.best`.
+
+## `class HintResult`
+
+Result returned by :meth:`Solver.hint`.
+
 ## Module Functions
 
-### `presets() -> list[dict[str, str]]`
+### `presets() -> list[PresetInfo]`
 
 Return all built-in game presets as `[{"id": ..., "name": ...}, ...]`.
+
+## Module Functions
+
+### `format_step(step: Step | Mapping[str, Any] | str) -> str`
+
+Format a step dict or JSON string as human-readable text (e.g. `"tableau 4 -> cell 1"`).
 
 ## `class Solver`
 
@@ -31,46 +61,50 @@ Create a solver from a built-in preset id (see `presets()`).
 
 Return this game's rules as a dictionary.
 
-### `deal(seed: int = 1) -> dict[str, Any]`
+### `deal(seed: int = 1) -> StateData`
 
 Deal a seeded position.
 
-### `deal_microsoft(n: int) -> dict[str, Any]`
+### `deal_microsoft(n: int) -> StateData`
 
 Deal Microsoft FreeCell deal `n` (for FreeCell-layout games).
 
-### `deal_ordered(cards: Sequence[str]) -> dict[str, Any]`
+### `deal_ordered(cards: Sequence[str]) -> StateData`
 
 Deal from an explicit list of card strings (e.g. `["AS", "2S", ...]`).
 
-### `validate(state: Mapping[str, Any] | str) -> None`
+### `validate(state: StateData | Mapping[str, Any] | str) -> None`
 
 Validate a position against this game's pack and pile capacities.
 
-### `solve(state: Mapping[str, Any] | str, *, max_states: int = 2000000, strategy: str = 'auto', timeout_ms: int | None = None, autoplay: bool = True, shorten: bool = True) -> dict[str, Any]`
+### `solve(state: StateData | Mapping[str, Any] | str, *, max_states: int = 2000000, strategy: Literal['auto', 'depth_first', 'depth-first', 'dfs', 'best_first', 'best-first', 'bfs'] = 'auto', timeout_ms: int | None = None, autoplay: bool = True, shorten: bool = True, cancel: CancelToken | None = None) -> SolveResult`
 
 Search for a winning line or prove unsolvability. Releases the GIL.
 
-### `best(state: Mapping[str, Any] | str, *, max_states: int = 2000000, strategy: str = 'auto', timeout_ms: int | None = None) -> dict[str, Any]`
+### `best(state: StateData | Mapping[str, Any] | str, *, max_states: int = 2000000, strategy: Literal['auto', 'depth_first', 'depth-first', 'dfs', 'best_first', 'best-first', 'bfs'] = 'auto', timeout_ms: int | None = None, cancel: CancelToken | None = None) -> MaxResult`
 
 Find the highest-scoring line in a points game. Releases the GIL.
 
-### `hint(state: Mapping[str, Any] | str, *, samples: int = 16, seed: int = 0, max_states: int = 100000, strategy: str = 'auto', timeout_ms: int | None = None, autoplay: bool = True, shorten: bool = True) -> dict[str, Any] | None`
+### `hint(state: StateData | Mapping[str, Any] | str, *, samples: int = 16, seed: int = 0, max_states: int = 100000, strategy: Literal['auto', 'depth_first', 'depth-first', 'dfs', 'best_first', 'best-first', 'bfs'] = 'auto', timeout_ms: int | None = None, autoplay: bool = True, shorten: bool = True, cancel: CancelToken | None = None) -> HintResult | None`
 
 Suggest a next step without peeking at face-down cards. Releases the GIL.
 
-### `legal_steps(state: Mapping[str, Any] | str) -> list[dict[str, Any]]`
+### `legal_steps(state: StateData | Mapping[str, Any] | str) -> list[Step]`
 
 Return every legal single step in `state`.
 
-### `play_step(state: Mapping[str, Any] | str, step: Mapping[str, Any] | str) -> dict[str, Any]`
+### `play_step(state: StateData | Mapping[str, Any] | str, step: Step | Mapping[str, Any] | str) -> StateData`
 
 Play one step and return the resulting position (raises ValueError if illegal).
 
-### `is_won(state: Mapping[str, Any] | str) -> bool`
+### `is_won(state: StateData | Mapping[str, Any] | str) -> bool`
 
 Return whether `state` is a won position.
 
-### `score(state: Mapping[str, Any] | str) -> int | None`
+### `score(state: StateData | Mapping[str, Any] | str) -> int | None`
 
 Return points for `state`, or `None` for non-scored games.
+
+### `render(state: StateData | Mapping[str, Any] | str) -> str`
+
+Render `state` as a human-readable ASCII board.

@@ -500,6 +500,22 @@ pub struct GroupRules {
     /// `suit`, `empty_suit`, `color`, and `max_cards` still apply.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rank_sequence: Vec<u8>,
+    /// Maximum cards accepted in a single move onto a non-empty pile of this group.
+    /// Defaults to `max_accept`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub non_empty_max_accept: Option<u16>,
+    /// No two non-empty piles in this group may share the same suit on their bottom card.
+    #[serde(default)]
+    pub unique_suits: bool,
+    /// While the stock is non-empty, forbid building onto a single-card pile in this group and
+    /// forbid moving a card from a single-card pile in this group onto another non-empty pile of
+    /// this group.
+    #[serde(default)]
+    pub no_build_single_while_stock: bool,
+    /// When refilling an emptied pile from the stock with `refill_count > 1`, deal the first card
+    /// face down unless it is the last card in the stock, and the remaining cards face up.
+    #[serde(default)]
+    pub refill_first_face_down: bool,
 }
 
 /// When two piles in the same group may swap their contents on a move from one to the other.
@@ -538,6 +554,8 @@ pub struct PileOverride {
     pub max_accept: Option<u16>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub empty_max_accept: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub non_empty_max_accept: Option<u16>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub suit: Option<Suit>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -646,6 +664,10 @@ impl GroupRules {
             unrestricted_from: None,
             lock_pile_dir: false,
             rank_sequence: Vec::new(),
+            non_empty_max_accept: None,
+            unique_suits: false,
+            no_build_single_while_stock: false,
+            refill_first_face_down: false,
         }
     }
 
@@ -1109,6 +1131,10 @@ pub struct StockRules {
     /// cards before dealing them out again.
     #[serde(default)]
     pub redeal_shuffle: bool,
+    /// On a multi-pile stock redeal, deal all gathered cards back out in rows alternating face-up
+    /// and face-down (ending face-up), honoring `divert_ranks`.
+    #[serde(default)]
+    pub redeal_deal_all_alternating: bool,
     /// For a multi-pile target: if any target piles are empty, deal only to the empty piles;
     /// otherwise deal to every target pile.
     #[serde(default)]
@@ -1152,6 +1178,7 @@ impl StockRules {
             deal_per_pile: false,
             redeal_reverse: false,
             redeal_shuffle: false,
+            redeal_deal_all_alternating: false,
             deal_empty_first: false,
             divert_ranks: Vec::new(),
             piles_per_round: Vec::new(),
@@ -1218,6 +1245,13 @@ pub enum RedealHow {
     },
     /// Move each pile's bottom card to its top (Crescent).
     RotateBottom,
+    /// Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.
+    DealRows,
+    /// On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group
+    /// starting at pile `k` and wrapping around.
+    RedistributePile,
+    /// Gather all cards of the group, shuffle them, and replay the group's opening deal steps.
+    ShuffleRedeal,
 }
 
 /// One step of the opening deal.

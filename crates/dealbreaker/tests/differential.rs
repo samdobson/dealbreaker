@@ -2515,3 +2515,182 @@ fn wave3_mechanics() {
     );
     check(r4, 0..40);
 }
+
+#[test]
+fn non_empty_max_accept_unique_suits_and_stock_restrictions() {
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+
+    // 1) GroupRules::non_empty_max_accept (runs on empty, 1 card on non-empty).
+    let mut tab1 = GroupRules::new("tableau", PileKind::Tableau, 3)
+        .build(BuildBy::Alternate, Dir::Down)
+        .empty(EmptyRule::Any)
+        .moves(MoveUnit::Run);
+    tab1.non_empty_max_accept = Some(1);
+    let r1 = Rules::new(
+        "mini-non-empty-max-accept",
+        pack.clone(),
+        vec![GroupRules::new("foundation", PileKind::Foundation, 2), tab1],
+        vec![DealStep::to("tableau").counts(&[3, 3, 2])],
+    );
+    check(r1, 0..40);
+
+    // 2) GroupRules::unique_suits (2 foundations with different base ranks, distinct suits).
+    let pack2 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let mut f2 = GroupRules::new("foundation", PileKind::Foundation, 2)
+        .build_rule(Build::new(BuildBy::Suit, Dir::Up).wrap())
+        .max_cards(3)
+        .pile(PileOverride::on(&[0]).empty(EmptyRule::Rank(1)))
+        .pile(PileOverride::on(&[1]).empty(EmptyRule::Rank(2)));
+    f2.unique_suits = true;
+    let r2 = Rules::new(
+        "mini-unique-suits",
+        pack2,
+        vec![
+            f2,
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build_rule(Build::new(BuildBy::Alternate, Dir::Down).wrap())
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Run),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    check(r2, 0..40);
+
+    // 3) no_build_single_while_stock + refill_first_face_down.
+    let mut tab3 = GroupRules::new("tableau", PileKind::Tableau, 2)
+        .build(BuildBy::OtherSuit, Dir::Down)
+        .empty(EmptyRule::Any)
+        .moves(MoveUnit::Top)
+        .refill_from(&["stock"]);
+    tab3.refill_count = Some(2);
+    tab3.no_build_single_while_stock = true;
+    tab3.refill_first_face_down = true;
+    let mut r3 = Rules::new(
+        "mini-no-build-single",
+        pack.clone(),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            tab3,
+        ],
+        vec![
+            DealStep::to("tableau").each(1).down(),
+            DealStep::to("tableau").each(1),
+            DealStep::to("waste").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r3.stock = Some(StockRules::to("waste"));
+    check(r3, 0..40);
+
+    // 4) Open-top stock accepting cards once empty (or onto face-up cards).
+    let mut st_grp = GroupRules::new("stock", PileKind::Stock, 1)
+        .build(BuildBy::Any, Dir::Any)
+        .empty(EmptyRule::Any)
+        .moves(MoveUnit::Top)
+        .max_accept(1);
+    st_grp.no_flip = true;
+    let mut r4 = Rules::new(
+        "mini-accept-on-face-down",
+        pack,
+        vec![
+            st_grp,
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Rank(4))
+                .moves(MoveUnit::Run),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r4.stock = Some(StockRules::to("tableau"));
+    check(r4, 0..40);
+}
+
+#[test]
+fn redeal_deal_rows_redistribute_shuffle_and_alternating() {
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+
+    // 1) RedealHow::DealRows.
+    let mut r1 = Rules::new(
+        "mini-deal-rows",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    r1.redeal = Some(RedealRules::new("tableau", RedealHow::DealRows));
+    check(r1, 0..40);
+
+    // 2) RedealHow::RedistributePile.
+    let mut r2 = Rules::new(
+        "mini-redistribute-pile",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    let mut rd2 = RedealRules::new("tableau", RedealHow::RedistributePile);
+    rd2.times = 3;
+    r2.redeal = Some(rd2);
+    check(r2, 0..40);
+
+    // 3) RedealHow::ShuffleRedeal.
+    let mut r3 = Rules::new(
+        "mini-shuffle-redeal",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Suit, Dir::Down)
+                .empty(EmptyRule::Rank(3))
+                .moves(MoveUnit::AnyFaceUp),
+        ],
+        vec![
+            DealStep::to("tableau").piles(&[1, 2]).each(1).down(),
+            DealStep::to("tableau").each(1),
+            DealStep::to("tableau").piles(&[0]).each(1),
+        ],
+    );
+    r3.redeal = Some(RedealRules::new("tableau", RedealHow::ShuffleRedeal));
+    check(r3, 0..40);
+
+    // 4) StockRules::redeal_deal_all_alternating + divert_ranks.
+    let pack4 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r4 = Rules::new(
+        "mini-redeal-alternating",
+        pack4,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Run),
+        ],
+        vec![
+            DealStep::to("tableau").each(2),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st4 = StockRules::to("tableau");
+    st4.redeals = 1;
+    st4.redeal_shuffle = true;
+    st4.redeal_deal_all_alternating = true;
+    st4.divert_ranks = vec![1];
+    r4.stock = Some(st4);
+    check(r4, 0..40);
+}

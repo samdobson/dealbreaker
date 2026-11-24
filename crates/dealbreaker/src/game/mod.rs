@@ -187,6 +187,12 @@ pub(crate) struct Group {
     pub lock_pile_dir: bool,
     /// Fixed rank sequence required by pile depth.
     pub rank_sequence: Vec<u8>,
+    /// No two non-empty piles in this group may share the same suit on their bottom card.
+    pub unique_suits: bool,
+    /// While stock is non-empty, forbid building onto or moving from single-card piles onto non-empty piles.
+    pub no_build_single_while_stock: bool,
+    /// When refilling from stock with `refill_count > 1`, deal the first card face down unless it is the last card.
+    pub refill_first_face_down: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -210,6 +216,7 @@ pub(crate) struct PileRules {
     pub min_cards: u16,
     pub max_accept: u16,
     pub empty_max_accept: u16,
+    pub non_empty_max_accept: u16,
     pub complete_runs: bool,
     /// Foundations the solver may play to automatically when safe.
     pub autoplay: bool,
@@ -240,6 +247,7 @@ impl PileRules {
             min_cards,
             max_accept,
             empty_max_accept,
+            non_empty_max_accept,
             complete_runs,
             admits,
             empty_suit,
@@ -256,6 +264,7 @@ impl PileRules {
             && *min_cards == other.min_cards
             && *max_accept == other.max_accept
             && *empty_max_accept == other.empty_max_accept
+            && *non_empty_max_accept == other.non_empty_max_accept
             && *complete_runs == other.complete_runs
             && *admits == other.admits
             && *empty_suit == other.empty_suit
@@ -294,7 +303,9 @@ impl Group {
 
     /// True if moves to or from this group are gated on the stock being empty.
     pub(crate) fn depends_on_stock_empty(&self) -> bool {
-        self.accept_when_stock_empty || self.moves_when_stock_empty
+        self.accept_when_stock_empty
+            || self.moves_when_stock_empty
+            || self.no_build_single_while_stock
     }
 
     /// True if this group participates in automatic post-move compaction or refilling.
@@ -347,6 +358,9 @@ impl Group {
             unrestricted_from: 0,
             lock_pile_dir: false,
             rank_sequence: Vec::new(),
+            unique_suits: false,
+            no_build_single_while_stock: false,
+            refill_first_face_down: false,
         }
     }
 }
@@ -373,6 +387,7 @@ pub(crate) struct Stock {
     pub deal_per_pile: bool,
     pub redeal_reverse: bool,
     pub redeal_shuffle: bool,
+    pub redeal_deal_all_alternating: bool,
     pub deal_empty_first: bool,
     pub divert_ranks: Vec<u8>,
     pub final_split_to: Option<u16>,

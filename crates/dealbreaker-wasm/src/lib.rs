@@ -36,6 +36,13 @@ pub fn presets() -> String {
     to_json(&v)
 }
 
+/// Format a single step JSON object as human-readable text (e.g. `"tableau 4 -> cell 1"`).
+#[wasm_bindgen(js_name = formatStep)]
+pub fn format_step(step_json: &str) -> Result<String, JsError> {
+    let step: Step = serde_json::from_str(step_json).map_err(js_err)?;
+    Ok(step.to_string())
+}
+
 /// One game's compiled rules. Create once, use for many positions.
 #[wasm_bindgen]
 pub struct Solver {
@@ -174,6 +181,11 @@ impl Solver {
         Ok(self.game.is_won(&self.state(state_json)?))
     }
 
+    /// Render a position as a human-readable ASCII board.
+    pub fn render(&self, state_json: &str) -> Result<String, JsError> {
+        Ok(self.game.render(&self.state(state_json)?))
+    }
+
     fn state(&self, json: &str) -> Result<State, JsError> {
         self.game.state_from_json(json).map_err(js_err)
     }
@@ -207,8 +219,12 @@ mod tests {
         assert!(!fc.is_won(&s1).unwrap());
 
         let ms1 = fc.deal_microsoft(1).unwrap();
+        assert!(fc.render(&ms1).unwrap().contains("tableau"));
         let legal: Vec<Step> = serde_json::from_str(&fc.legal_steps(&ms1).unwrap()).unwrap();
         assert!(!legal.is_empty());
+        assert!(format_step(&serde_json::to_string(&legal[0]).unwrap())
+            .unwrap()
+            .contains("->"));
 
         let solved: serde_json::Value = serde_json::from_str(
             &fc.solve(&ms1, Some(r#"{"max_states":200000}"#.into()))

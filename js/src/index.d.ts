@@ -1,3 +1,5 @@
+/// <reference lib="esnext.disposable" />
+
 export * from "./types.js";
 
 import type {
@@ -24,6 +26,9 @@ export function init(moduleOrPath?: InitInput): Promise<void>;
 
 /** List all built-in game presets. */
 export function presets(): PresetInfo[];
+
+/** Format a single step as human-readable text (e.g. `"tableau 4 -> cell 1"`). */
+export function formatStep(step: Step | string): string;
 
 /** One game's compiled rules. Create once, reuse across many positions. */
 export class Solver {
@@ -69,6 +74,12 @@ export class Solver {
   /** Whether the position is won. */
   isWon(state: StateData | string): boolean;
 
+  /** Render a position as a human-readable ASCII board. */
+  render(state: StateData | string): string;
+
   /** Free the underlying WebAssembly instance. */
   free(): void;
+
+  /** Alias for `free()` supporting explicit resource management (`using solver = ...`). */
+  [Symbol.dispose](): void;
 }

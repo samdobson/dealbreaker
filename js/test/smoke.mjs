@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { init, presets, Solver } from "../src/node.js";
+import { init, presets, formatStep, Solver } from "../src/node.js";
 
 test("init() is idempotent in Node", async () => {
   await init();
@@ -26,6 +26,8 @@ test("FreeCell Microsoft #1 solves and replays via playStep", () => {
 
     const legal = fc.legalSteps(state);
     assert.ok(legal.length > 0);
+    assert.ok(fc.render(state).includes("tableau"));
+    assert.ok(formatStep(legal[0]).includes("->"));
 
     const result = fc.solve(state, { max_states: 200_000 });
     assert.equal(result.outcome, "solved");

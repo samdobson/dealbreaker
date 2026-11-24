@@ -109,6 +109,7 @@ impl Game {
                 let mut min_cards = g.min_cards;
                 let mut max_accept = g.max_accept;
                 let mut empty_max_accept = g.empty_max_accept;
+                let mut non_empty_max_accept = g.non_empty_max_accept;
                 let mut suit = g.suit;
                 let mut empty_suit = g.empty_suit;
                 let mut color = g.color;
@@ -120,6 +121,7 @@ impl Game {
                     min_cards = o.min_cards.or(min_cards);
                     max_accept = o.max_accept.or(max_accept);
                     empty_max_accept = o.empty_max_accept.or(empty_max_accept);
+                    non_empty_max_accept = o.non_empty_max_accept.or(non_empty_max_accept);
                     suit = o.suit.or(suit);
                     empty_suit = o.empty_suit.or(empty_suit);
                     color = o.color.or(color);
@@ -195,6 +197,8 @@ impl Game {
                     && !g.match_longest_rank
                     && !g.lock_build_dir
                     && !g.lock_pile_dir
+                    && !g.unique_suits
+                    && !rules.groups.iter().any(|gr| gr.no_build_single_while_stock)
                     && g.rank_sequence.is_empty()
                     && g.unrestricted_from.is_none()
                     && g.final_from_same_index.is_none()
@@ -214,6 +218,7 @@ impl Game {
                     min_cards: min_cards.unwrap_or(0),
                     max_accept,
                     empty_max_accept: empty_max_accept.unwrap_or(max_accept),
+                    non_empty_max_accept: non_empty_max_accept.unwrap_or(max_accept),
                     complete_runs: g.complete_runs,
                     autoplay,
                     sink: moves == MoveUnit::None
@@ -349,6 +354,9 @@ impl Game {
                 unrestricted_from,
                 lock_pile_dir: g.lock_pile_dir,
                 rank_sequence: g.rank_sequence.clone(),
+                unique_suits: g.unique_suits,
+                no_build_single_while_stock: g.no_build_single_while_stock,
+                refill_first_face_down: g.refill_first_face_down,
             };
             grp.symmetric = g.layout.is_none()
                 && g.piles.is_empty()
@@ -392,6 +400,7 @@ impl Game {
                     min_cards: 0,
                     max_accept: 0,
                     empty_max_accept: 0,
+                    non_empty_max_accept: 0,
                     complete_runs: false,
                     autoplay: false,
                     sink: false,
@@ -562,6 +571,7 @@ impl Game {
                     deal_per_pile: sr.deal_per_pile,
                     redeal_reverse: sr.redeal_reverse,
                     redeal_shuffle: sr.redeal_shuffle,
+                    redeal_deal_all_alternating: sr.redeal_deal_all_alternating,
                     deal_empty_first: sr.deal_empty_first,
                     divert_ranks: sr.divert_ranks.clone(),
                     final_split_to,
@@ -936,6 +946,7 @@ impl Game {
                     && pr.empty_suit.is_none()
                     && pr.max_cards == u16::MAX
                     && pr.empty_max_accept >= pr.max_accept
+                    && pr.non_empty_max_accept >= pr.max_accept
                     && !gr.accept_only_when_empty
                     && !gr.requires_rank_on_prev
                     && !gr.requires_prev_non_empty
@@ -1059,7 +1070,11 @@ impl Game {
                             | tg.empty_accepts_from
                             | tg.unrestricted_from
                             | tg.final_from_same_index.map_or(0, |r| 1u64 << r);
-                        if tg.kind == PileKind::Stock || allowed_from & (1 << fg) == 0 {
+                        if (tg.kind == PileKind::Stock
+                            && tr.empty == EmptyRule::None
+                            && tr.build.by == BuildBy::None)
+                            || allowed_from & (1 << fg) == 0
+                        {
                             return false;
                         }
                         if from_kind == PileKind::Foundation && tg.kind == PileKind::Foundation {

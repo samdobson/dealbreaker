@@ -23,6 +23,7 @@ const btnSolve = $("btn-solve");
 const btnHint = $("btn-hint");
 const btnCancel = $("btn-cancel");
 const btnUndo = $("btn-undo");
+const btnShare = $("btn-share");
 const btnFirst = $("btn-first");
 const btnPrev = $("btn-prev");
 const btnPlay = $("btn-play");
@@ -32,6 +33,7 @@ const btnResetRules = $("btn-reset-rules");
 
 let worker = null;
 let currentPreset = "freecell";
+let isCustomRules = false;
 let currentRules = null;
 let state = null;
 let legalSteps = [];
@@ -450,6 +452,67 @@ async function respawnWorker(fromCustomRules = false) {
   elMsWrap.classList.toggle("hidden", currentPreset !== "freecell");
 }
 
+function toBase64Url(bytes) {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(str) {
+  const b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+  const bin = atob(b64 + pad);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function encodeRulesParam(rulesObj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(compactRules(rulesObj)));
+  if (typeof CompressionStream === "function") {
+    const cs = new CompressionStream("deflate-raw");
+    const writer = cs.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    const compressed = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+    return "z:" + toBase64Url(compressed);
+  }
+  return "r:" + toBase64Url(bytes);
+}
+
+async function decodeRulesParam(encoded) {
+  if (encoded.startsWith("z:") && typeof DecompressionStream === "function") {
+    const bytes = fromBase64Url(encoded.slice(2));
+    const ds = new DecompressionStream("deflate-raw");
+    const writer = ds.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    const raw = await new Response(ds.readable).text();
+    return JSON.parse(raw);
+  }
+  const payload = encoded.startsWith("r:") ? encoded.slice(2) : encoded;
+  return JSON.parse(new TextDecoder().decode(fromBase64Url(payload)));
+}
+
+async function syncUrlHash() {
+  const params = new URLSearchParams();
+  const seed = Math.max(1, Number.parseInt(elSeed.value, 10) || 1);
+  if (isCustomRules && currentRules) {
+    params.set("rules", await encodeRulesParam(currentRules));
+    params.set("seed", String(seed));
+  } else {
+    params.set("game", currentPreset);
+    params.set("seed", String(seed));
+    if (currentPreset === "freecell") {
+      params.set("ms", elMsMode.checked ? "1" : "0");
+    }
+  }
+  const next = "#" + params.toString();
+  if (window.location.hash !== next) {
+    window.history.replaceState(null, "", next);
+  }
+}
+
 async function dealCurrent() {
   clearPlayback();
   history = [];
@@ -460,11 +523,12 @@ async function dealCurrent() {
   setBusy(true);
   try {
     state =
-      currentPreset === "freecell" && elMsMode.checked
+      !isCustomRules && currentPreset === "freecell" && elMsMode.checked
         ? await worker.dealMicrosoft(n)
         : await worker.deal(n);
     setStatus(`Dealt ${currentRules.name} #${n}`);
     await refreshStateMeta();
+    await syncUrlHash();
   } finally {
     setBusy(false);
   }
@@ -472,6 +536,7 @@ async function dealCurrent() {
 
 async function loadPreset(id) {
   currentPreset = id;
+  isCustomRules = false;
   elRulesError.textContent = "";
   setBusy(true);
   setStatus(`Loading ${id}…`);
@@ -653,6 +718,7 @@ btnApplyRules.addEventListener("click", async () => {
     const nextWorker = await WorkerSolver.fromRules(parsed);
     if (worker) worker.terminate();
     worker = nextWorker;
+    isCustomRules = true;
     currentRules = await worker.rules();
     btnSolve.textContent = isScored() ? "Best Score" : "Solve";
     elMsWrap.classList.add("hidden");
@@ -667,10 +733,39 @@ btnApplyRules.addEventListener("click", async () => {
 
 btnResetRules.addEventListener("click", () => loadPreset(currentPreset));
 
+btnShare.addEventListener("click", async () => {
+  await syncUrlHash();
+  const url = window.location.href;
+  try {
+    await navigator.clipboard.writeText(url);
+    setStatus("Copied shareable link to clipboard!");
+  } catch {
+    window.prompt("Copy shareable link:", url);
+  }
+});
+
 async function boot() {
   try {
     await init();
     const list = presets();
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const hashGame = params.get("game");
+    const hashSeed = params.get("seed");
+    const hashMs = params.get("ms");
+    const hashRules = params.get("rules");
+
+    if (hashGame && list.some((p) => p.id === hashGame)) {
+      currentPreset = hashGame;
+    }
+    if (hashSeed && Number.parseInt(hashSeed, 10) >= 1) {
+      elSeed.value = String(Number.parseInt(hashSeed, 10));
+    }
+    if (hashMs === "0") {
+      elMsMode.checked = false;
+    } else if (hashMs === "1") {
+      elMsMode.checked = true;
+    }
+
     for (const p of list) {
       const opt = document.createElement("option");
       opt.value = p.id;
@@ -678,6 +773,23 @@ async function boot() {
       if (p.id === currentPreset) opt.selected = true;
       elPreset.appendChild(opt);
     }
+
+    if (hashRules) {
+      try {
+        const parsed = await decodeRulesParam(hashRules);
+        worker = await WorkerSolver.fromRules(parsed);
+        isCustomRules = true;
+        currentRules = await worker.rules();
+        elRulesEditor.value = JSON.stringify(compactRules(currentRules), null, 2);
+        btnSolve.textContent = isScored() ? "Best Score" : "Solve";
+        elMsWrap.classList.add("hidden");
+        await dealCurrent();
+        return;
+      } catch (err) {
+        elRulesError.textContent = `Invalid shared rules in URL: ${err.message}`;
+      }
+    }
+
     await loadPreset(currentPreset);
   } catch (err) {
     setStatus(`Failed to initialize WASM: ${err.message}`);

@@ -13,6 +13,11 @@ export function createBindings(wasm, ensureReady) {
     return JSON.parse(wasm.presets());
   }
 
+  function formatStep(step) {
+    ensureReady();
+    return wasm.formatStep(toJson(step));
+  }
+
   class Solver {
     #inner;
 
@@ -79,6 +84,10 @@ export function createBindings(wasm, ensureReady) {
       return this.#inner.isWon(toJson(state));
     }
 
+    render(state) {
+      return this.#inner.render(toJson(state));
+    }
+
     free() {
       if (this.#inner) {
         this.#inner.free();
@@ -91,5 +100,5 @@ export function createBindings(wasm, ensureReady) {
     }
   }
 
-  return { presets, Solver };
+  return { presets, formatStep, Solver };
 }

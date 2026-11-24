@@ -11,4 +11,4 @@ export function init() {
   return Promise.resolve();
 }
 
-export const { presets, Solver } = createBindings(wasm, () => {});
+export const { presets, formatStep, Solver } = createBindings(wasm, () => {});

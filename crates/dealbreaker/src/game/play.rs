@@ -201,6 +201,65 @@ impl Game {
             {
                 self.push(s, j, Op::Redeal);
             }
+            if st.redeal_deal_all_alternating {
+                let targets = st.round_targets(s.redeals_used);
+                let n = targets.len();
+                if let Some(q) = s.piles[st.pile as usize].len().checked_div(n) {
+                    let mut flip = (q & 1) != 0;
+                    while !s.piles[st.pile as usize].is_empty() {
+                        if s.piles[st.pile as usize].len() <= n {
+                            flip = true;
+                        }
+                        for &p in targets {
+                            if s.piles[st.pile as usize].is_empty() {
+                                break;
+                            }
+                            if st.divert_ranks.is_empty() {
+                                if flip {
+                                    self.deal_from_stock(s, j, st.pile, p, 1);
+                                } else {
+                                    self.push(
+                                        s,
+                                        j,
+                                        Op::Shift {
+                                            from: st.pile,
+                                            to: p,
+                                            count: 1,
+                                        },
+                                    );
+                                }
+                            } else {
+                                while let Some(&top) = s.piles[st.pile as usize].last() {
+                                    let c = top.up();
+                                    if st.divert_ranks.contains(&c.rank()) {
+                                        if let Some(fp) = self.find_foundation(s, c) {
+                                            self.deal_from_stock(s, j, st.pile, fp, 1);
+                                            continue;
+                                        }
+                                    }
+                                    if flip {
+                                        self.deal_from_stock(s, j, st.pile, p, 1);
+                                    } else {
+                                        self.push(
+                                            s,
+                                            j,
+                                            Op::Shift {
+                                                from: st.pile,
+                                                to: p,
+                                                count: 1,
+                                            },
+                                        );
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        flip = !flip;
+                    }
+                }
+                self.settle(s, j);
+                return true;
+            }
         }
         let stock_len = s.piles[st.pile as usize].len() as u16;
         if stock_len > 0 && !(st.final_split_to.is_some() && stock_len <= 2) {
@@ -448,6 +507,153 @@ impl Game {
                                     count: 1,
                                 },
                             );
+                        }
+                    }
+                }
+            }
+            RedealHow::DealRows => {
+                for p in g.piles() {
+                    let n = len(s, p);
+                    for _ in 0..n {
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: p,
+                                to: gp,
+                                count: 1,
+                            },
+                        );
+                    }
+                }
+                while len(s, gp) > 0 {
+                    for p in g.piles() {
+                        if len(s, gp) == 0 {
+                            break;
+                        }
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: gp,
+                                to: p,
+                                count: 1,
+                            },
+                        );
+                    }
+                }
+            }
+            RedealHow::RedistributePile => {
+                let count = g.count as usize;
+                let k = (s.redeals_used as usize) % count;
+                let src = g.start + k as u16;
+                let n = len(s, src);
+                if n > 0 {
+                    for _ in 0..n {
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: src,
+                                to: gp,
+                                count: 1,
+                            },
+                        );
+                    }
+                    for i in 0..n as usize {
+                        let dst = g.start + ((k + i) % count) as u16;
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: gp,
+                                to: dst,
+                                count: 1,
+                            },
+                        );
+                    }
+                }
+            }
+            RedealHow::ShuffleRedeal => {
+                for p in g.piles() {
+                    while let Some(&top) = s.piles[p as usize].last() {
+                        if top.is_face_up() {
+                            self.push(
+                                s,
+                                j,
+                                Op::Turn {
+                                    from: p,
+                                    to: gp,
+                                    count: 1,
+                                    up: false,
+                                },
+                            );
+                        } else {
+                            self.push(
+                                s,
+                                j,
+                                Op::Shift {
+                                    from: p,
+                                    to: gp,
+                                    count: 1,
+                                },
+                            );
+                        }
+                    }
+                }
+                self.shuffle_pile(s, j, gp);
+                for step in &self.rules.deal {
+                    if step.to != g.name {
+                        continue;
+                    }
+                    let piles: Vec<u16> = match &step.piles {
+                        None => g.piles().collect(),
+                        Some(ix) => ix.iter().map(|&i| g.start + i).collect(),
+                    };
+                    let deal_one = |s: &mut State, j: &mut Vec<Op>, dst: u16| {
+                        if step.face_up {
+                            self.push(
+                                s,
+                                j,
+                                Op::Turn {
+                                    from: gp,
+                                    to: dst,
+                                    count: 1,
+                                    up: true,
+                                },
+                            );
+                        } else {
+                            self.push(
+                                s,
+                                j,
+                                Op::Shift {
+                                    from: gp,
+                                    to: dst,
+                                    count: 1,
+                                },
+                            );
+                        }
+                    };
+                    if let Some(c) = step.count {
+                        for _ in 0..c {
+                            for &dst in &piles {
+                                if len(s, gp) == 0 {
+                                    break;
+                                }
+                                deal_one(s, j, dst);
+                            }
+                        }
+                    } else if let Some(cs) = &step.counts {
+                        let max_c = cs.iter().copied().max().unwrap_or(0);
+                        for r in 0..max_c {
+                            for (&dst, &c) in piles.iter().zip(cs.iter()) {
+                                if r < c {
+                                    if len(s, gp) == 0 {
+                                        break;
+                                    }
+                                    deal_one(s, j, dst);
+                                }
+                            }
                         }
                     }
                 }
@@ -806,6 +1012,21 @@ impl Game {
                                     },
                                 );
                                 moved += 1;
+                            } else if g.refill_first_face_down && moved == 0 {
+                                if s.piles[q as usize].len() > 1 {
+                                    self.push(
+                                        s,
+                                        j,
+                                        Op::Shift {
+                                            from: q,
+                                            to: p,
+                                            count: 1,
+                                        },
+                                    );
+                                } else {
+                                    self.deal_from_stock(s, j, q, p, 1);
+                                }
+                                moved += 1;
                             } else {
                                 let n = need.min(s.piles[q as usize].len() as u16);
                                 self.deal_from_stock(s, j, q, p, n);
@@ -1025,11 +1246,17 @@ impl Game {
                     >= *n as usize
             }
             Win::CountAndSpread(g, n, spread) => {
-                self.groups[*g as usize]
+                let f_cards: usize = self.groups[*g as usize]
                     .piles()
                     .map(|p| s.piles[p as usize].len())
-                    .sum::<usize>()
-                    >= *n as usize
+                    .sum();
+                let s_cards: usize = self.groups[*spread as usize]
+                    .piles()
+                    .map(|p| s.piles[p as usize].len())
+                    .sum();
+                let total: usize = s.piles.iter().map(|p| p.len()).sum();
+                f_cards >= *n as usize
+                    && f_cards + s_cards == total
                     && self.groups[*spread as usize]
                         .piles()
                         .all(|p| s.piles[p as usize].len() <= 1)

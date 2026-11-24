@@ -122,6 +122,7 @@ fn hint_inner(
         matches!(
             r.how,
             crate::rules::RedealHow::Shuffle { .. }
+                | crate::rules::RedealHow::ShuffleRedeal
                 | crate::rules::RedealHow::GridShuffle
                 | crate::rules::RedealHow::GridShuffleRandomGaps
         )

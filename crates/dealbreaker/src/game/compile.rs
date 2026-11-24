@@ -298,6 +298,7 @@ impl Game {
                 lock_build_dir: g.lock_build_dir,
                 no_flip: g.no_flip,
                 refill_same_index: g.refill_same_index,
+                require_valid_base: g.require_valid_base,
             };
             grp.symmetric = g.layout.is_none()
                 && g.piles.is_empty()
@@ -617,9 +618,13 @@ impl Game {
                 let wg = &groups[s.target as usize];
                 let sg = pile_group[s.pile as usize];
                 debug_assert_eq!(w, wg.start);
+                let feeds_refill = groups
+                    .iter()
+                    .any(|g| g.refill_from.contains(&s.target) || g.refill_from.contains(&sg));
                 let stock_playable = pile_rules[s.pile as usize].moves != MoveUnit::None
                     || removal.iter().any(|r| r.from & (1 << sg) != 0);
-                !stock_playable
+                !feeds_refill
+                    && !stock_playable
                     && (pile_rules[w as usize].moves != MoveUnit::None
                         || removal.iter().any(|r| r.from & (1 << s.target) != 0))
             }

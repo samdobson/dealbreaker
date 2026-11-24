@@ -550,6 +550,9 @@ impl Game {
         if tg.accept_only_when_empty && !dst.is_empty() {
             return false;
         }
+        if tg.require_valid_base && !dst.is_empty() && !self.empty_accepts(to, dst[0], s) {
+            return false;
+        }
         if tg.accept_when_stock_empty
             && self
                 .stock_pile

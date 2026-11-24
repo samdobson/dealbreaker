@@ -457,6 +457,10 @@ pub struct GroupRules {
     /// within the source group rather than the first non-empty pile.
     #[serde(default)]
     pub refill_same_index: bool,
+    /// Only allow building onto a non-empty pile if its bottom card satisfies the pile's `empty`
+    /// rule.
+    #[serde(default)]
+    pub require_valid_base: bool,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -579,6 +583,7 @@ impl GroupRules {
             lock_build_dir: false,
             no_flip: false,
             refill_same_index: false,
+            require_valid_base: false,
         }
     }
 
@@ -749,6 +754,11 @@ impl GroupRules {
 
     pub fn refill_same_index(mut self) -> Self {
         self.refill_same_index = true;
+        self
+    }
+
+    pub fn require_valid_base(mut self) -> Self {
+        self.require_valid_base = true;
         self
     }
 }

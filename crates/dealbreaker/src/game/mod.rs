@@ -163,6 +163,8 @@ pub(crate) struct Group {
     pub no_flip: bool,
     /// Refill each emptied pile from the same-index pile of `refill_from`.
     pub refill_same_index: bool,
+    /// Only allow building on a non-empty pile if its bottom card satisfies the pile's `empty` rule.
+    pub require_valid_base: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -310,6 +312,7 @@ impl Group {
             lock_build_dir: false,
             no_flip: false,
             refill_same_index: false,
+            require_valid_base: false,
         }
     }
 }

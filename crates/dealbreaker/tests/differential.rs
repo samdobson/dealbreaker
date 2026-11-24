@@ -2025,3 +2025,45 @@ fn lock_build_dir_no_flip_refill_same_index_and_piles_per_round() {
     r_well.stock = Some(st2);
     check(r_well, 0..40);
 }
+
+#[test]
+fn require_valid_base_and_multi_source_refill_count() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    let mut r = Rules::new(
+        "mini-gallery",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::Any, Dir::Same)
+                .empty(EmptyRule::Rank(1))
+                .max_cards(2),
+            GroupRules::new("gallery", PileKind::Tableau, 4)
+                .build_rule(Build::new(BuildBy::Suit, Dir::Up).step(2))
+                .moves(MoveUnit::Top)
+                .max_cards(2)
+                .max_accept(1)
+                .require_valid_base()
+                .pile(PileOverride::on(&[0, 1]).empty(EmptyRule::Rank(2)))
+                .pile(PileOverride::on(&[2, 3]).empty(EmptyRule::Rank(3))),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Suit, Dir::Down)
+                .moves(MoveUnit::Top)
+                .max_accept(1)
+                .refill_from(&["waste", "stock"])
+                .refill_count(2),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("gallery").each(1),
+            DealStep::to("tableau").each(1),
+            DealStep::to("waste").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("waste");
+    st.auto = true;
+    r.stock = Some(st);
+    r.win = WinRule::Empty(vec!["stock".into(), "waste".into(), "tableau".into()]);
+    check(r, 0..40);
+}

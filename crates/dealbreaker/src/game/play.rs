@@ -690,40 +690,45 @@ impl Game {
                     }
                     // The first group in the list with a card to give; within it, the first pile
                     // (or the largest pile when `refill_largest` is set, ties to lowest index).
-                    let src = g.refill_from.iter().find_map(|&rg| {
-                        let rg = &self.groups[rg as usize];
-                        let eligible = |q: u16| {
-                            s.piles[q as usize].last().is_some_and(|c| {
-                                c.is_face_up()
-                                    || rg.kind == PileKind::Stock
-                                    || rg.flip_only_last
-                                    || rg.no_flip
-                            })
-                        };
-                        if g.refill_same_index {
-                            let idx = p - g.start;
-                            if idx < rg.count {
-                                let q = rg.start + idx;
-                                eligible(q).then_some(q)
-                            } else {
-                                None
-                            }
-                        } else if g.refill_largest {
-                            let mut best: Option<(u16, usize)> = None;
-                            for q in rg.piles() {
-                                if eligible(q) {
-                                    let len = s.piles[q as usize].len();
-                                    if best.is_none_or(|(_, bl)| len > bl) {
-                                        best = Some((q, len));
+                    let find_src = |s: &State| {
+                        g.refill_from.iter().find_map(|&rg| {
+                            let rg = &self.groups[rg as usize];
+                            let eligible = |q: u16| {
+                                s.piles[q as usize].last().is_some_and(|c| {
+                                    c.is_face_up()
+                                        || rg.kind == PileKind::Stock
+                                        || rg.flip_only_last
+                                        || rg.no_flip
+                                })
+                            };
+                            if g.refill_same_index {
+                                let idx = p - g.start;
+                                if idx < rg.count {
+                                    let q = rg.start + idx;
+                                    eligible(q).then_some(q)
+                                } else {
+                                    None
+                                }
+                            } else if g.refill_largest {
+                                let mut best: Option<(u16, usize)> = None;
+                                for q in rg.piles() {
+                                    if eligible(q) {
+                                        let len = s.piles[q as usize].len();
+                                        if best.is_none_or(|(_, bl)| len > bl) {
+                                            best = Some((q, len));
+                                        }
                                     }
                                 }
+                                best.map(|(q, _)| q)
+                            } else {
+                                rg.piles().find(|&q| eligible(q))
                             }
-                            best.map(|(q, _)| q)
-                        } else {
-                            rg.piles().find(|&q| eligible(q))
-                        }
-                    });
-                    if let Some(q) = src {
+                        })
+                    };
+                    let mut moved = 0u16;
+                    while moved < g.refill_count {
+                        let Some(q) = find_src(s) else { break };
+                        let need = g.refill_count - moved;
                         if self.group_of(q).kind == PileKind::Stock {
                             let via_waste = self.stock.as_ref().and_then(|st| {
                                 if st.pile == q
@@ -748,13 +753,15 @@ impl Game {
                                         count: 1,
                                     },
                                 );
+                                moved += 1;
                             } else {
-                                let n = g.refill_count.min(s.piles[q as usize].len() as u16);
+                                let n = need.min(s.piles[q as usize].len() as u16);
                                 self.deal_from_stock(s, j, q, p, n);
+                                moved += n;
                             }
                         } else {
                             let rg = self.group_of(q);
-                            let mut moved = 0u16;
+                            let mut sub = 0u16;
                             while moved < g.refill_count {
                                 let Some(&top) = s.piles[q as usize].last() else {
                                     break;
@@ -784,9 +791,13 @@ impl Game {
                                     break;
                                 }
                                 moved += 1;
+                                sub += 1;
                             }
                             if s.piles[q as usize].is_empty() {
                                 next_emptied.push(q);
+                            }
+                            if sub == 0 {
+                                break;
                             }
                         }
                         changed = true;

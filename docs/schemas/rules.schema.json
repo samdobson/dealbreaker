@@ -525,13 +525,6 @@
           ]
         },
         {
-          "description": "Any strictly higher rank in the pack's rank sequence (no wrap).",
-          "type": "string",
-          "enum": [
-            "up_any"
-          ]
-        },
-        {
           "description": "Up or down.",
           "type": "string",
           "enum": [
@@ -550,6 +543,13 @@
           "type": "string",
           "enum": [
             "any"
+          ]
+        },
+        {
+          "description": "Any strictly higher rank in the pack's rank sequence (no wrap).",
+          "type": "string",
+          "enum": [
+            "up_any"
           ]
         }
       ]
@@ -1239,20 +1239,6 @@
           ]
         },
         {
-          "description": "Any built sequence from the top whose cards alternate in colour.",
-          "type": "string",
-          "enum": [
-            "alt_color_run"
-          ]
-        },
-        {
-          "description": "Any built sequence from the top whose cards are all one colour.",
-          "type": "string",
-          "enum": [
-            "same_color_run"
-          ]
-        },
-        {
           "description": "Any number of face-up cards from the top, built or not (Yukon).",
           "type": "string",
           "enum": [
@@ -1278,6 +1264,20 @@
           "type": "string",
           "enum": [
             "top_or_whole"
+          ]
+        },
+        {
+          "description": "Any built sequence from the top whose cards alternate in colour.",
+          "type": "string",
+          "enum": [
+            "alt_color_run"
+          ]
+        },
+        {
+          "description": "Any built sequence from the top whose cards are all one colour.",
+          "type": "string",
+          "enum": [
+            "same_color_run"
           ]
         }
       ]
@@ -1652,13 +1652,6 @@
           ]
         },
         {
-          "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving the gaps at random positions among the non-sequence slots.",
-          "type": "string",
-          "enum": [
-            "grid_shuffle_random_gaps"
-          ]
-        },
-        {
           "description": "Close the gaps: slide the cards forward in reading order, then fill the empty places at the end from `refill_from`'s top card, turned face up (Monte Carlo).",
           "type": "object",
           "required": [
@@ -1678,6 +1671,13 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving the gaps at random positions among the non-sequence slots.",
+          "type": "string",
+          "enum": [
+            "grid_shuffle_random_gaps"
+          ]
         },
         {
           "description": "Move each pile's bottom card to its top (Crescent).",
@@ -2326,17 +2326,6 @@
                 "group"
               ],
               "properties": {
-                "build": {
-                  "description": "Optional build rule used to check ordered row prefixes (defaults to the group's build).",
-                  "anyOf": [
-                    {
-                      "$ref": "#/definitions/Build"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
                 "group": {
                   "type": "string"
                 },
@@ -2391,6 +2380,39 @@
               "properties": {
                 "group": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Like [`WinRule::Rows`], but checks each row's ordered prefix using `build` instead of the group's build rule.",
+          "type": "object",
+          "required": [
+            "rows_built"
+          ],
+          "properties": {
+            "rows_built": {
+              "type": "object",
+              "required": [
+                "build",
+                "group"
+              ],
+              "properties": {
+                "build": {
+                  "$ref": "#/definitions/Build"
+                },
+                "group": {
+                  "type": "string"
+                },
+                "length": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "minimum": 0.0
                 }
               }
             }

@@ -976,14 +976,14 @@ pub enum Dir {
     #[default]
     Down,
     Up,
-    /// Any strictly higher rank in the pack's rank sequence (no wrap).
-    UpAny,
     /// Up or down.
     Either,
     /// Same rank.
     Same,
     /// Any rank at all (a pile that takes anything, subject to `by`).
     Any,
+    /// Any strictly higher rank in the pack's rank sequence (no wrap).
+    UpAny,
 }
 
 /// What an empty pile accepts.
@@ -1031,10 +1031,6 @@ pub enum MoveUnit {
     Run,
     /// Any built sequence from the top whose cards are all one suit (Spider).
     SuitRun,
-    /// Any built sequence from the top whose cards alternate in colour.
-    AltColorRun,
-    /// Any built sequence from the top whose cards are all one colour.
-    SameColorRun,
     /// Any number of face-up cards from the top, built or not (Yukon).
     AnyFaceUp,
     /// A built sequence, as long as free cells and empty piles would allow moving it one card at
@@ -1044,6 +1040,10 @@ pub enum MoveUnit {
     Whole,
     /// Either the top card alone, or the whole pile when all face up and built in sequence.
     TopOrWhole,
+    /// Any built sequence from the top whose cards alternate in colour.
+    AltColorRun,
+    /// Any built sequence from the top whose cards are all one colour.
+    SameColorRun,
 }
 
 /// Overlapping piles: a pile is playable only once every pile covering it is empty.
@@ -1234,15 +1234,15 @@ pub enum RedealHow {
     /// Grid games: leave each row's built sequence in place, shuffle every other card, and
     /// deal them back leaving one gap straight after each sequence (Montana).
     GridShuffle,
-    /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
-    /// them back leaving the gaps at random positions among the non-sequence slots.
-    GridShuffleRandomGaps,
     /// Close the gaps: slide the cards forward in reading order, then fill the empty places
     /// at the end from `refill_from`'s top card, turned face up (Monte Carlo).
     Compact {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         refill_from: Option<String>,
     },
+    /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
+    /// them back leaving the gaps at random positions among the non-sequence slots.
+    GridShuffleRandomGaps,
     /// Move each pile's bottom card to its top (Crescent).
     RotateBottom,
     /// Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.
@@ -1487,14 +1487,19 @@ pub enum WinRule {
         group: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         length: Option<u16>,
-        /// Optional build rule used to check ordered row prefixes (defaults to the group's build).
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        build: Option<Build>,
     },
     /// The position scores at least this many points (see [`Rules::score`]).
     Score { at_least: u32 },
     /// Every pile in `group` holds `max_cards` cards with a bottom card satisfying its `empty` rule.
     AllFull { group: String },
+    /// Like [`WinRule::Rows`], but checks each row's ordered prefix using `build` instead of the
+    /// group's build rule.
+    RowsBuilt {
+        group: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        length: Option<u16>,
+        build: Build,
+    },
 }
 
 /// How a position is scored.

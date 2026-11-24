@@ -1086,7 +1086,6 @@ pub fn gaps_single_deal() -> Rules {
     r.win = WinRule::Rows {
         group: "tableau".into(),
         length: Some(12),
-        build: None,
     };
     r
 }

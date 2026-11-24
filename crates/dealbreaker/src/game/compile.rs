@@ -747,11 +747,7 @@ fn compile_win(
         WinRule::AtMostPiles { group, piles } => {
             Ok(Win::AtMostPiles(find_group(rules, group)?, *piles))
         }
-        WinRule::Rows {
-            group,
-            length,
-            build,
-        } => {
+        WinRule::Rows { group, length } | WinRule::RowsBuilt { group, length, .. } => {
             let gi = find_group(rules, group)?;
             let g = &groups[gi as usize];
             let cols = g.columns.ok_or_else(|| {
@@ -768,7 +764,6 @@ fn compile_win(
             if len > cols {
                 return err("rows win: length longer than a row");
             }
-            let _ = build;
             Ok(Win::Rows(gi, len, first))
         }
         WinRule::Score { at_least } => {
@@ -937,7 +932,7 @@ impl Game {
             }
             self.pile_rules[p].fits = t;
         }
-        if let WinRule::Rows { build: Some(b), .. } = &self.rules.win {
+        if let WinRule::RowsBuilt { build: b, .. } = &self.rules.win {
             let mut t = [0u64; FACES];
             for (u, row) in t.iter_mut().enumerate() {
                 for o in 0..FACES {
@@ -1648,7 +1643,6 @@ mod tests {
         r.win = WinRule::Rows {
             group: "tableau".into(),
             length: Some(99),
-            build: None,
         };
         assert!(Game::new(r).unwrap_err().0.contains("longer than a row"));
 

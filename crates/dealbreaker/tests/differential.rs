@@ -246,7 +246,6 @@ fn mini_montana() -> Rules {
     r.win = WinRule::Rows {
         group: "tableau".into(),
         length: Some(5),
-        build: None,
     };
     r.redeal.as_mut().unwrap().times = 1;
     r
@@ -1930,7 +1929,6 @@ fn grid_shuffle_random_gaps_and_after_pile_final() {
     r_gap.win = WinRule::Rows {
         group: "tableau".into(),
         length: Some(3),
-        build: None,
     };
     check(r_gap, 0..40);
 
@@ -2182,7 +2180,6 @@ fn neighbor_refill_nearest_and_final_split() {
     r_nb.win = WinRule::Rows {
         group: "tableau".into(),
         length: Some(4),
-        build: None,
     };
     check(r_nb, 0..40);
 
@@ -2434,10 +2431,10 @@ fn wave3_mechanics() {
             .piles(&[1, 2, 3, 4, 6, 7, 8, 9])
             .each(1)],
     );
-    r1.win = WinRule::Rows {
+    r1.win = WinRule::RowsBuilt {
         group: "tableau".into(),
         length: Some(4),
-        build: Some(Build::new(BuildBy::Suit, Dir::Up)),
+        build: Build::new(BuildBy::Suit, Dir::Up),
     };
     check(r1, 0..40);
 

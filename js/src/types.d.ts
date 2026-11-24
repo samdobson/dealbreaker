@@ -265,7 +265,8 @@ export type WinRule =
   | { count: { group: string; cards: number } }
   | { count_and_spread: { group: string; cards: number; spread: string } }
   | { at_most_piles: { group: string; piles: number } }
-  | { rows: { group: string; length?: number; build?: Build } }
+  | { rows: { group: string; length?: number } }
+  | { rows_built: { group: string; length?: number; build: Build } }
   | { score: { at_least: number } }
   | { all_full: { group: string } };
 

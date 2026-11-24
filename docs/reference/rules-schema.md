@@ -164,10 +164,10 @@ The suit or colour relation between a card and the card placed on it.
 Rank direction from a card to the card placed on it.
 
 - `"down"` \| `"up"`
-- `"up_any"` — Any strictly higher rank in the pack's rank sequence (no wrap).
 - `"either"` — Up or down.
 - `"same"` — Same rank.
 - `"any"` — Any rank at all (a pile that takes anything, subject to `by`).
+- `"up_any"` — Any strictly higher rank in the pack's rank sequence (no wrap).
 
 ### EmptyRule {#emptyrule}
 
@@ -191,12 +191,12 @@ Which cards may leave a pile together.
 - `"top"` — The top card only.
 - `"run"` — Any built sequence (by this group's build rule) from the top.
 - `"suit_run"` — Any built sequence from the top whose cards are all one suit (Spider).
-- `"alt_color_run"` — Any built sequence from the top whose cards alternate in colour.
-- `"same_color_run"` — Any built sequence from the top whose cards are all one colour.
 - `"any_face_up"` — Any number of face-up cards from the top, built or not (Yukon).
 - `"supermove"` — A built sequence, as long as free cells and empty piles would allow moving it one card at a time (FreeCell's "supermove"): (empty cells + 1) × 2^(empty piles).
 - `"whole"` — Only the whole pile, all face up.
 - `"top_or_whole"` — Either the top card alone, or the whole pile when all face up and built in sequence.
+- `"alt_color_run"` — Any built sequence from the top whose cards alternate in colour.
+- `"same_color_run"` — Any built sequence from the top whose cards are all one colour.
 
 ### Layout {#layout}
 
@@ -274,8 +274,8 @@ How a redeal deals the gathered cards.
 - `{ "regroup": ... }` (`object`) — Keep the cards in order and deal them back `per_pile` at a time to each pile in turn, starting from the first pile's top cards (Cruel). Fewer piles may end up in use. If there are more cards than `per_pile` for every pile, the surplus is shared out: each pile gets an equal part and the first few one more.
 - `{ "shuffle": ... }` (`object`) — Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie), sharing out any surplus as for [`RedealHow::Regroup`].
 - `"grid_shuffle"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap straight after each sequence (Montana).
-- `"grid_shuffle_random_gaps"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving the gaps at random positions among the non-sequence slots.
 - `{ "compact": ... }` (`object`) — Close the gaps: slide the cards forward in reading order, then fill the empty places at the end from `refill_from`'s top card, turned face up (Monte Carlo).
+- `"grid_shuffle_random_gaps"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving the gaps at random positions among the non-sequence slots.
 - `"rotate_bottom"` — Move each pile's bottom card to its top (Crescent).
 - `"deal_rows"` — Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.
 - `"redistribute_pile"` — On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group starting at pile `k` and wrapping around.
@@ -419,6 +419,7 @@ When the game is won.
 - `{ "rows": ... }` (`object`) — Every row of a grid group holds a built sequence from its first column, `length` cards long (default: one less than the row), starting with the rank its first column takes (Montana).
 - `{ "score": ... }` (`object`) — The position scores at least this many points (see [`Rules::score`]).
 - `{ "all_full": ... }` (`object`) — Every pile in `group` holds `max_cards` cards with a bottom card satisfying its `empty` rule.
+- `{ "rows_built": ... }` (`object`) — Like [`WinRule::Rows`], but checks each row's ordered prefix using `build` instead of the group's build rule.
 
 ### SearchHints {#searchhints}
 

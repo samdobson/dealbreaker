@@ -309,12 +309,27 @@ impl Game {
         if let Some(n) = self.hooks.as_ref().and_then(|h| h.movable(self, s, pile)) {
             return n.min(cards.len());
         }
-        if self.group_of(pile).moves_when_stock_empty
+        let grp = self.group_of(pile);
+        if grp.moves_when_stock_empty
             && self
                 .stock_pile
                 .is_some_and(|sp| !s.piles[sp as usize].is_empty())
         {
             return 0;
+        }
+        if let Some(ref_gi) = grp.moves_when_any_empty {
+            if !self.groups[ref_gi as usize]
+                .piles()
+                .any(|p| s.piles[p as usize].is_empty())
+            {
+                return 0;
+            }
+        }
+        if let Some(ref_gi) = grp.moves_when_same_index_empty {
+            let ref_pile = self.groups[ref_gi as usize].start + (pile - grp.start);
+            if !s.piles[ref_pile as usize].is_empty() {
+                return 0;
+            }
         }
         let g = self.rule(pile);
         let n = match g.moves {

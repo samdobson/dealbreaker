@@ -261,6 +261,23 @@ impl Game {
                     Some(ref_gi)
                 }
             };
+            let moves_when_any_empty = match &g.moves_when_any_empty {
+                None => None,
+                Some(name) => Some(find(name)?),
+            };
+            let moves_when_same_index_empty = match &g.moves_when_same_index_empty {
+                None => None,
+                Some(name) => {
+                    let ref_gi = find(name)?;
+                    if rules.groups[ref_gi as usize].count != g.count {
+                        return err(format!(
+                            "{:?}: moves_when_same_index_empty group {:?} must have the same pile count",
+                            g.name, name
+                        ));
+                    }
+                    Some(ref_gi)
+                }
+            };
             let has_after_pile = (start as usize..start as usize + g.count as usize)
                 .any(|p| pile_rules[p].after_pile.is_some());
             let mut grp = Group {
@@ -295,6 +312,8 @@ impl Game {
                 requires_prev_non_empty: g.requires_prev_non_empty,
                 max_same_rank: g.max_same_rank,
                 moves_when_stock_empty: g.moves_when_stock_empty,
+                moves_when_any_empty,
+                moves_when_same_index_empty,
                 flip_only_last: g.flip_only_last,
                 final_from_same_index,
                 lock_build_dir: g.lock_build_dir,
@@ -531,6 +550,14 @@ impl Game {
                 }
             }
             if let Some(r) = groups[i].final_from_same_index {
+                if groups[r as usize].count > 1 {
+                    groups[r as usize].symmetric = false;
+                    groups[r as usize].symmetric_when_no_stock = false;
+                    groups[r as usize].symmetric_when_no_redeal = false;
+                    is_refill_source[r as usize] = true;
+                }
+            }
+            if let Some(r) = groups[i].moves_when_same_index_empty {
                 if groups[r as usize].count > 1 {
                     groups[r as usize].symmetric = false;
                     groups[r as usize].symmetric_when_no_stock = false;

@@ -156,6 +156,10 @@ pub(crate) struct Group {
     pub max_same_rank: Option<u8>,
     /// Cards may leave piles of this group only once the stock pile is empty.
     pub moves_when_stock_empty: bool,
+    /// Cards may leave piles of this group only once at least one pile in this group is empty.
+    pub moves_when_any_empty: Option<u16>,
+    /// Cards may leave pile `i` of this group only once pile `i` of this group is empty.
+    pub moves_when_same_index_empty: Option<u16>,
     /// Only auto-flip the top card of a pile when it is the last remaining card.
     pub flip_only_last: bool,
     /// When a pile is one card shy of `max_cards`, its final card must come from the same-index
@@ -271,6 +275,7 @@ impl Group {
             || self.requires_rank_on_prev
             || self.requires_prev_non_empty
             || self.final_from_same_index.is_some()
+            || self.moves_when_same_index_empty.is_some()
             || self.refill_same_index
             || self.refill_nearest
     }
@@ -316,6 +321,8 @@ impl Group {
             requires_prev_non_empty: false,
             max_same_rank: None,
             moves_when_stock_empty: false,
+            moves_when_any_empty: None,
+            moves_when_same_index_empty: None,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,

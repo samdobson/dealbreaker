@@ -2235,3 +2235,47 @@ fn neighbor_refill_nearest_and_final_split() {
     r_split.stock = Some(st);
     check(r_split, 0..40);
 }
+
+#[test]
+fn moves_when_empty_gates() {
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    // 1) moves_when_any_empty
+    let r_any = Rules::new(
+        "mini-moves-when-any-empty",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("cell", PileKind::Cell, 1).moves_when_any_empty("reserve"),
+            GroupRules::new("reserve", PileKind::Reserve, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Suit, Dir::Either)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![
+            DealStep::to("reserve").each(1),
+            DealStep::to("tableau").counts(&[3, 3, 2]),
+        ],
+    );
+    check(r_any, 0..40);
+
+    // 2) moves_when_same_index_empty
+    let r_same = Rules::new(
+        "mini-moves-when-same-index-empty",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("cell", PileKind::Cell, 2).moves_when_same_index_empty("reserve"),
+            GroupRules::new("reserve", PileKind::Reserve, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Suit, Dir::Either)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![
+            DealStep::to("reserve").each(1),
+            DealStep::to("tableau").counts(&[3, 3, 2]),
+        ],
+    );
+    check(r_same, 0..40);
+}

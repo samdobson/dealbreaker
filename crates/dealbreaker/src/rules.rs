@@ -444,6 +444,12 @@ pub struct GroupRules {
     /// Cards may leave piles of this group only once the stock pile is empty.
     #[serde(default)]
     pub moves_when_stock_empty: bool,
+    /// Cards may leave piles of this group only once at least one pile in the named group is empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moves_when_any_empty: Option<String>,
+    /// Cards may leave pile `i` of this group only once pile `i` of the named group is empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moves_when_same_index_empty: Option<String>,
     /// Only automatically turn a pile's face-down top card face up when it is the sole card left
     /// in the pile.
     #[serde(default)]
@@ -592,6 +598,8 @@ impl GroupRules {
             requires_prev_non_empty: false,
             max_same_rank: None,
             moves_when_stock_empty: false,
+            moves_when_any_empty: None,
+            moves_when_same_index_empty: None,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,
@@ -744,6 +752,16 @@ impl GroupRules {
 
     pub fn moves_when_stock_empty(mut self) -> Self {
         self.moves_when_stock_empty = true;
+        self
+    }
+
+    pub fn moves_when_any_empty(mut self, group: &str) -> Self {
+        self.moves_when_any_empty = Some(group.to_string());
+        self
+    }
+
+    pub fn moves_when_same_index_empty(mut self, group: &str) -> Self {
+        self.moves_when_same_index_empty = Some(group.to_string());
         self
     }
 

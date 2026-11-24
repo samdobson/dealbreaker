@@ -590,7 +590,208 @@ mod tests {
             ));
             let best: serde_json::Value = serde_json::from_str(&best_s).unwrap();
             assert!(best["score"].as_u64().unwrap() > 0);
+
+            // Pre-triggered cancel on best returns proven=false with 0 states.
+            let ps_cancel = dealbreaker_cancel_new();
+            dealbreaker_cancel_trigger(ps_cancel);
+            let best_cancelled_s = take_str(dealbreaker_solver_best(
+                ps,
+                ps_deal_c.as_ptr(),
+                ptr::null(),
+                ps_cancel,
+            ));
+            let best_cancelled: serde_json::Value =
+                serde_json::from_str(&best_cancelled_s).unwrap();
+            assert_eq!(best_cancelled["proven"], false);
+            assert_eq!(best_cancelled["states"], 0);
+            dealbreaker_cancel_free(ps_cancel);
+
             dealbreaker_solver_free(ps);
+        }
+    }
+
+    #[test]
+    fn ffi_deal_ordered_and_hint() {
+        unsafe {
+            let fc_id = CString::new("freecell").unwrap();
+            let fc = dealbreaker_solver_from_preset(fc_id.as_ptr());
+            assert!(!fc.is_null());
+
+            // Valid 52-card ordered deal.
+            let mut cards = Vec::with_capacity(52);
+            for s in ["C", "D", "H", "S"] {
+                for r in [
+                    "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K",
+                ] {
+                    cards.push(format!("{r}{s}"));
+                }
+            }
+            let cards_c = CString::new(serde_json::to_string(&cards).unwrap()).unwrap();
+            let ordered_s = take_str(dealbreaker_solver_deal_ordered(fc, cards_c.as_ptr()));
+            let ordered_c = CString::new(ordered_s).unwrap();
+            assert_eq!(dealbreaker_solver_validate(fc, ordered_c.as_ptr()), 0);
+
+            // Invalid ordered deal (too few cards / bad card name).
+            let short_c = CString::new(r#"["AS","2S"]"#).unwrap();
+            assert!(dealbreaker_solver_deal_ordered(fc, short_c.as_ptr()).is_null());
+            assert!(last_err().is_some());
+            let bad_card_c = CString::new(r#"["ZZ"]"#).unwrap();
+            assert!(dealbreaker_solver_deal_ordered(fc, bad_card_c.as_ptr()).is_null());
+            assert!(last_err().is_some());
+
+            // Hint on visible FreeCell deal.
+            let ms5_s = take_str(dealbreaker_solver_deal_microsoft(fc, 5));
+            let ms5_c = CString::new(ms5_s).unwrap();
+            let hint_opts = CString::new(r#"{"samples":1}"#).unwrap();
+            let h_s = take_str(dealbreaker_solver_hint(
+                fc,
+                ms5_c.as_ptr(),
+                hint_opts.as_ptr(),
+                ptr::null(),
+            ));
+            let h: serde_json::Value = serde_json::from_str(&h_s).unwrap();
+            assert_eq!(h["wins"], 1);
+            assert!(h["step"].is_object());
+
+            // Hint with pre-triggered cancel returns JSON "null".
+            let cancel = dealbreaker_cancel_new();
+            dealbreaker_cancel_trigger(cancel);
+            let h_cancel = take_str(dealbreaker_solver_hint(
+                fc,
+                ms5_c.as_ptr(),
+                hint_opts.as_ptr(),
+                cancel,
+            ));
+            assert_eq!(h_cancel, "null");
+            dealbreaker_cancel_free(cancel);
+            dealbreaker_solver_free(fc);
+
+            // Hint with "?" unknown face-down cards in Klondike.
+            let kl_id = CString::new("klondike").unwrap();
+            let kl = dealbreaker_solver_from_preset(kl_id.as_ptr());
+            assert!(!kl.is_null());
+            let kl_s = take_str(dealbreaker_solver_deal(kl, 2));
+            let mut kl_val: serde_json::Value = serde_json::from_str(&kl_s).unwrap();
+            for piles in kl_val["piles"].as_object_mut().unwrap().values_mut() {
+                for pile in piles.as_array_mut().unwrap() {
+                    for card in pile.as_array_mut().unwrap() {
+                        if card.as_str().is_some_and(|c| c.starts_with('~')) {
+                            *card = serde_json::Value::String("?".into());
+                        }
+                    }
+                }
+            }
+            let masked_c = CString::new(kl_val.to_string()).unwrap();
+            let kl_opts =
+                CString::new(r#"{"samples":2,"seed":1,"solve":{"max_states":5000}}"#).unwrap();
+            let kl_h_s = take_str(dealbreaker_solver_hint(
+                kl,
+                masked_c.as_ptr(),
+                kl_opts.as_ptr(),
+                ptr::null(),
+            ));
+            let kl_h: serde_json::Value = serde_json::from_str(&kl_h_s).unwrap();
+            assert!(kl_h.is_null() || kl_h["step"].is_object());
+            dealbreaker_solver_free(kl);
+        }
+    }
+
+    #[test]
+    fn ffi_null_pointers_and_error_paths() {
+        unsafe {
+            // Free / trigger on NULL are safe no-ops.
+            dealbreaker_string_free(ptr::null_mut());
+            dealbreaker_cancel_free(ptr::null_mut());
+            dealbreaker_cancel_trigger(ptr::null());
+            dealbreaker_solver_free(ptr::null_mut());
+
+            let empty_c = CString::new("{}").unwrap();
+
+            // NULL arguments to every entry point fail cleanly and set last_error.
+            assert!(dealbreaker_solver_new(ptr::null()).is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_from_preset(ptr::null()).is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_rules(ptr::null()).is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_deal(ptr::null(), 1).is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_deal_microsoft(ptr::null(), 1).is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_deal_ordered(ptr::null(), empty_c.as_ptr()).is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert_eq!(
+                dealbreaker_solver_validate(ptr::null(), empty_c.as_ptr()),
+                -1
+            );
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_solve(
+                ptr::null(),
+                empty_c.as_ptr(),
+                ptr::null(),
+                ptr::null()
+            )
+            .is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_best(
+                ptr::null(),
+                empty_c.as_ptr(),
+                ptr::null(),
+                ptr::null()
+            )
+            .is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_hint(
+                ptr::null(),
+                empty_c.as_ptr(),
+                ptr::null(),
+                ptr::null()
+            )
+            .is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(dealbreaker_solver_legal_steps(ptr::null(), empty_c.as_ptr()).is_null());
+            assert!(last_err().unwrap().contains("NULL"));
+            assert!(
+                dealbreaker_solver_play_step(ptr::null(), empty_c.as_ptr(), empty_c.as_ptr())
+                    .is_null()
+            );
+            assert!(last_err().unwrap().contains("NULL"));
+            assert_eq!(dealbreaker_solver_is_won(ptr::null(), empty_c.as_ptr()), -1);
+            assert!(last_err().unwrap().contains("NULL"));
+            assert_eq!(dealbreaker_solver_score(ptr::null(), empty_c.as_ptr()), -2);
+            assert!(last_err().unwrap().contains("NULL"));
+
+            // Invalid UTF-8 bytes fail cleanly.
+            let bad_utf8: [u8; 3] = [0xff, 0xfe, 0x00];
+            assert!(dealbreaker_solver_from_preset(bad_utf8.as_ptr() as *const c_char).is_null());
+            assert!(last_err().unwrap().contains("UTF-8"));
+
+            // Invalid rules JSON, bad options JSON, NULL state, and illegal step.
+            let bad_json = CString::new("{not json").unwrap();
+            assert!(dealbreaker_solver_new(bad_json.as_ptr()).is_null());
+            assert!(last_err().is_some());
+
+            let fc_id = CString::new("freecell").unwrap();
+            let fc = dealbreaker_solver_from_preset(fc_id.as_ptr());
+            let deal_c = CString::new(take_str(dealbreaker_solver_deal_microsoft(fc, 1))).unwrap();
+
+            assert_eq!(dealbreaker_solver_validate(fc, ptr::null()), -1);
+            assert_eq!(dealbreaker_solver_validate(fc, bad_json.as_ptr()), -1);
+            assert_eq!(dealbreaker_solver_is_won(fc, ptr::null()), -1);
+            assert_eq!(dealbreaker_solver_score(fc, ptr::null()), -2);
+            assert!(
+                dealbreaker_solver_solve(fc, deal_c.as_ptr(), bad_json.as_ptr(), ptr::null())
+                    .is_null()
+            );
+            assert!(last_err().is_some());
+
+            let illegal_step = CString::new(r#"{"type":"deal"}"#).unwrap();
+            assert!(
+                dealbreaker_solver_play_step(fc, deal_c.as_ptr(), illegal_step.as_ptr()).is_null()
+            );
+            assert!(last_err().is_some());
+
+            dealbreaker_solver_free(fc);
         }
     }
 }

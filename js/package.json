@@ -49,6 +49,6 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test test/smoke.mjs"
+    "test": "node --test test/smoke.mjs test/worker.mjs"
   }
 }

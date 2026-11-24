@@ -1399,6 +1399,168 @@ mod tests {
     }
 
     #[test]
+    fn compile_rejects_invalid_stock_redeal_removal_win_and_score_rules() {
+        // Build step out of range.
+        let mut r = presets::freecell();
+        r.groups[2].build.as_mut().unwrap().step = 0;
+        assert!(Game::new(r).unwrap_err().0.contains("build step"));
+
+        // after_pile with mismatched group pile count.
+        let mut r = presets::freecell();
+        r.groups[2].empty = Some(EmptyRule::AfterPile {
+            group: "cell".into(),
+            offset: 1,
+        });
+        assert!(Game::new(r).unwrap_err().0.contains("same pile count"));
+
+        // refill_count == 0.
+        let mut r = presets::freecell();
+        r.groups[2].refill_count = Some(0);
+        assert!(Game::new(r).unwrap_err().0.contains("refill_count"));
+
+        // final_from_same_index with mismatched pile count.
+        let mut r = presets::freecell();
+        r.groups[2].final_from_same_index = Some("cell".into());
+        assert!(Game::new(r).unwrap_err().0.contains("same pile count"));
+
+        // moves_when_same_index_empty with mismatched pile count.
+        let mut r = presets::freecell();
+        r.groups[2].moves_when_same_index_empty = Some("cell".into());
+        assert!(Game::new(r).unwrap_err().0.contains("same pile count"));
+
+        // Stock rules + tableau redeal together.
+        let mut r = presets::klondike1();
+        r.redeal = Some(RedealRules::new("tableau", RedealHow::RotateBottom));
+        assert!(Game::new(r)
+            .unwrap_err()
+            .0
+            .contains("both stock rules and a tableau redeal"));
+
+        // GridShuffle redeal without grid layout.
+        let mut r = presets::la_belle_lucie();
+        r.redeal.as_mut().unwrap().how = RedealHow::GridShuffle;
+        assert!(Game::new(r).unwrap_err().0.contains("grid layout"));
+
+        // Redeal per_pile == 0.
+        let mut r = presets::la_belle_lucie();
+        r.redeal.as_mut().unwrap().how = RedealHow::Shuffle { per_pile: 0 };
+        assert!(Game::new(r).unwrap_err().0.contains("per_pile"));
+
+        // Grid layout with 0 columns or non-dividing pile count.
+        let mut r = presets::freecell();
+        r.groups[2].layout = Some(Layout::Grid { columns: 0 });
+        assert!(Game::new(r).unwrap_err().0.contains("whole rows"));
+        let mut r = presets::freecell();
+        r.groups[2].layout = Some(Layout::Grid { columns: 3 });
+        assert!(Game::new(r).unwrap_err().0.contains("whole rows"));
+
+        // Pyramid / TriPeaks pile count mismatches.
+        let mut r = presets::freecell();
+        r.groups[2].layout = Some(Layout::Pyramid { rows: 3 });
+        assert!(Game::new(r).unwrap_err().0.contains("pyramid"));
+        let mut r = presets::freecell();
+        r.groups[2].layout = Some(Layout::TriPeaks);
+        assert!(Game::new(r).unwrap_err().0.contains("28 piles"));
+
+        // Stock validation errors.
+        let mut r = presets::klondike1();
+        r.stock.as_mut().unwrap().to = "stock".into();
+        assert!(Game::new(r).unwrap_err().0.contains("deal to itself"));
+
+        let mut r = presets::klondike1();
+        r.stock.as_mut().unwrap().count = 0;
+        assert!(Game::new(r).unwrap_err().0.contains("stock count"));
+
+        let mut r = presets::klondike1();
+        r.stock.as_mut().unwrap().count_per_round = vec![1, 0];
+        assert!(Game::new(r).unwrap_err().0.contains("count_per_round"));
+
+        let mut r = presets::klondike1();
+        r.stock.as_mut().unwrap().final_to = Some("stock".into());
+        assert!(Game::new(r).unwrap_err().0.contains("final_to"));
+
+        let mut r = presets::klondike1();
+        r.stock.as_mut().unwrap().skip_empty = true;
+        r.stock.as_mut().unwrap().require_no_empty = true;
+        assert!(Game::new(r).unwrap_err().0.contains("skip_empty"));
+
+        let mut r = presets::freecell();
+        r.stock = Some(StockRules::to("tableau"));
+        assert!(Game::new(r).unwrap_err().0.contains("no stock group"));
+
+        let mut r = presets::klondike1();
+        r.stock.as_mut().unwrap().to = "foundation".into();
+        r.stock.as_mut().unwrap().redeals = 1;
+        assert!(Game::new(r)
+            .unwrap_err()
+            .0
+            .contains("gather from a foundation"));
+
+        // Removal validation errors.
+        let mut r = presets::pyramid();
+        r.removal[0].kind = RemovalKind::BetweenMatch { max_len: 0 };
+        assert!(Game::new(r).unwrap_err().0.contains("between_match"));
+
+        let mut r = presets::pyramid();
+        r.removal[0].kind = RemovalKind::ContiguousSumMultiple {
+            divisor: 0,
+            max_len: 2,
+        };
+        assert!(Game::new(r).unwrap_err().0.contains("divisor"));
+
+        let mut r = presets::pyramid();
+        r.removal[0].kind = RemovalKind::ContiguousSumMultiple {
+            divisor: 10,
+            max_len: 5,
+        };
+        assert!(Game::new(r).unwrap_err().0.contains("max_len"));
+
+        let mut r = presets::pyramid();
+        r.removal[0].adjacent = Some(Adjacency::Eight);
+        assert!(Game::new(r)
+            .unwrap_err()
+            .0
+            .contains("exactly one grid group"));
+
+        let mut r = presets::pyramid();
+        r.removal[0].from = vec!["tableau".into()];
+        r.removal[0].adjacent = Some(Adjacency::Eight);
+        assert!(Game::new(r).unwrap_err().0.contains("grid layout"));
+
+        // WinRule validation errors.
+        let mut r = presets::poker_squares();
+        r.win = WinRule::AllOnFoundations;
+        assert!(Game::new(r).unwrap_err().0.contains("no foundations"));
+
+        let mut r = presets::freecell();
+        r.win = WinRule::Score { at_least: 10 };
+        assert!(Game::new(r).unwrap_err().0.contains("score rule"));
+
+        let mut r = presets::montana();
+        r.win = WinRule::Rows {
+            group: "tableau".into(),
+            length: Some(99),
+            build: None,
+        };
+        assert!(Game::new(r).unwrap_err().0.contains("longer than a row"));
+
+        // ScoreRules validation errors.
+        let mut r = presets::poker_squares();
+        r.groups[2].layout = None;
+        assert!(Game::new(r).unwrap_err().0.contains("grid layout"));
+
+        let mut r = presets::cribbage_squares();
+        if let Some(ScoreRules {
+            hands: Hands::Cribbage(ref mut cr),
+            ..
+        }) = r.score
+        {
+            cr.starter = Some("tableau".into());
+        }
+        assert!(Game::new(r).unwrap_err().0.contains("starter"));
+    }
+
+    #[test]
     fn min_cards_override_splits_symmetry_classes() {
         let mut ov = PileOverride::on(&[0]);
         ov.min_cards = Some(1);

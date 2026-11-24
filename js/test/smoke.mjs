@@ -107,3 +107,52 @@ test("Scored games (Poker Squares & Cribbage Squares) best() and score()", () =>
     }
   }
 });
+
+test("Error paths, gave-up/unsolvable, unknown '?' hint cards, and Symbol.dispose", () => {
+  assert.throws(() => Solver.fromPreset("does-not-exist"));
+  assert.throws(() => new Solver("{not json"));
+
+  const fc = Solver.fromPreset("freecell");
+  try {
+    const deal = fc.dealMicrosoft(11982);
+    const gaveUp = fc.solve(deal, { max_states: 1 });
+    assert.equal(gaveUp.outcome, "gave-up");
+
+    const unsolvable = fc.solve(deal, { max_states: 5_000_000 });
+    assert.equal(unsolvable.outcome, "unsolvable");
+
+    // Invalid options JSON throws.
+    assert.throws(() => fc.solve(deal, "{bad"));
+  } finally {
+    fc[Symbol.dispose]();
+    // Double free is a safe no-op.
+    fc.free();
+  }
+
+  // dealMicrosoft rejects non-52-card games (Spider uses 2 decks).
+  const sp = Solver.fromPreset("spider");
+  try {
+    assert.throws(() => sp.dealMicrosoft(1));
+  } finally {
+    sp.free();
+  }
+
+  // hint() accepts "?" placeholders for face-down cards.
+  const kl = Solver.fromPreset("klondike");
+  try {
+    const state = kl.deal(2);
+    for (const piles of Object.values(state.piles)) {
+      for (const pile of piles) {
+        for (let i = 0; i < pile.length; i++) {
+          if (pile[i].startsWith("~")) pile[i] = "?";
+        }
+      }
+    }
+    // Strict validate rejects "?", while hint accepts it.
+    assert.throws(() => kl.validate(state));
+    const h = kl.hint(state, { samples: 2, seed: 1, solve: { max_states: 5_000 } });
+    assert.ok(h === null || typeof h.step?.type === "string");
+  } finally {
+    kl.free();
+  }
+});

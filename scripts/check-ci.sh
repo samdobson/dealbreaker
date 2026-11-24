@@ -21,6 +21,18 @@ cargo test -p dealbreaker --lib --features parallel
 echo "[check-ci] rustdoc (-D warnings)..."
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 
+if command -v cc >/dev/null 2>&1; then
+  echo "[check-ci] C ABI smoke test..."
+  cargo build -p dealbreaker-ffi
+  cc -Wall -Wextra -Werror \
+    -I crates/dealbreaker-ffi/include \
+    crates/dealbreaker-ffi/tests/smoke.c \
+    -L target/debug -ldealbreaker_ffi \
+    -Wl,-rpath,"$PWD/target/debug" \
+    -o target/debug/ffi-smoke
+  ./target/debug/ffi-smoke
+fi
+
 if rustup target list --installed | grep -qx wasm32-unknown-unknown; then
   echo "[check-ci] clippy (wasm32)..."
   cargo clippy -p dealbreaker-wasm --target wasm32-unknown-unknown -- -D warnings

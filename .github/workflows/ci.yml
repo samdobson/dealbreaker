@@ -24,6 +24,16 @@ jobs:
       - run: cargo test -p dealbreaker --lib --features parallel
       # Release mode: the solver tests search hundreds of thousands of positions.
       - run: cargo test --workspace --release
+      - name: Compile and run C ABI smoke test
+        run: |
+          cargo build --release -p dealbreaker-ffi
+          cc -Wall -Wextra -Werror \
+            -I crates/dealbreaker-ffi/include \
+            crates/dealbreaker-ffi/tests/smoke.c \
+            -L target/release -ldealbreaker_ffi \
+            -Wl,-rpath,"$PWD/target/release" \
+            -o target/release/ffi-smoke
+          ./target/release/ffi-smoke
       - run: cargo doc --workspace --no-deps
         env:
           RUSTDOCFLAGS: -D warnings

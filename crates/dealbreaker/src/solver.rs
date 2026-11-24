@@ -1960,4 +1960,104 @@ mod tests {
             assert_eq!(parsed.timeout_ms, Some(250));
         }
     }
+
+    #[test]
+    fn shorten_removes_detours_and_preserves_win() {
+        let fc = Game::new(presets::freecell()).unwrap();
+        let deal = fc.deal_ordered(&microsoft_deal(1)).unwrap();
+        let r = solve(
+            &fc,
+            &deal,
+            &SolveOptions::default().max_states(200_000).shorten(false),
+        );
+        let Outcome::Solved(base_moves) = r.outcome else {
+            panic!("expected MS #1 to solve");
+        };
+
+        // Prepend a reversible detour: tableau 0 -> cell 0 -> tableau 0 (Wait: moving back
+        // to tableau 0 may not be legal; move tableau 0 -> cell 0 -> cell 1, then back to cell 0
+        // isn't needed if we move to cell 0, then move cell 0 -> cell 1, and compare against
+        // a direct move; even simpler: start from a state with a reversible cell-to-cell hop
+        // right before a move from cell 0, or a Klondike stock full-cycle detour).
+        // In FreeCell, after moving a card to cell 0, hopping cell 0 -> cell 1 -> cell 0
+        // returns to the exact prior state and must be eliminated completely.
+        let tab0 = fc.pile_index("tableau", 0).unwrap();
+        let cell0 = fc.pile_index("cell", 0).unwrap();
+        let cell1 = fc.pile_index("cell", 1).unwrap();
+        let mut s = deal.clone();
+        let m_to_cell = Move::new(Action::Transfer {
+            from: tab0,
+            to: cell0,
+            count: 1,
+        });
+        fc.play(&mut s, m_to_cell).unwrap();
+
+        let r2 = solve(&fc, &s, &SolveOptions::default().max_states(200_000));
+        let Outcome::Solved(rest) = r2.outcome else {
+            panic!("expected position after 1 move to solve");
+        };
+
+        let mut detoured = Vec::with_capacity(rest.len() + 2);
+        detoured.push(Move::new(Action::Transfer {
+            from: cell0,
+            to: cell1,
+            count: 1,
+        }));
+        detoured.push(Move::new(Action::Transfer {
+            from: cell1,
+            to: cell0,
+            count: 1,
+        }));
+        detoured.extend_from_slice(&rest);
+
+        let shortened = shorten(&fc, &s, &detoured);
+        assert!(
+            shortened.len() <= rest.len(),
+            "expected detour to be removed: detoured={}, rest={}, shortened={}",
+            detoured.len(),
+            rest.len(),
+            shortened.len()
+        );
+        // Replays legally to a win.
+        let mut end = s.clone();
+        for &m in &shortened {
+            fc.play(&mut end, m).unwrap();
+        }
+        assert!(fc.is_won(&end));
+
+        // Shortening an already-shortened line is idempotent in length.
+        let again = shorten(&fc, &s, &shortened);
+        assert_eq!(again.len(), shortened.len());
+
+        // Also verify shorten on the unshortened MS #1 solution replays cleanly.
+        let short_base = shorten(&fc, &deal, &base_moves);
+        assert!(short_base.len() <= base_moves.len());
+        let mut end2 = deal;
+        for &m in &short_base {
+            fc.play(&mut end2, m).unwrap();
+        }
+        assert!(fc.is_won(&end2));
+    }
+
+    #[test]
+    fn autoplay_disabled_still_solves_and_replays() {
+        let fc = Game::new(presets::freecell()).unwrap();
+        let deal = fc.deal_ordered(&microsoft_deal(1)).unwrap();
+        let r = solve(
+            &fc,
+            &deal,
+            &SolveOptions::default().max_states(200_000).autoplay(false),
+        );
+        let Outcome::Solved(moves) = r.outcome else {
+            panic!(
+                "expected MS #1 to solve with autoplay=false, got {:?}",
+                r.outcome
+            );
+        };
+        let mut s = deal;
+        for &m in &moves {
+            fc.play(&mut s, m).unwrap();
+        }
+        assert!(fc.is_won(&s));
+    }
 }

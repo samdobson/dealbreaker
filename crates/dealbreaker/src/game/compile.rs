@@ -163,6 +163,19 @@ impl Game {
                 // can stand on any card, so with jokers about no card is ever done with.
                 // Competing foundations with different rules are filtered out after `fits` is
                 // compiled below.
+                let after_pile = match &empty {
+                    EmptyRule::AfterPile { group, offset } => {
+                        let ref_gi = find(group)?;
+                        if rules.groups[ref_gi as usize].count != g.count {
+                            return err(format!(
+                                "{:?}: after_pile group {:?} must have the same pile count",
+                                g.name, group
+                            ));
+                        }
+                        Some((ref_gi, *offset))
+                    }
+                    _ => None,
+                };
                 let autoplay = rules.safe_autoplay
                     && rules.redeal.is_none()
                     && !stock_redeals_non_waste
@@ -172,6 +185,7 @@ impl Game {
                     && !g.requires_rank_on_prev
                     && !g.requires_prev_non_empty
                     && !g.match_longest_rank
+                    && g.final_from_same_index.is_none()
                     && build.by == BuildBy::Suit
                     && matches!(build.dir, Dir::Up | Dir::Down)
                     && (!build.wrap || max_cards <= nranks as u16)
@@ -199,6 +213,7 @@ impl Game {
                     empty_suit,
                     fits: [0; FACES],
                     wild: g.wild.unwrap_or(g.kind != PileKind::Foundation),
+                    after_pile,
                 });
                 pile_group.push(gi as u16);
             }
@@ -231,6 +246,21 @@ impl Game {
                 .iter()
                 .map(|n| find(n))
                 .collect::<Result<Vec<_>, _>>()?;
+            let final_from_same_index = match &g.final_from_same_index {
+                None => None,
+                Some(name) => {
+                    let ref_gi = find(name)?;
+                    if rules.groups[ref_gi as usize].count != g.count {
+                        return err(format!(
+                            "{:?}: final_from_same_index group {:?} must have the same pile count",
+                            g.name, name
+                        ));
+                    }
+                    Some(ref_gi)
+                }
+            };
+            let has_after_pile = (start as usize..start as usize + g.count as usize)
+                .any(|p| pile_rules[p].after_pile.is_some());
             let mut grp = Group {
                 name: g.name.clone(),
                 kind: g.kind,
@@ -261,8 +291,13 @@ impl Game {
                 requires_prev_non_empty: g.requires_prev_non_empty,
                 max_same_rank: g.max_same_rank,
                 moves_when_stock_empty: g.moves_when_stock_empty,
+                flip_only_last: g.flip_only_last,
+                final_from_same_index,
             };
-            grp.symmetric = g.layout.is_none() && g.piles.is_empty() && !grp.has_positional_rules();
+            grp.symmetric = g.layout.is_none()
+                && g.piles.is_empty()
+                && !grp.has_positional_rules()
+                && !has_after_pile;
             groups.push(grp);
             start = start
                 .checked_add(g.count)
@@ -280,7 +315,11 @@ impl Game {
                     groups[gi as usize].symmetric_when_no_redeal = true;
                 }
                 groups[gi as usize].symmetric = false;
-                if rd.how == RedealHow::GridShuffle && groups[gi as usize].columns.is_none() {
+                if matches!(
+                    rd.how,
+                    RedealHow::GridShuffle | RedealHow::GridShuffleRandomGaps
+                ) && groups[gi as usize].columns.is_none()
+                {
                     return err("grid_shuffle redeals need a grid layout");
                 }
                 if let RedealHow::Regroup { per_pile: 0 } | RedealHow::Shuffle { per_pile: 0 } =
@@ -304,6 +343,7 @@ impl Game {
                     empty_suit: None,
                     fits: [0; FACES],
                     wild: false,
+                    after_pile: None,
                 });
                 pile_group.push(groups.len() as u16 - 1);
                 start += 1;
@@ -432,6 +472,7 @@ impl Game {
                     deal_per_pile: sr.deal_per_pile,
                     redeal_reverse: sr.redeal_reverse,
                     deal_empty_first: sr.deal_empty_first,
+                    divert_ranks: sr.divert_ranks.clone(),
                 })
             }
             (None, _) => None,
@@ -443,8 +484,8 @@ impl Game {
                 return err("redeals can't gather from a foundation group");
             }
         }
-        // Groups that refill others are read from their first non-empty pile, so their order
-        // matters.
+        // Groups that refill others or are referenced by index (after_pile / final_from_same_index)
+        // are read by pile position, so their order matters.
         let mut is_refill_source = vec![false; groups.len()];
         for i in 0..groups.len() {
             for r in groups[i].refill_from.clone() {
@@ -453,6 +494,28 @@ impl Game {
                     groups[r as usize].symmetric_when_no_stock = false;
                     groups[r as usize].symmetric_when_no_redeal = false;
                     is_refill_source[r as usize] = true;
+                }
+            }
+            if let Some(r) = groups[i].final_from_same_index {
+                if groups[r as usize].count > 1 {
+                    groups[r as usize].symmetric = false;
+                    groups[r as usize].symmetric_when_no_stock = false;
+                    groups[r as usize].symmetric_when_no_redeal = false;
+                    is_refill_source[r as usize] = true;
+                }
+            }
+            for p in groups[i].piles() {
+                if let Some((r, _)) = pile_rules[p as usize].after_pile {
+                    if groups[r as usize].count > 1 {
+                        groups[r as usize].symmetric = false;
+                        groups[r as usize].symmetric_when_no_stock = false;
+                        groups[r as usize].symmetric_when_no_redeal = false;
+                        is_refill_source[r as usize] = true;
+                    }
+                    groups[i].symmetric = false;
+                    groups[i].symmetric_when_no_stock = false;
+                    groups[i].symmetric_when_no_redeal = false;
+                    is_refill_source[i] = true;
                 }
             }
         }
@@ -662,7 +725,7 @@ impl Game {
                 EmptyRule::Ranks(rs) => rs
                     .iter()
                     .fold(0u64, |m, &r| m | (real & self.rank_faces[r as usize])),
-                EmptyRule::AfterLeft { .. } => return real,
+                EmptyRule::AfterLeft { .. } | EmptyRule::AfterPile { .. } => return real,
             };
             let mut cur = start_mask;
             if let Some(es) = pr.empty_suit {
@@ -849,9 +912,10 @@ impl Game {
                         let tgi = self.pile_group[to as usize] as usize;
                         let tg = &self.groups[tgi];
                         let tr = &self.pile_rules[to as usize];
-                        if tg.kind == PileKind::Stock
-                            || (tg.accepts_from | tg.empty_accepts_from) & (1 << fg) == 0
-                        {
+                        let allowed_from = tg.accepts_from
+                            | tg.empty_accepts_from
+                            | tg.final_from_same_index.map_or(0, |r| 1u64 << r);
+                        if tg.kind == PileKind::Stock || allowed_from & (1 << fg) == 0 {
                             return false;
                         }
                         if from_kind == PileKind::Foundation && tg.kind == PileKind::Foundation {

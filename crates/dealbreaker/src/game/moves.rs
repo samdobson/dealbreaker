@@ -72,7 +72,9 @@ impl Game {
             EmptyRule::DealtBaseOffset(o) => s
                 .base_rank
                 .is_none_or(|b| card.rank() == self.rank_from(b, *o)),
-            EmptyRule::AfterLeft { .. } => self.empty_set(pile, s) >> card.face() & 1 != 0,
+            EmptyRule::AfterLeft { .. } | EmptyRule::AfterPile { .. } => {
+                self.empty_set(pile, s) >> card.face() & 1 != 0
+            }
         }
     }
 
@@ -125,6 +127,18 @@ impl Game {
                     0
                 };
                 real & self.accept_set(r, left, base, false)
+            }
+            EmptyRule::AfterPile { .. } => {
+                let (ref_gi, offset) = r.after_pile.unwrap();
+                let idx = pile - self.group_of(pile).start;
+                let ref_pile = self.groups[ref_gi as usize].start + idx;
+                match s.piles[ref_pile as usize].last() {
+                    Some(&c) if c.is_face_up() && !c.is_joker() => {
+                        let want = self.rank_from(c.rank(), offset);
+                        real & self.rank_faces[want as usize]
+                    }
+                    _ => 0,
+                }
             }
         }
     }
@@ -506,13 +520,25 @@ impl Game {
             }
         }
         let dst = &s.piles[to as usize];
-        let mask = if dst.is_empty() {
-            tg.empty_accepts_from
-        } else {
-            tg.accepts_from
-        };
-        if mask & (1 << fgi) == 0 || matches!(tg.kind, PileKind::Stock) {
+        if matches!(tg.kind, PileKind::Stock) {
             return false;
+        }
+        let is_final_same_index =
+            tg.final_from_same_index.is_some() && dst.len() + n == tr.max_cards as usize;
+        if let Some(ref_gi) = tg.final_from_same_index.filter(|_| is_final_same_index) {
+            let expected_from = self.groups[ref_gi as usize].start + (to - tg.start);
+            if from != expected_from {
+                return false;
+            }
+        } else {
+            let mask = if dst.is_empty() {
+                tg.empty_accepts_from
+            } else {
+                tg.accepts_from
+            };
+            if mask & (1 << fgi) == 0 {
+                return false;
+            }
         }
         if let Some(reach) = &tg.reach {
             let same = self.pile_group[to as usize] as usize == fgi as usize;

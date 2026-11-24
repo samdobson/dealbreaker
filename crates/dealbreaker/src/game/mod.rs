@@ -152,6 +152,11 @@ pub(crate) struct Group {
     pub max_same_rank: Option<u8>,
     /// Cards may leave piles of this group only once the stock pile is empty.
     pub moves_when_stock_empty: bool,
+    /// Only auto-flip the top card of a pile when it is the last remaining card.
+    pub flip_only_last: bool,
+    /// When a pile is one card shy of `max_cards`, its final card must come from the same-index
+    /// pile of this group.
+    pub final_from_same_index: Option<u16>,
 }
 
 #[derive(Clone, Debug)]
@@ -189,6 +194,8 @@ pub(crate) struct PileRules {
     pub fits: [u64; FACES],
     /// Jokers are wild here.
     pub wild: bool,
+    /// Resolved target group and rank offset for [`EmptyRule::AfterPile`].
+    pub after_pile: Option<(u16, i8)>,
 }
 
 impl PileRules {
@@ -207,6 +214,7 @@ impl PileRules {
             admits,
             empty_suit,
             wild,
+            after_pile,
             autoplay: _,
             sink: _,
             fits: _,
@@ -222,6 +230,7 @@ impl PileRules {
             && *admits == other.admits
             && *empty_suit == other.empty_suit
             && *wild == other.wild
+            && *after_pile == other.after_pile
     }
 
     /// True if two foundation piles accept the exact same card sequences (for autoplay conflict
@@ -247,6 +256,7 @@ impl Group {
             || self.compact_face_up
             || self.requires_rank_on_prev
             || self.requires_prev_non_empty
+            || self.final_from_same_index.is_some()
     }
 
     /// True if moves to or from this group are gated on the stock being empty.
@@ -288,6 +298,8 @@ impl Group {
             requires_prev_non_empty: false,
             max_same_rank: None,
             moves_when_stock_empty: false,
+            flip_only_last: false,
+            final_from_same_index: None,
         }
     }
 }
@@ -313,6 +325,7 @@ pub(crate) struct Stock {
     pub deal_per_pile: bool,
     pub redeal_reverse: bool,
     pub deal_empty_first: bool,
+    pub divert_ranks: Vec<u8>,
 }
 
 impl Stock {

@@ -292,7 +292,21 @@ impl Game {
                                 if s.piles[st.pile as usize].is_empty() {
                                     break;
                                 }
-                                self.deal_from_stock(s, j, st.pile, p, 1);
+                                if st.divert_ranks.is_empty() {
+                                    self.deal_from_stock(s, j, st.pile, p, 1);
+                                } else {
+                                    while let Some(&top) = s.piles[st.pile as usize].last() {
+                                        let c = top.up();
+                                        if st.divert_ranks.contains(&c.rank()) {
+                                            if let Some(fp) = self.find_foundation(s, c) {
+                                                self.deal_from_stock(s, j, st.pile, fp, 1);
+                                                continue;
+                                            }
+                                        }
+                                        self.deal_from_stock(s, j, st.pile, p, 1);
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
@@ -421,7 +435,7 @@ impl Game {
                     }
                 }
             }
-            RedealHow::GridShuffle => {
+            RedealHow::GridShuffle | RedealHow::GridShuffleRandomGaps => {
                 let cols = g.columns.unwrap();
                 let prefix: Vec<u16> = (0..g.count / cols)
                     .map(|row| self.row_prefix(s, rd.group, row) as u16)
@@ -444,12 +458,45 @@ impl Game {
                     }
                 }
                 self.shuffle_pile(s, j, gp);
-                for (row, &k) in prefix.iter().enumerate() {
-                    for col in k + 1..cols {
+                if rd.how == RedealHow::GridShuffle {
+                    for (row, &k) in prefix.iter().enumerate() {
+                        for col in k + 1..cols {
+                            if len(s, gp) == 0 {
+                                break;
+                            }
+                            let p = g.start + row as u16 * cols + col;
+                            self.push(
+                                s,
+                                j,
+                                Op::Shift {
+                                    from: gp,
+                                    to: p,
+                                    count: 1,
+                                },
+                            );
+                        }
+                    }
+                } else {
+                    let mut slots: Vec<u16> = Vec::new();
+                    for (row, &k) in prefix.iter().enumerate() {
+                        for col in k..cols {
+                            slots.push(g.start + row as u16 * cols + col);
+                        }
+                    }
+                    let mut rng = Rng::new(
+                        s.seed ^ (s.redeals_used as u64 + 1).wrapping_mul(0x517c_c1b7_2722_0a95),
+                    );
+                    for i in (1..slots.len()).rev() {
+                        let k = rng.below(i as u64 + 1) as usize;
+                        slots.swap(i, k);
+                    }
+                    let n_cards = len(s, gp) as usize;
+                    let mut chosen = slots[..n_cards.min(slots.len())].to_vec();
+                    chosen.sort_unstable();
+                    for p in chosen {
                         if len(s, gp) == 0 {
                             break;
                         }
-                        let p = g.start + row as u16 * cols + col;
                         self.push(
                             s,
                             j,
@@ -558,9 +605,11 @@ impl Game {
             }
             if !self.has_covers && !initial_emptied.is_empty() {
                 for &p in initial_emptied {
+                    let g = self.group_of(p);
                     if s.piles[p as usize].last().is_some_and(|c| !c.is_face_up())
-                        && (self.group_of(p).kind != PileKind::Stock
+                        && (g.kind != PileKind::Stock
                             || self.stock.as_ref().is_some_and(|st| st.face_up))
+                        && (!g.flip_only_last || s.piles[p as usize].len() == 1)
                     {
                         self.push(s, j, Op::Flip(p));
                     }
@@ -568,9 +617,11 @@ impl Game {
                 return;
             }
             for p in 0..s.piles.len() as u16 {
+                let g = self.group_of(p);
                 let flip = s.piles[p as usize].last().is_some_and(|c| !c.is_face_up())
-                    && (self.group_of(p).kind != PileKind::Stock
+                    && (g.kind != PileKind::Stock
                         || self.stock.as_ref().is_some_and(|st| st.face_up))
+                    && (!g.flip_only_last || s.piles[p as usize].len() == 1)
                     && self.available(s, p);
                 if flip {
                     self.push(s, j, Op::Flip(p));
@@ -639,9 +690,9 @@ impl Game {
                     let src = g.refill_from.iter().find_map(|&rg| {
                         let rg = &self.groups[rg as usize];
                         let eligible = |q: u16| {
-                            s.piles[q as usize]
-                                .last()
-                                .is_some_and(|c| c.is_face_up() || rg.kind == PileKind::Stock)
+                            s.piles[q as usize].last().is_some_and(|c| {
+                                c.is_face_up() || rg.kind == PileKind::Stock || rg.flip_only_last
+                            })
                         };
                         if g.refill_largest {
                             let mut best: Option<(u16, usize)> = None;
@@ -688,19 +739,36 @@ impl Game {
                                 self.deal_from_stock(s, j, q, p, n);
                             }
                         } else {
+                            let rg = self.group_of(q);
                             let mut moved = 0u16;
-                            while moved < g.refill_count
-                                && s.piles[q as usize].last().is_some_and(|c| c.is_face_up())
-                            {
-                                self.push(
-                                    s,
-                                    j,
-                                    Op::Shift {
-                                        from: q,
-                                        to: p,
-                                        count: 1,
-                                    },
-                                );
+                            while moved < g.refill_count {
+                                let Some(&top) = s.piles[q as usize].last() else {
+                                    break;
+                                };
+                                if top.is_face_up() {
+                                    self.push(
+                                        s,
+                                        j,
+                                        Op::Shift {
+                                            from: q,
+                                            to: p,
+                                            count: 1,
+                                        },
+                                    );
+                                } else if rg.flip_only_last {
+                                    self.push(
+                                        s,
+                                        j,
+                                        Op::Turn {
+                                            from: q,
+                                            to: p,
+                                            count: 1,
+                                            up: true,
+                                        },
+                                    );
+                                } else {
+                                    break;
+                                }
                                 moved += 1;
                             }
                             if s.piles[q as usize].is_empty() {
@@ -728,9 +796,11 @@ impl Game {
             }
             if self.rules.auto_flip {
                 for p in 0..s.piles.len() as u16 {
+                    let g = self.group_of(p);
                     let flip = s.piles[p as usize].last().is_some_and(|c| !c.is_face_up())
-                        && (self.group_of(p).kind != PileKind::Stock
+                        && (g.kind != PileKind::Stock
                             || self.stock.as_ref().is_some_and(|st| st.face_up))
+                        && (!g.flip_only_last || s.piles[p as usize].len() == 1)
                         && self.available(s, p);
                     if flip {
                         self.push(s, j, Op::Flip(p));

@@ -1848,3 +1848,116 @@ fn waste_talon_with_moves_when_stock_empty_and_min_cards_override() {
     };
     check(r_min, 0..40);
 }
+
+#[test]
+fn flip_only_last_and_stock_divert_ranks() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]);
+
+    // Reserve with flip_only_last refills tableau face-up while staying face-down until 1 card left.
+    let mut r_fol = Rules::new(
+        "mini-flip-only-last",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("reserve", PileKind::Reserve, 1).flip_only_last(),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Alternate, Dir::Down)
+                .moves(MoveUnit::Top)
+                .refill_from(&["reserve"]),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("reserve").each(3).down(),
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r_fol.stock = Some(StockRules::to("waste"));
+    check(r_fol, 0..40);
+
+    // Stock dealing to tableau diverts Aces straight to foundations and keeps dealing to same pile.
+    let mut r_div = Rules::new(
+        "mini-stock-divert-ranks",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.divert_ranks = vec![1];
+    r_div.stock = Some(st);
+    check(r_div, 0..40);
+}
+
+#[test]
+fn grid_shuffle_random_gaps_and_after_pile_final() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]);
+
+    // Grid shuffle with random gap placement.
+    let mut r_gap = Rules::new(
+        "mini-grid-random-gaps",
+        pack.clone(),
+        vec![
+            GroupRules::new("tableau", PileKind::Tableau, 8)
+                .layout(Layout::Grid { columns: 4 })
+                .build(BuildBy::Suit, Dir::Up)
+                .empty(EmptyRule::AfterLeft { first: 2 })
+                .moves(MoveUnit::Top)
+                .max_cards(1),
+            GroupRules::new("discard", PileKind::Reserve, 1)
+                .moves(MoveUnit::None)
+                .empty(EmptyRule::None),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("discard").collect(&[1]),
+        ],
+    );
+    r_gap.redeal = Some(RedealRules::new(
+        "tableau",
+        RedealHow::GridShuffleRandomGaps,
+    ));
+    r_gap.win = WinRule::Rows {
+        group: "tableau".into(),
+        length: Some(3),
+    };
+    check(r_gap, 0..40);
+
+    // Per-pile dynamic base rank (after_pile) + final card must come from same-index reserve.
+    let mut r_ap = Rules::new(
+        "mini-after-pile-final",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build_rule(Build::new(BuildBy::Any, Dir::Up).wrap())
+                .empty(EmptyRule::AfterPile {
+                    group: "reserve".into(),
+                    offset: 1,
+                })
+                .max_cards(4)
+                .accepts_from(&["tableau"])
+                .final_from_same_index("reserve"),
+            GroupRules::new("reserve", PileKind::Reserve, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::None),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("reserve").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r_ap.stock = Some(StockRules::to("tableau"));
+    check(r_ap, 0..40);
+}

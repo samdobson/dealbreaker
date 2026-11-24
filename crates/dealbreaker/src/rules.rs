@@ -437,6 +437,14 @@ pub struct GroupRules {
     /// Cards may leave piles of this group only once the stock pile is empty.
     #[serde(default)]
     pub moves_when_stock_empty: bool,
+    /// Only automatically turn a pile's face-down top card face up when it is the sole card left
+    /// in the pile.
+    #[serde(default)]
+    pub flip_only_last: bool,
+    /// When a pile is one card shy of `max_cards`, its final card must come from the pile at the
+    /// same index within this group (overriding `accepts_from`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_from_same_index: Option<String>,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -554,6 +562,8 @@ impl GroupRules {
             requires_prev_non_empty: false,
             max_same_rank: None,
             moves_when_stock_empty: false,
+            flip_only_last: false,
+            final_from_same_index: None,
         }
     }
 
@@ -701,6 +711,16 @@ impl GroupRules {
         self.moves_when_stock_empty = true;
         self
     }
+
+    pub fn flip_only_last(mut self) -> Self {
+        self.flip_only_last = true;
+        self
+    }
+
+    pub fn final_from_same_index(mut self, group: &str) -> Self {
+        self.final_from_same_index = Some(group.to_string());
+        self
+    }
 }
 
 /// How cards are built on one another.
@@ -823,6 +843,9 @@ pub enum EmptyRule {
     /// In a grid: a card that could be built (by this pile's build rule) on the top card of
     /// the pile to the left; in the first column, a card of rank `first` (Montana's gaps).
     AfterLeft { first: u8 },
+    /// A card whose rank is `offset` places after the top card of the pile at the same index in
+    /// `group`, wrapping around the pack's rank sequence.
+    AfterPile { group: String, offset: i8 },
 }
 
 /// Which cards may leave a pile together.
@@ -939,6 +962,10 @@ pub struct StockRules {
     /// otherwise deal to every target pile.
     #[serde(default)]
     pub deal_empty_first: bool,
+    /// When dealing to a multi-pile target, divert cards of these ranks to the first accepting
+    /// foundation and keep dealing until a non-diverted card lands on the current target pile.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub divert_ranks: Vec<u8>,
 }
 
 impl StockRules {
@@ -962,6 +989,7 @@ impl StockRules {
             deal_per_pile: false,
             redeal_reverse: false,
             deal_empty_first: false,
+            divert_ranks: Vec::new(),
         }
     }
 }
@@ -1012,6 +1040,9 @@ pub enum RedealHow {
     /// Grid games: leave each row's built sequence in place, shuffle every other card, and
     /// deal them back leaving one gap straight after each sequence (Montana).
     GridShuffle,
+    /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
+    /// them back leaving the gaps at random positions among the non-sequence slots.
+    GridShuffleRandomGaps,
     /// Close the gaps: slide the cards forward in reading order, then fill the empty places
     /// at the end from `refill_from`'s top card, turned face up (Monte Carlo).
     Compact {

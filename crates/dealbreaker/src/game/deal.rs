@@ -77,7 +77,7 @@ impl Game {
     }
 
     /// First foundation pile that currently accepts `c` (used by card-dependent deal steps).
-    fn find_foundation(&self, s: &State, c: Card) -> Option<u16> {
+    pub(super) fn find_foundation(&self, s: &State, c: Card) -> Option<u16> {
         for g in self
             .groups
             .iter()

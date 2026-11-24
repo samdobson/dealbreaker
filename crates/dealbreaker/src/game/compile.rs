@@ -63,6 +63,13 @@ impl Game {
                     .iter()
                     .any(|gr| gr.name == sr.to && gr.kind != PileKind::Waste)
         });
+        let stock_sensitive_to_empty = rules.stock.as_ref().is_some_and(|sr| {
+            sr.require_no_empty
+                || sr.require_no_empty_group.is_some()
+                || sr.skip_empty
+                || sr.first_empty
+                || sr.deal_empty_first
+        });
         let mut groups = Vec::new();
         let mut pile_group = Vec::new();
         let mut pile_rules = Vec::new();
@@ -179,6 +186,7 @@ impl Game {
                 let autoplay = rules.safe_autoplay
                     && rules.redeal.is_none()
                     && !stock_redeals_non_waste
+                    && !stock_sensitive_to_empty
                     && pack.jokers == 0
                     && g.kind == PileKind::Foundation
                     && !g.complete_runs
@@ -505,6 +513,12 @@ impl Game {
                     }
                     groups[target as usize].symmetric = false;
                 }
+                if let Some(ft) = final_to {
+                    if groups[ft as usize].symmetric && groups[ft as usize].count > 1 {
+                        groups[ft as usize].symmetric_when_no_stock = true;
+                    }
+                    groups[ft as usize].symmetric = false;
+                }
                 Some(Stock {
                     pile: groups[sg].start,
                     target,
@@ -528,6 +542,7 @@ impl Game {
                     face_up: sr.face_up,
                     deal_per_pile: sr.deal_per_pile,
                     redeal_reverse: sr.redeal_reverse,
+                    redeal_shuffle: sr.redeal_shuffle,
                     deal_empty_first: sr.deal_empty_first,
                     divert_ranks: sr.divert_ranks.clone(),
                     final_split_to,

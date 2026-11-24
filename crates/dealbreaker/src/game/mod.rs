@@ -360,6 +360,7 @@ pub(crate) struct Stock {
     pub face_up: bool,
     pub deal_per_pile: bool,
     pub redeal_reverse: bool,
+    pub redeal_shuffle: bool,
     pub deal_empty_first: bool,
     pub divert_ranks: Vec<u8>,
     pub final_split_to: Option<u16>,

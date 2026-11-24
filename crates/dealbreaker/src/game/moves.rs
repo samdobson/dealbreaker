@@ -1318,19 +1318,23 @@ impl Game {
         }
         let Some(st) = &self.stock else { return false };
         if !s.piles[st.pile as usize].is_empty() {
-            if st.final_split_to.is_some() && s.piles[st.pile as usize].len() < 2 {
+            let stock_len = s.piles[st.pile as usize].len() as u16;
+            if st.final_split_to.is_some() && stock_len < 2 {
                 return false;
             }
             let rtargets = st.round_targets(s.redeals_used);
             let any_non_empty = || rtargets.iter().any(|&p| !s.piles[p as usize].is_empty());
             let any_empty = || rtargets.iter().any(|&p| s.piles[p as usize].is_empty());
+            let final_to_active = st
+                .final_to
+                .is_some_and(|ft| stock_len <= self.groups[ft as usize].count);
             if st.only_when_empty && any_non_empty() {
                 return false;
             }
             if st.first_empty && !any_empty() {
                 return false;
             }
-            if st.require_no_empty && any_empty() {
+            if st.require_no_empty && !final_to_active && any_empty() {
                 return false;
             }
             if let Some(req_gi) = st.require_no_empty_group {

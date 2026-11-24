@@ -192,6 +192,9 @@ impl Game {
                     }
                 }
             }
+            if st.redeal_shuffle {
+                self.shuffle_pile(s, j, st.pile);
+            }
             if st.redeals != u32::MAX
                 || (s.redeals_used as usize) + 1 < st.count_per_round.len()
                 || (s.redeals_used as usize) + 1 < st.piles_per_round.len()

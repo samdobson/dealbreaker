@@ -1062,6 +1062,10 @@ pub struct StockRules {
     /// order.
     #[serde(default)]
     pub redeal_reverse: bool,
+    /// When gathering a multi-pile target back into the stock on redeal, shuffle the gathered
+    /// cards before dealing them out again.
+    #[serde(default)]
+    pub redeal_shuffle: bool,
     /// For a multi-pile target: if any target piles are empty, deal only to the empty piles;
     /// otherwise deal to every target pile.
     #[serde(default)]
@@ -1104,6 +1108,7 @@ impl StockRules {
             final_piles: None,
             deal_per_pile: false,
             redeal_reverse: false,
+            redeal_shuffle: false,
             deal_empty_first: false,
             divert_ranks: Vec::new(),
             piles_per_round: Vec::new(),

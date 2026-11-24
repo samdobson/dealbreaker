@@ -121,9 +121,15 @@ fn hint_inner(
     let random_future = game.rules().redeal.as_ref().is_some_and(|r| {
         matches!(
             r.how,
-            crate::rules::RedealHow::Shuffle { .. } | crate::rules::RedealHow::GridShuffle
+            crate::rules::RedealHow::Shuffle { .. }
+                | crate::rules::RedealHow::GridShuffle
+                | crate::rules::RedealHow::GridShuffleRandomGaps
         )
-    });
+    }) || game
+        .rules()
+        .stock
+        .as_ref()
+        .is_some_and(|st| st.redeal_shuffle);
     let samples = if hidden.is_empty() && !random_future {
         1
     } else {

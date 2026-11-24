@@ -2360,3 +2360,56 @@ fn swap_bases_and_all_full_win() {
     };
     check(r2, 0..40);
 }
+
+#[test]
+fn stock_redeal_shuffle_and_final_to() {
+    // 1) StockRules::redeal_shuffle (2 suits x 4 ranks = 8 cards, 2 tableau piles, 1 redeal).
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r1 = Rules::new(
+        "mini-redeal-shuffle",
+        pack.clone(),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::Top),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st1 = StockRules::to("tableau");
+    st1.redeals = 1;
+    st1.redeal_shuffle = true;
+    r1.stock = Some(st1);
+    check(r1, 0..40);
+
+    // 2) StockRules::final_to bypassing require_no_empty (2 suits x 5 ranks = 10 cards).
+    let pack2 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    let mut r2 = Rules::new(
+        "mini-final-to-no-empty",
+        pack2,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("reserve", PileKind::Reserve, 2)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::Top),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Run),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st2 = StockRules::to("tableau");
+    st2.require_no_empty = true;
+    st2.final_to = Some("reserve".into());
+    r2.stock = Some(st2);
+    check(r2, 0..40);
+}

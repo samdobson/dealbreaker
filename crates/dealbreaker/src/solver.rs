@@ -1126,7 +1126,9 @@ impl<'g, 'c> Ctx<'g, 'c> {
                         h += pw * s.piles[st.pile as usize].len() as u32;
                     }
                 }
-                if let crate::game::Win::Count(gi, n) = g.win {
+                if let crate::game::Win::Count(gi, n) | crate::game::Win::CountAndSpread(gi, n, _) =
+                    g.win
+                {
                     let have: usize = g.groups[gi as usize]
                         .piles()
                         .map(|p| s.piles[p as usize].len())

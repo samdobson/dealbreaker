@@ -796,10 +796,12 @@ impl Game {
                         self.push(s, j, Op::SetBaseRank(r));
                         if cb.refill_from_stock {
                             if let Some(sp) = self.stock_pile {
-                                if s.piles[from as usize].is_empty()
-                                    && !s.piles[sp as usize].is_empty()
-                                {
-                                    self.deal_from_stock(s, j, sp, from, 1);
+                                for p in self.groups[cb.from_group as usize].piles() {
+                                    if s.piles[p as usize].is_empty()
+                                        && !s.piles[sp as usize].is_empty()
+                                    {
+                                        self.deal_from_stock(s, j, sp, p, 1);
+                                    }
                                 }
                             }
                         }
@@ -877,6 +879,16 @@ impl Game {
                     .map(|p| s.piles[p as usize].len())
                     .sum::<usize>()
                     >= *n as usize
+            }
+            Win::CountAndSpread(g, n, spread) => {
+                self.groups[*g as usize]
+                    .piles()
+                    .map(|p| s.piles[p as usize].len())
+                    .sum::<usize>()
+                    >= *n as usize
+                    && self.groups[*spread as usize]
+                        .piles()
+                        .all(|p| s.piles[p as usize].len() <= 1)
             }
         }
     }

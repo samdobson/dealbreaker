@@ -1231,6 +1231,12 @@ pub enum WinRule {
     Empty(Vec<String>),
     /// A group holds at least this many cards (Aces Up: 48 discarded).
     Count { group: String, cards: u16 },
+    /// A group holds at least `cards` cards and every pile of `spread` holds at most one card.
+    CountAndSpread {
+        group: String,
+        cards: u16,
+        spread: String,
+    },
     /// At most this many piles of a group hold cards (Accordion: 1).
     AtMostPiles { group: String, piles: u16 },
     /// Every row of a grid group holds a built sequence from its first column, `length` cards

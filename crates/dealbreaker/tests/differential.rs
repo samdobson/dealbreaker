@@ -1713,7 +1713,7 @@ fn multi_card_refill_and_stock_modes() {
     r_per.stock = Some(st);
     check(r_per, 0..40);
 
-    // deal_empty_first.
+    // deal_empty_first + CountAndSpread.
     let mut r_ef = Rules::new(
         "mini-empty-first",
         pack,
@@ -1730,6 +1730,11 @@ fn multi_card_refill_and_stock_modes() {
     let mut st2 = StockRules::to("tableau");
     st2.deal_empty_first = true;
     r_ef.stock = Some(st2);
+    r_ef.win = WinRule::CountAndSpread {
+        group: "foundation".into(),
+        cards: 7,
+        spread: "tableau".into(),
+    };
     check(r_ef, 0..40);
 }
 

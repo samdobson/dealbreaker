@@ -245,6 +245,8 @@ pub(crate) enum Win {
     AllOnFoundations,
     Empty(Vec<u16>),
     Count(u16, u16),
+    /// Group, card count, spread group (every pile holds at most one card).
+    CountAndSpread(u16, u16, u16),
     /// Grid group, row length to check, first-column rank.
     Rows(u16, u16, u8),
     /// Group, most non-empty piles.

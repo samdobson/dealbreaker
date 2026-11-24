@@ -551,6 +551,11 @@ impl Game {
                 Win::Empty(names.iter().map(|n| find(n)).collect::<Result<_, _>>()?)
             }
             WinRule::Count { group, cards } => Win::Count(find(group)?, *cards),
+            WinRule::CountAndSpread {
+                group,
+                cards,
+                spread,
+            } => Win::CountAndSpread(find(group)?, *cards, find(spread)?),
             WinRule::AtMostPiles { group, piles } => Win::AtMostPiles(find(group)?, *piles),
             WinRule::Rows { group, length } => {
                 let gi = find(group)?;

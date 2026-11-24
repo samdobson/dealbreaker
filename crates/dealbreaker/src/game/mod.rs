@@ -191,9 +191,104 @@ pub(crate) struct PileRules {
     pub wild: bool,
 }
 
+impl PileRules {
+    /// True if two piles have identical rule policies (ignoring derived tables like `fits`,
+    /// `autoplay`, and `sink`). Exhaustive destructuring ensures new fields are considered here.
+    pub(crate) fn same_policy(&self, other: &PileRules) -> bool {
+        let PileRules {
+            build,
+            empty,
+            moves,
+            max_cards,
+            min_cards,
+            max_accept,
+            empty_max_accept,
+            complete_runs,
+            admits,
+            empty_suit,
+            wild,
+            autoplay: _,
+            sink: _,
+            fits: _,
+        } = self;
+        *build == other.build
+            && *empty == other.empty
+            && *moves == other.moves
+            && *max_cards == other.max_cards
+            && *min_cards == other.min_cards
+            && *max_accept == other.max_accept
+            && *empty_max_accept == other.empty_max_accept
+            && *complete_runs == other.complete_runs
+            && *admits == other.admits
+            && *empty_suit == other.empty_suit
+            && *wild == other.wild
+    }
+
+    /// True if two foundation piles accept the exact same card sequences (for autoplay conflict
+    /// detection).
+    pub(crate) fn same_foundation_policy(&self, other: &PileRules) -> bool {
+        self.build == other.build
+            && self.empty == other.empty
+            && self.empty_suit == other.empty_suit
+            && self.max_cards == other.max_cards
+            && self.admits == other.admits
+    }
+}
+
 impl Group {
     pub fn piles(&self) -> std::ops::Range<u16> {
         self.start..self.start + self.count
+    }
+
+    /// True if pile position/order within this group affects legality or transitions.
+    pub(crate) fn has_positional_rules(&self) -> bool {
+        self.reach.is_some()
+            || self.compact
+            || self.compact_face_up
+            || self.requires_rank_on_prev
+            || self.requires_prev_non_empty
+    }
+
+    /// True if moves to or from this group are gated on the stock being empty.
+    pub(crate) fn depends_on_stock_empty(&self) -> bool {
+        self.accept_when_stock_empty || self.moves_when_stock_empty
+    }
+
+    /// True if this group participates in automatic post-move compaction or refilling.
+    pub(crate) fn needs_settle(&self) -> bool {
+        self.compact || self.compact_face_up || !self.refill_from.is_empty()
+    }
+
+    /// Internal single-pile scratch group (used for redeal gathering).
+    pub(crate) fn hidden_scratch(name: &str, start: u16) -> Group {
+        Group {
+            name: name.into(),
+            kind: PileKind::Reserve,
+            start,
+            count: 1,
+            accepts_from: 0,
+            empty_accepts_from: 0,
+            refill_from: Vec::new(),
+            refill_count: 1,
+            symmetric: true,
+            symmetric_when_no_stock: false,
+            symmetric_when_no_redeal: false,
+            sym_classes: Vec::new(),
+            columns: None,
+            hidden: true,
+            reach: None,
+            compact: false,
+            requires_rank_on_prev: false,
+            match_longest_rank: false,
+            accept_only_when_empty: false,
+            accept_when_stock_empty: false,
+            compact_face_up: false,
+            refill_largest: false,
+            refill_on_empty: false,
+            requires_prev_non_empty: false,
+            max_same_rank: None,
+            moves_when_stock_empty: false,
+        }
     }
 }
 
@@ -205,7 +300,8 @@ pub(crate) struct Stock {
     pub count: u16,
     pub count_per_round: Vec<u16>,
     pub final_to: Option<u16>,
-    pub piles: Option<Vec<u16>>,
+    /// Resolved target pile indices (either `StockRules::piles` or all piles of `target`).
+    pub targets: Vec<u16>,
     pub final_piles: Option<Vec<u16>>,
     pub redeals: u32,
     pub require_no_empty: bool,
@@ -228,6 +324,11 @@ impl Stock {
             let i = (redeals_used as usize).min(self.count_per_round.len() - 1);
             self.count_per_round[i]
         }
+    }
+
+    /// True if emptying a target pile can block or alter how a stock deal behaves.
+    pub fn sensitive_to_empty_piles(&self) -> bool {
+        self.require_no_empty || self.skip_empty || self.first_empty || self.deal_empty_first
     }
 }
 

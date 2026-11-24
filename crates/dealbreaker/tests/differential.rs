@@ -1799,3 +1799,52 @@ fn choose_base_and_empty_accepts_from() {
     r_sb.stock = Some(StockRules::to("waste"));
     check(r_sb, 0..40);
 }
+
+#[test]
+fn waste_talon_with_moves_when_stock_empty_and_min_cards_override() {
+    // Waste talon + moves_when_stock_empty must not enable talon compression, otherwise the
+    // solver cannot deal out the stock to unlock the gated group.
+    let mut r = Rules::new(
+        "mini-waste-moves-when-stock-empty",
+        Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("reserve", PileKind::Reserve, 1).moves_when_stock_empty(),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any),
+        ],
+        vec![
+            DealStep::to("reserve").each(2),
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r.stock = Some(StockRules::to("waste"));
+    check(r, 0..40);
+
+    // Per-pile min_cards override must not collapse distinct piles into one symmetry class.
+    let mut ov = PileOverride::on(&[0]);
+    ov.min_cards = Some(1);
+    let mut r_min = Rules::new(
+        "mini-min-cards-override-sym",
+        Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any)
+                .pile(ov),
+        ],
+        vec![DealStep::to("tableau").counts(&[2, 3, 3])],
+    );
+    r_min.win = WinRule::Count {
+        group: "foundation".into(),
+        cards: 7,
+    };
+    check(r_min, 0..40);
+}

@@ -50,6 +50,32 @@ impl Game {
         self.deal_from(d)
     }
 
+    /// Fixed suit of a pile (via `empty_suit` or a single-suit `admits` mask), if any.
+    fn pile_fixed_suit(&self, p: u16) -> Option<crate::card::Suit> {
+        let r = self.rule(p);
+        if r.empty_suit.is_some() {
+            return r.empty_suit;
+        }
+        let real = r.admits & REAL_FACES;
+        crate::card::Suit::ALL
+            .into_iter()
+            .find(|&s| real == (self.suit_faces[s as usize] & REAL_FACES))
+    }
+
+    /// If `step` diverts `c` straight to an accepting foundation, return that foundation pile.
+    fn divert_target(&self, s: &State, step: &crate::rules::DealStep, c: Card) -> Option<u16> {
+        let divert = step.auto_foundation
+            || step
+                .divert_ranks
+                .as_ref()
+                .is_some_and(|rs| rs.contains(&c.rank()));
+        if divert {
+            self.find_foundation(s, c)
+        } else {
+            None
+        }
+    }
+
     /// First foundation pile that currently accepts `c` (used by card-dependent deal steps).
     fn find_foundation(&self, s: &State, c: Card) -> Option<u16> {
         for g in self
@@ -140,20 +166,10 @@ impl Game {
                     put(&mut s, piles[i % piles.len()], c);
                 }
             } else if let Some(ranks) = &step.ranks {
-                let pile_suit = |p: u16| -> Option<crate::card::Suit> {
-                    let r = self.rule(p);
-                    if r.empty_suit.is_some() {
-                        return r.empty_suit;
-                    }
-                    let real = r.admits & REAL_FACES;
-                    crate::card::Suit::ALL
-                        .into_iter()
-                        .find(|&s| real == (self.suit_faces[s as usize] & REAL_FACES))
-                };
                 if let Some(n) = step.count {
                     for _ in 0..n {
                         for &p in &piles {
-                            let want_suit = pile_suit(p);
+                            let want_suit = self.pile_fixed_suit(p);
                             let at = deck
                                 .iter()
                                 .position(|c| {
@@ -178,12 +194,12 @@ impl Game {
                             true
                         }
                     });
-                    let has_suit = piles.iter().any(|&p| pile_suit(p).is_some());
+                    let has_suit = piles.iter().any(|&p| self.pile_fixed_suit(p).is_some());
                     if has_suit {
                         let mut used = vec![0usize; piles.len()];
                         for c in taken {
                             let slot = (0..piles.len())
-                                .filter(|&i| pile_suit(piles[i]) == Some(c.suit()))
+                                .filter(|&i| self.pile_fixed_suit(piles[i]) == Some(c.suit()))
                                 .min_by_key(|&i| used[i])
                                 .unwrap_or(0);
                             used[slot] += 1;
@@ -217,16 +233,9 @@ impl Game {
                 if let Some(split_r) = step.split_on_rank {
                     let mut idx = 0usize;
                     while let Some(c) = deck.pop_front() {
-                        let divert = step.auto_foundation
-                            || step
-                                .divert_ranks
-                                .as_ref()
-                                .is_some_and(|rs| rs.contains(&c.rank()));
-                        if divert {
-                            if let Some(f) = self.find_foundation(&s, c) {
-                                put(&mut s, f, c);
-                                continue;
-                            }
+                        if let Some(f) = self.divert_target(&s, step, c) {
+                            put(&mut s, f, c);
+                            continue;
                         }
                         if c.rank() == split_r
                             && !s.piles[piles[idx] as usize].is_empty()
@@ -239,17 +248,10 @@ impl Game {
                 } else {
                     let mut i = 0;
                     while let Some(c) = deck.pop_front() {
-                        let divert = step.auto_foundation
-                            || step
-                                .divert_ranks
-                                .as_ref()
-                                .is_some_and(|rs| rs.contains(&c.rank()));
-                        if divert {
-                            if let Some(f) = self.find_foundation(&s, c) {
-                                put(&mut s, f, c);
-                                i += 1;
-                                continue;
-                            }
+                        if let Some(f) = self.divert_target(&s, step, c) {
+                            put(&mut s, f, c);
+                            i += 1;
+                            continue;
                         }
                         put(&mut s, piles[i % piles.len()], c);
                         i += 1;
@@ -259,13 +261,7 @@ impl Game {
                 && step.count == Some(1)
                 && step.counts.is_none()
                 && piles.len() > 1
-                && piles.iter().any(|&p| {
-                    let r = self.rule(p);
-                    r.empty_suit.is_some()
-                        || crate::card::Suit::ALL.into_iter().any(|su| {
-                            (r.admits & REAL_FACES) == (self.suit_faces[su as usize] & REAL_FACES)
-                        })
-                })
+                && piles.iter().any(|&p| self.pile_fixed_suit(p).is_some())
             {
                 let Some(c) = deck.pop_front() else {
                     return err("deal: ran out of cards");
@@ -273,15 +269,7 @@ impl Game {
                 let target = piles
                     .iter()
                     .copied()
-                    .find(|&p| {
-                        let r = self.rule(p);
-                        if let Some(es) = r.empty_suit {
-                            es == c.suit()
-                        } else {
-                            (r.admits & REAL_FACES)
-                                == (self.suit_faces[c.suit() as usize] & REAL_FACES)
-                        }
-                    })
+                    .find(|&p| self.pile_fixed_suit(p) == Some(c.suit()))
                     .unwrap_or(piles[0]);
                 put(&mut s, target, c);
             } else {
@@ -316,14 +304,8 @@ impl Game {
                                 }
                                 return err("deal: ran out of cards");
                             };
-                            let divert = !step.drain_foundations
-                                && (step.auto_foundation
-                                    || step
-                                        .divert_ranks
-                                        .as_ref()
-                                        .is_some_and(|rs| rs.contains(&c.rank())));
-                            if divert {
-                                if let Some(f) = self.find_foundation(&s, c) {
+                            if !step.drain_foundations {
+                                if let Some(f) = self.divert_target(&s, step, c) {
                                     put(&mut s, f, c);
                                     continue;
                                 }

@@ -223,44 +223,28 @@ impl Game {
                 match st.target_kind {
                     PileKind::Waste | PileKind::Foundation => {
                         let n = count.min(stock_len);
-                        let dest = st
-                            .piles
-                            .as_ref()
-                            .and_then(|v| v.first().copied())
-                            .unwrap_or(tg.start);
-                        self.deal_from_stock(s, j, st.pile, dest, n);
+                        self.deal_from_stock(s, j, st.pile, st.targets[0], n);
                     }
                     _ if st.first_empty => {
-                        let found = match &st.piles {
-                            Some(ps) => {
-                                ps.iter().copied().find(|&p| s.piles[p as usize].is_empty())
-                            }
-                            None => tg.piles().find(|&p| s.piles[p as usize].is_empty()),
-                        };
-                        if let Some(p) = found {
+                        if let Some(p) = st
+                            .targets
+                            .iter()
+                            .copied()
+                            .find(|&p| s.piles[p as usize].is_empty())
+                        {
                             let n = count.min(stock_len);
                             self.deal_from_stock(s, j, st.pile, p, n);
                         }
                     }
                     _ if st.skip_empty => {
-                        let mut targets: Vec<u16> = match &st.piles {
-                            Some(ps) => ps
-                                .iter()
-                                .copied()
-                                .filter(|&p| !s.piles[p as usize].is_empty())
-                                .collect(),
-                            None => tg
-                                .piles()
-                                .filter(|&p| !s.piles[p as usize].is_empty())
-                                .collect(),
-                        };
+                        let mut targets: Vec<u16> = st
+                            .targets
+                            .iter()
+                            .copied()
+                            .filter(|&p| !s.piles[p as usize].is_empty())
+                            .collect();
                         if targets.is_empty() {
-                            targets.push(
-                                st.piles
-                                    .as_ref()
-                                    .and_then(|v| v.first().copied())
-                                    .unwrap_or(tg.start),
-                            );
+                            targets.push(st.targets[0]);
                         }
                         for _ in 0..count {
                             for &p in &targets {
@@ -272,18 +256,19 @@ impl Game {
                         }
                     }
                     _ if st.deal_empty_first => {
-                        let all: Vec<u16> = match &st.piles {
-                            Some(ps) => ps.clone(),
-                            None => tg.piles().collect(),
-                        };
-                        let empties: Vec<u16> = all
+                        let empties: Vec<u16> = st
+                            .targets
                             .iter()
                             .copied()
                             .filter(|&p| s.piles[p as usize].is_empty())
                             .collect();
-                        let targets = if empties.is_empty() { all } else { empties };
+                        let targets: &[u16] = if empties.is_empty() {
+                            &st.targets
+                        } else {
+                            &empties
+                        };
                         for _ in 0..count {
-                            for &p in &targets {
+                            for &p in targets {
                                 if s.piles[st.pile as usize].is_empty() {
                                     break;
                                 }
@@ -292,11 +277,7 @@ impl Game {
                         }
                     }
                     _ if st.deal_per_pile => {
-                        let targets: Vec<u16> = match &st.piles {
-                            Some(ps) => ps.clone(),
-                            None => tg.piles().collect(),
-                        };
-                        for &p in &targets {
+                        for &p in &st.targets {
                             let rem = s.piles[st.pile as usize].len() as u16;
                             if rem == 0 {
                                 break;
@@ -307,20 +288,11 @@ impl Game {
                     }
                     _ => {
                         for _ in 0..count {
-                            if let Some(ps) = &st.piles {
-                                for &p in ps {
-                                    if s.piles[st.pile as usize].is_empty() {
-                                        break;
-                                    }
-                                    self.deal_from_stock(s, j, st.pile, p, 1);
+                            for &p in &st.targets {
+                                if s.piles[st.pile as usize].is_empty() {
+                                    break;
                                 }
-                            } else {
-                                for p in tg.piles() {
-                                    if s.piles[st.pile as usize].is_empty() {
-                                        break;
-                                    }
-                                    self.deal_from_stock(s, j, st.pile, p, 1);
-                                }
+                                self.deal_from_stock(s, j, st.pile, p, 1);
                             }
                         }
                     }

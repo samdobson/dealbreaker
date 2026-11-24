@@ -1048,18 +1048,8 @@ impl Game {
         }
         let Some(st) = &self.stock else { return false };
         if !s.piles[st.pile as usize].is_empty() {
-            let any_non_empty = || match &st.piles {
-                Some(ps) => ps.iter().any(|&p| !s.piles[p as usize].is_empty()),
-                None => self.groups[st.target as usize]
-                    .piles()
-                    .any(|p| !s.piles[p as usize].is_empty()),
-            };
-            let any_empty = || match &st.piles {
-                Some(ps) => ps.iter().any(|&p| s.piles[p as usize].is_empty()),
-                None => self.groups[st.target as usize]
-                    .piles()
-                    .any(|p| s.piles[p as usize].is_empty()),
-            };
+            let any_non_empty = || st.targets.iter().any(|&p| !s.piles[p as usize].is_empty());
+            let any_empty = || st.targets.iter().any(|&p| s.piles[p as usize].is_empty());
             if st.only_when_empty && any_non_empty() {
                 return false;
             }
@@ -1070,11 +1060,7 @@ impl Game {
                 return false;
             }
             if matches!(st.target_kind, PileKind::Waste | PileKind::Foundation) {
-                let dest = st
-                    .piles
-                    .as_ref()
-                    .and_then(|v| v.first().copied())
-                    .unwrap_or(self.groups[st.target as usize].start);
+                let dest = st.targets[0];
                 let n = st
                     .deal_count(s.redeals_used)
                     .min(s.piles[st.pile as usize].len() as u16);

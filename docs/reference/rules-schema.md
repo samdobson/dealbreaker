@@ -22,6 +22,7 @@ A complete description of one solitaire game.
 |---|---|---|---|
 | `$schema` | `string` | — | Optional JSON Schema URI for editor validation (ignored by the solver). |
 | `auto_flip` | `boolean` | `true` | Turn up a face-down card when it becomes the top of an uncovered pile. Default true. |
+| `choose_base` | [ChooseBase](#choosebase) \| `null` | — | Opening choice of the foundation base rank: before a base rank is set, only a single-card move from this group to a foundation is legal, and its rank becomes the base rank. |
 | `deal` | [DealStep](#dealstep)[] | `[]` | The opening deal, step by step. Cards come off a shuffled pack. |
 | `groups` *(required)* | [GroupRules](#grouprules)[] | — | The piles on the table, in groups of identical piles. |
 | `name` *(required)* | `string` | — | Human-readable name, e.g. "FreeCell". |
@@ -79,6 +80,7 @@ One group of identical piles.
 | `complete_runs` | `boolean` | `false` | Foundation only accepts a whole suit sequence at once, moved together (Spider). |
 | `count` | `integer` | `1` |  |
 | `empty` | [EmptyRule](#emptyrule) \| `null` | — | What an empty pile accepts. Default: foundations take the pack's first rank; tableaux and cells take any card; reserves, stock and waste take none. |
+| `empty_accepts_from` | `array` \| `null` | — | Only cards coming from these groups are accepted onto an empty pile (default: same as `accepts_from`). |
 | `empty_max_accept` | `integer` \| `null` | — | Most cards that may be placed onto an empty pile in one move. Default: same as `max_accept`. |
 | `empty_suit` | [Suit](#suit) \| `null` | — | Empty piles accept only cards of this suit (non-empty piles follow `build` as usual). |
 | `kind` *(required)* | [PileKind](#pilekind) | — |  |
@@ -86,13 +88,18 @@ One group of identical piles.
 | `match_longest_rank` | `boolean` | `false` | A pile with fewer cards than the longest pile in this group only accepts a card whose rank matches the card at the same index in the longest pile. |
 | `max_accept` | `integer` \| `null` | — | Most cards the pile accepts in one move. Default: 1 for foundations (a whole suit for `complete_runs`), unlimited otherwise. |
 | `max_cards` | `integer` \| `null` | — | Most cards the pile may hold. Default: 1 for cells, unlimited otherwise. |
+| `max_same_rank` | `integer` \| `null` | — | Most consecutive face-up cards of the same rank allowed at the top of a pile. |
+| `min_cards` | `integer` \| `null` | — | Fewest cards that must remain on the pile (cards at or below this depth cannot leave). |
 | `moves` | [MoveUnit](#moveunit) \| `null` | — | Which cards may leave a pile. Default: one card for tableaux, cells, reserves and the waste; none for foundations and the stock. |
+| `moves_when_stock_empty` | `boolean` | `false` | Cards may leave piles of this group only once the stock pile is empty. |
 | `name` *(required)* | `string` | — | Name used in deal steps, solutions and states, e.g. "tableau". |
 | `piles` | [PileOverride](#pileoverride)[] | — | Different rules for particular piles of the group (Calculation's foundations, each building by a different step from a different base). |
 | `reach` | `array` \| `null` | — | A pile accepts cards only from piles of its own group exactly this many places after it (Accordion: 1 and 3). |
+| `refill_count` | `integer` \| `null` | — | Cards moved per automatic refill from `refill_from` (default 1). |
 | `refill_from` | `string`[] | — | When a pile in this group empties, refill it automatically with the top card of the first non-empty pile of these groups, tried in order (Canfield's tableau from its reserve; many games from the waste, then the stock). Stock cards are turned face up. Groups to try in order; a group name or a list. |
 | `refill_largest` | `boolean` | `false` | When refilling from a multi-pile group in `refill_from`, take from the pile with the most cards (ties broken by lowest index) rather than the first non-empty pile. |
 | `refill_on_empty` | `boolean` | `false` | Refill a pile in this group only when a move just emptied it, rather than also filling pre-existing empty piles when a refill source later receives a card. |
+| `requires_prev_non_empty` | `boolean` | `false` | Each pile after the first may only be started (while empty) once the previous pile in the group is non-empty. |
 | `requires_rank_on_prev` | `boolean` | `false` | Each pile after the first only accepts a card whose rank is already present on the previous pile in the group (when empty, it must match the previous pile's bottom card). |
 | `suit` | [Suit](#suit) \| `null` | — | Piles accept only cards of this suit. |
 | `wild` | `boolean` \| `null` | — | Jokers are wild on these piles: a joker stands for any card that would be legal where it lies. It may be placed wherever some card could be (by the build rule, or the empty rule on an empty pile), and a card may be built on it if it could be built on some card the joker could stand for, given the cards beneath it. The joker's stand-in is never fixed: it is whatever keeps the pile legal. Where jokers aren't wild, a joker can only go to an empty pile that takes any card, and nothing is built on it. Default: wild everywhere but foundations. |
@@ -161,6 +168,8 @@ Which cards may leave a pile together.
 - `"top"` — The top card only.
 - `"run"` — Any built sequence (by this group's build rule) from the top.
 - `"suit_run"` — Any built sequence from the top whose cards are all one suit (Spider).
+- `"alt_color_run"` — Any built sequence from the top whose cards alternate in colour.
+- `"same_color_run"` — Any built sequence from the top whose cards are all one colour.
 - `"any_face_up"` — Any number of face-up cards from the top, built or not (Yukon).
 - `"supermove"` — A built sequence, as long as free cells and empty piles would allow moving it one card at a time (FreeCell's "supermove"): (empty cells + 1) × 2^(empty piles).
 - `"whole"` — Only the whole pile, all face up.
@@ -188,6 +197,7 @@ Rules for some piles of a group that differ from the group's. Fields left out ke
 | `empty_suit` | [Suit](#suit) \| `null` | — |  |
 | `max_accept` | `integer` \| `null` | — |  |
 | `max_cards` | `integer` \| `null` | — |  |
+| `min_cards` | `integer` \| `null` | — |  |
 | `moves` | [MoveUnit](#moveunit) \| `null` | — |  |
 | `piles` *(required)* | `integer`[] | — | Indices within the group. |
 | `suit` | [Suit](#suit) \| `null` | — |  |
@@ -200,9 +210,16 @@ How the stock deals.
 |---|---|---|---|
 | `auto` | `boolean` | `false` | Deal by itself whenever the waste is empty (and the stock isn't). |
 | `count` | `integer` | `1` | Cards per deal (or rounds per deal for multi-pile targets). |
+| `count_per_round` | `integer`[] | — | Cards per deal on each round (0-indexed by redeals used). When non-empty, overrides `count`; rounds past the end reuse the last entry. |
+| `deal_empty_first` | `boolean` | `false` | For a multi-pile target: if any target piles are empty, deal only to the empty piles; otherwise deal to every target pile. |
+| `deal_per_pile` | `boolean` | `false` | For a multi-pile target with `count > 1`: deal `count` cards to each pile in turn rather than `count` rounds of one card per pile. |
 | `face_up` | `boolean` | `false` | Keep the top card of the stock turned face up so it may be played or removed directly. |
+| `final_piles` | `array` \| `null` | — | For a multi-pile target: when the remaining stock has at most `final_piles.len()` cards, deal one card to each of these piles of `to` (indices within the group) instead of `piles`. |
+| `final_to` | `string` \| `null` | — | For a multi-pile target: when the remaining stock has at most as many cards as this group has piles, deal one card to each pile of this group instead of `to`. |
 | `first_empty` | `boolean` | `false` | For a multi-pile target: deal `count` cards into the first empty pile instead of one to every pile (Accordion). |
 | `only_when_empty` | `boolean` | `false` | Deal only when the target pile is empty: each card must be played before the next is turned (Calculation, Sir Tommy). |
+| `piles` | `array` \| `null` | — | Specific piles of `to` to deal to (indices within the group). Default: all piles. |
+| `redeal_reverse` | `boolean` | `false` | When gathering a multi-pile target back into the stock on redeal, gather piles in reverse order. |
 | `redeals` | `integer` | `0` | Times the waste may be turned back into the stock. |
 | `require_no_empty` | `boolean` | `false` | The stock may not deal while any pile of the target group is empty (Spider). |
 | `skip_empty` | `boolean` | `false` | For a multi-pile target: deal only to non-empty piles (or to the first pile if all are empty). |
@@ -228,6 +245,7 @@ How a redeal deals the gathered cards.
 - `{ "shuffle": ... }` (`object`) — Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie), sharing out any surplus as for [`RedealHow::Regroup`].
 - `"grid_shuffle"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap straight after each sequence (Montana).
 - `{ "compact": ... }` (`object`) — Close the gaps: slide the cards forward in reading order, then fill the empty places at the end from `refill_from`'s top card, turned face up (Monte Carlo).
+- `"rotate_bottom"` — Move each pile's bottom card to its top (Crescent).
 
 ### DealStep {#dealstep}
 
@@ -237,17 +255,23 @@ Cards come off the shuffled pack in order. With `count` or `counts`, they are de
 
 | Field | Type | Default | Description |
 |---|---|---|---|
+| `auto_foundation` | `boolean` | `false` | During this step, place any dealt card directly on the first foundation that accepts it. |
 | `collect` | `array` \| `null` | — | After this step, take every card of these ranks off the table and put them on this step's group (Montana: deal all 52, then remove the aces to leave gaps). |
 | `count` | `integer` \| `null` | — | Cards to each selected pile. |
 | `counts` | `array` \| `null` | — | Cards to each selected pile, per pile. |
+| `divert_ranks` | `array` \| `null` | — | During this step, divert dealt cards of these ranks to the first foundation that accepts them; with `drain_foundations`, restrict draining to these ranks. |
+| `drain_foundations` | `boolean` | `false` | After each dealt row, repeatedly move exposed top cards of the selected piles onto any accepting foundation (restricted to `divert_ranks` if set). |
 | `face_up` | `boolean` | `true` | Face up (default) or face down. |
 | `kings_to_bottom` | `boolean` | `false` | After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen). |
+| `limit` | `integer` \| `null` | — | With `ranks` (and no `count`): take at most this many matching cards in total instead of all of them. |
 | `of_base` | `boolean` | `false` | Take every remaining card of the dealt base rank out of the pack and put one on each selected pile in turn (requires an earlier step with `set_base`). |
 | `one_each` | `boolean` | `false` | With `ranks`: take only the first card of each listed rank, in the listed order (Calculation's A, 2, 3, 4). |
+| `one_per_suit` | `boolean` | `false` | Pull one card of each suit (in pack suit order) from the deck per round (repeated `count` times, default 1), placing them on the selected piles in turn. |
 | `piles` | `array` \| `null` | — | Piles of the group to deal to (indices). Default: all. |
 | `ranks` | `array` \| `null` | — | Take every card of these ranks out of the pack and put one on each selected pile in turn (Beleaguered Castle's aces). |
 | `rest` | `boolean` | `false` | Deal every remaining card, round-robin over the selected piles. |
 | `set_base` | `boolean` | `false` | The first card this step deals sets the base rank for [`EmptyRule::DealtBase`]. |
+| `split_on_rank` | `integer` \| `null` | — | With `rest`: deal sequentially into each selected pile, advancing to the next pile whenever a card of this rank is dealt to a non-empty pile. |
 | `to` *(required)* | `string` | — | Target group. |
 
 ### RemovalRules {#removalrules}
@@ -353,6 +377,7 @@ When the game is won.
 - `"all_on_foundations"` — Every card is on a foundation.
 - `{ "empty": ... }` (`string`[]) — These groups are empty (Pyramid, Golf, TriPeaks: the tableau).
 - `{ "count": ... }` (`object`) — A group holds at least this many cards (Aces Up: 48 discarded).
+- `{ "count_and_spread": ... }` (`object`) — A group holds at least `cards` cards and every pile of `spread` holds at most one card.
 - `{ "at_most_piles": ... }` (`object`) — At most this many piles of a group hold cards (Accordion: 1).
 - `{ "rows": ... }` (`object`) — Every row of a grid group holds a built sequence from its first column, `length` cards long (default: one less than the row), starting with the rank its first column takes (Montana).
 - `{ "score": ... }` (`object`) — The position scores at least this many points (see [`Rules::score`]).
@@ -370,3 +395,13 @@ Heuristic weights and search tuning. They change how fast the solver finds a win
 | `fast_share` | `integer` | `50` | Percent of the budget the default strategy spends on its fast, pruned best-first phase before the sound depth-first search (default 50). |
 | `progress_weight` | `integer` | `4` | Cost of each card still to go home, or each step still missing from the win (default 4). |
 | `stock_weight` | `integer` | `1` | Cost of each card still in a stock that deals to the tableau (default 1). |
+
+### ChooseBase {#choosebase}
+
+Rules for choosing the foundation base rank on the opening move.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `deal_waste` | `boolean` | `false` | Immediately deal one card from the stock to the waste after the choice. |
+| `from` *(required)* | `string` | — | Group whose cards may be played to a foundation to choose the base rank. |
+| `refill_from_stock` | `boolean` | `false` | Immediately deal one card from the stock to the emptied source pile after the choice. |

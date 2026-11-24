@@ -23,3 +23,11 @@ parallel = ["dealbreaker/parallel", "dep:rayon"]
 dealbreaker = { path = "../dealbreaker", version = "1.2.0" }
 rayon = { version = "1", optional = true }
 serde_json = "1"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/dealbreaker-v{ version }-{ target }.{ archive-format }"
+bin-dir = "dealbreaker-v{ version }-{ target }/{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"

@@ -31,18 +31,41 @@ Dealbreaker models solitaire variants as small JSON files and solves them with a
 
 ## Quick start
 
+**CLI** (or download a pre-built binary from [Releases](https://github.com/samdobson/dealbreaker/releases)):
+
 ```sh
-cargo install dealbreaker-cli
+cargo binstall dealbreaker-cli   # or: cargo install dealbreaker-cli
 dealbreaker solve freecell --ms 1
 ```
 
-Or run directly in Docker:
+**Docker**:
 
 ```sh
 docker run --rm ghcr.io/samdobson/dealbreaker solve freecell --ms 1
 ```
 
-See the **[documentation](https://samdobson.github.io/dealbreaker/)** for pre-built binaries, Rust, JavaScript/WASM, Python, and C usage, or try it directly in your browser with the **[live web demo](https://samdobson.github.io/dealbreaker/demo/)**.
+**Python** (`pip install dealbreaker`):
+
+```python
+from dealbreaker import Solver
+
+solver = Solver.from_preset("freecell")
+result = solver.solve(solver.deal_microsoft(1))
+print(result["outcome"], len(result["steps"]), "steps")
+```
+
+**JavaScript / TypeScript** (`npm install dealbreaker`):
+
+```js
+import { Solver } from "dealbreaker";
+
+const solver = Solver.fromPreset("freecell");
+const result = solver.solve(solver.dealMicrosoft(1));
+console.log(result.outcome, result.steps.length, "steps");
+solver.free();
+```
+
+See the **[documentation](https://samdobson.github.io/dealbreaker/)** for Rust, C/Swift/Kotlin, Web Workers, and custom JSON games, or try it directly in your browser with the **[live web demo](https://samdobson.github.io/dealbreaker/demo/)**.
 
 ## License
 

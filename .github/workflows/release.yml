@@ -166,8 +166,66 @@ jobs:
           name: cli-${{ matrix.target }}
           path: dist/*
 
+  build-ffi:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-ffi-${{ matrix.target }}
+      - run: cargo build --release -p dealbreaker-ffi --target ${{ matrix.target }}
+      - name: Package FFI archive (Unix)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          NAME="dealbreaker-ffi-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir -p "dist/$NAME/include" "dist/$NAME/lib"
+          cp crates/dealbreaker-ffi/include/dealbreaker.h crates/dealbreaker-ffi/include/module.modulemap "dist/$NAME/include/"
+          cp "target/${{ matrix.target }}/release/libdealbreaker_ffi."* "dist/$NAME/lib/"
+          cp README.md LICENSE-MIT LICENSE-APACHE "dist/$NAME/"
+          tar -C dist -czf "dist/${NAME}.tar.gz" "$NAME"
+          rm -rf "dist/$NAME"
+      - name: Package FFI archive (Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $name = "dealbreaker-ffi-$env:GITHUB_REF_NAME-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force -Path "dist/$name/include", "dist/$name/lib" | Out-Null
+          Copy-Item crates/dealbreaker-ffi/include/dealbreaker.h, crates/dealbreaker-ffi/include/module.modulemap "dist/$name/include/"
+          Copy-Item "target/${{ matrix.target }}/release/dealbreaker_ffi.dll", "target/${{ matrix.target }}/release/dealbreaker_ffi.dll.lib", "target/${{ matrix.target }}/release/dealbreaker_ffi.lib" "dist/$name/lib/"
+          Copy-Item README.md, LICENSE-MIT, LICENSE-APACHE "dist/$name/"
+          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
+          Remove-Item -Recurse -Force "dist/$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffi-${{ matrix.target }}
+          path: dist/*
+
   github-release:
-    needs: [build-binaries]
+    needs: [build-binaries, build-ffi]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -9,6 +9,9 @@ cargo fmt --all --check
 echo "[check-ci] clippy (workspace)..."
 cargo clippy --workspace --all-targets -- -D warnings
 
+echo "[check-ci] clippy (dealbreaker-py)..."
+cargo clippy --manifest-path crates/dealbreaker-py/Cargo.toml -- -D warnings
+
 echo "[check-ci] test --lib --no-default-features..."
 cargo test -p dealbreaker --lib --no-default-features
 
@@ -62,6 +65,47 @@ if [ -d docs/node_modules ]; then
   ./scripts/gen-docs.sh
   git diff --exit-code docs/reference/
   npm --prefix docs run build
+fi
+
+if command -v maturin >/dev/null 2>&1 && command -v pytest >/dev/null 2>&1; then
+  PY_BIN=""
+  if python3 -m pytest --version >/dev/null 2>&1; then
+    PY_BIN="$(command -v python3)"
+  elif command -v pyenv >/dev/null 2>&1 && pyenv which pytest >/dev/null 2>&1; then
+    PY_BIN="$(sed -n '1s/^#!//p' "$(pyenv which pytest)" | awk '{print $1}')"
+  else
+    SHEBANG="$(sed -n '1s/^#!//p' "$(command -v pytest)" | awk '{print $1}')"
+    if [ -n "$SHEBANG" ] && [ -x "$SHEBANG" ] && "$SHEBANG" -m pytest --version >/dev/null 2>&1; then
+      PY_BIN="$SHEBANG"
+    elif [ -d "${HOME}/.pyenv/versions" ]; then
+      for cand in "${HOME}"/.pyenv/versions/*/bin/python; do
+        if [ -x "$cand" ] && "$cand" -m pytest --version >/dev/null 2>&1; then
+          PY_BIN="$cand"
+          break
+        fi
+      done
+    fi
+  fi
+  if [ -n "$PY_BIN" ]; then
+    echo "[check-ci] python (maturin + pytest)..."
+    PY_VENV="$(mktemp -d)"
+    trap 'rm -rf "$PY_VENV"' EXIT
+    "$PY_BIN" -m venv --system-site-packages "$PY_VENV"
+    VIRTUAL_ENV="$PY_VENV" maturin develop --release --manifest-path crates/dealbreaker-py/Cargo.toml
+    "$PY_VENV/bin/python" -m pytest -v crates/dealbreaker-py/tests
+    rm -rf "$PY_VENV"
+    trap - EXIT
+  else
+    echo "[check-ci] skipping python tests (no python interpreter with pytest found)"
+  fi
+fi
+
+if cargo audit --version >/dev/null 2>&1; then
+  echo "[check-ci] cargo audit (workspace + dealbreaker-py)..."
+  cargo audit
+  cargo audit --file crates/dealbreaker-py/Cargo.lock
+else
+  echo "[check-ci] skipping cargo audit (install with: cargo install cargo-audit)"
 fi
 
 echo "[check-ci] all checks passed!"

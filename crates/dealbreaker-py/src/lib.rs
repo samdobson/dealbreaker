@@ -1,7 +1,7 @@
 //! PyO3 native extension module for Dealbreaker.
 //!
 //! All long-running search methods (`solve`, `best`, `hint`) release the Python GIL via
-//! `Python::allow_threads`, allowing concurrent searches across Python threads.
+//! `Python::detach`, allowing concurrent searches across Python threads.
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -184,7 +184,7 @@ impl NativeSolver {
         let opts = build_solve_opts(max_states, strategy, timeout_ms, autoplay, shorten)?;
         let flag = cancel.map(|c| Arc::clone(&c.borrow().flag));
         let game = &self.game;
-        let out = py.allow_threads(|| {
+        let out = py.detach(|| {
             let r = match &flag {
                 Some(f) => solve_with_cancel(game, &s, &opts, f),
                 None => solve(game, &s, &opts),
@@ -216,7 +216,7 @@ impl NativeSolver {
         let opts = build_solve_opts(max_states, strategy, timeout_ms, true, true)?;
         let flag = cancel.map(|c| Arc::clone(&c.borrow().flag));
         let game = &self.game;
-        let out = py.allow_threads(|| {
+        let out = py.detach(|| {
             let r = match &flag {
                 Some(f) => maximize_with_cancel(game, &s, &opts, f),
                 None => maximize(game, &s, &opts),
@@ -254,7 +254,7 @@ impl NativeSolver {
             .solve(solve_opts);
         let flag = cancel.map(|c| Arc::clone(&c.borrow().flag));
         let game = &self.game;
-        let out = py.allow_threads(|| {
+        let out = py.detach(|| {
             let h = match &flag {
                 Some(f) => hint_with_cancel(game, &s, &opts, f),
                 None => hint(game, &s, &opts),

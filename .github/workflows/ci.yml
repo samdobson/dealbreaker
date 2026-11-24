@@ -96,9 +96,11 @@ jobs:
         with:
           workspaces: crates/dealbreaker-py
       - run: cargo clippy --manifest-path crates/dealbreaker-py/Cargo.toml -- -D warnings
-      - run: pip install maturin pytest
-      - run: maturin develop --release --manifest-path crates/dealbreaker-py/Cargo.toml
-      - run: pytest -v crates/dealbreaker-py/tests
+      - run: |
+          python -m venv .venv
+          .venv/bin/pip install maturin pytest
+          VIRTUAL_ENV="$PWD/.venv" .venv/bin/maturin develop --release --manifest-path crates/dealbreaker-py/Cargo.toml
+          .venv/bin/pytest -v crates/dealbreaker-py/tests
       - name: Verify pyproject.toml version matches Cargo.toml
         run: |
           CARGO_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n1)"

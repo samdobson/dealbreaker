@@ -542,7 +542,17 @@ impl Game {
         }
         if let Some(reach) = &tg.reach {
             let same = self.pile_group[to as usize] as usize == fgi as usize;
-            if !same || from < to || !reach.contains(&(from - to)) {
+            if !same {
+                return false;
+            }
+            let dist = if tg.reach_both_ways {
+                from.abs_diff(to)
+            } else if from >= to {
+                from - to
+            } else {
+                return false;
+            };
+            if !reach.contains(&dist) {
                 return false;
             }
         }
@@ -564,7 +574,12 @@ impl Game {
             || n > src.len()
             || n > tr.max_accept as usize
             || (dst.is_empty() && n > tr.empty_max_accept as usize)
-            || dst.len() + n > tr.max_cards as usize
+            || (if tg.replace_on_drop.is_some() {
+                0
+            } else {
+                dst.len()
+            }) + n
+                > tr.max_cards as usize
         {
             return false;
         }
@@ -846,7 +861,7 @@ impl Game {
                 }
                 let tr = self.rule(to);
                 if no_hooks {
-                    if dst.len() >= tr.max_cards as usize {
+                    if tg.replace_on_drop.is_none() && dst.len() >= tr.max_cards as usize {
                         continue;
                     }
                     if !tr.complete_runs {
@@ -869,7 +884,11 @@ impl Game {
                     (unit, unit)
                 } else {
                     let max_n = if no_hooks {
-                        let room = (tr.max_cards as usize).saturating_sub(dst.len());
+                        let room = if tg.replace_on_drop.is_some() {
+                            tr.max_cards as usize
+                        } else {
+                            (tr.max_cards as usize).saturating_sub(dst.len())
+                        };
                         let cap = if dst_empty {
                             tr.empty_max_accept.min(tr.max_accept) as usize
                         } else {
@@ -1057,6 +1076,108 @@ impl Game {
                     rec(ranks, &tops, &mut pick, &mut sets);
                     for set in sets {
                         emit(&set);
+                    }
+                }
+                RemovalKind::ReachSuitOrRank { distances } => {
+                    for (i, &(p, c)) in tops.iter().enumerate() {
+                        let pg = self.pile_group[p as usize];
+                        for &(q, d) in &tops[i + 1..] {
+                            if self.pile_group[q as usize] != pg {
+                                continue;
+                            }
+                            if distances.contains(&q.abs_diff(p))
+                                && (c.is_joker()
+                                    || d.is_joker()
+                                    || c.suit() == d.suit()
+                                    || c.rank() == d.rank())
+                            {
+                                emit(&[p, q]);
+                            }
+                        }
+                    }
+                }
+                RemovalKind::BetweenMatch { max_len } => {
+                    let max_l = *max_len as usize;
+                    for (gi, g) in self.groups.iter().enumerate() {
+                        if r.from & (1 << gi) == 0 {
+                            continue;
+                        }
+                        let start = g.start;
+                        let end = g.start + g.count;
+                        for len in 1..=max_l {
+                            for p in start + 1..end {
+                                let last = p as usize + len - 1;
+                                let right = p as usize + len;
+                                if right >= end as usize {
+                                    break;
+                                }
+                                let (Some(&lc), Some(&rc)) =
+                                    (s.piles[p as usize - 1].last(), s.piles[right].last())
+                                else {
+                                    continue;
+                                };
+                                if !lc.is_face_up() || !rc.is_face_up() {
+                                    continue;
+                                }
+                                let match_lr = lc.is_joker()
+                                    || rc.is_joker()
+                                    || lc.suit() == rc.suit()
+                                    || lc.rank() == rc.rank();
+                                if !match_lr {
+                                    continue;
+                                }
+                                let mut buf = [0u16; 4];
+                                let mut ok = true;
+                                for (k, slot) in buf.iter_mut().enumerate().take(len) {
+                                    let q = p + k as u16;
+                                    if !self.available(s, q)
+                                        || !s.piles[q as usize]
+                                            .last()
+                                            .is_some_and(|c| c.is_face_up())
+                                    {
+                                        ok = false;
+                                        break;
+                                    }
+                                    *slot = q;
+                                }
+                                let _ = last;
+                                if ok {
+                                    emit(&buf[..len]);
+                                }
+                            }
+                        }
+                    }
+                }
+                RemovalKind::ContiguousSumMultiple { divisor, max_len } => {
+                    let div = *divisor as u32;
+                    let max_l = *max_len as usize;
+                    for (gi, g) in self.groups.iter().enumerate() {
+                        if r.from & (1 << gi) == 0 {
+                            continue;
+                        }
+                        let start = g.start;
+                        let end = g.start + g.count;
+                        for p in start..end {
+                            let mut sum = 0u32;
+                            let mut buf = [0u16; 4];
+                            for k in 0..max_l {
+                                let q = p + k as u16;
+                                if q >= end || !self.available(s, q) {
+                                    break;
+                                }
+                                let Some(&c) = s.piles[q as usize].last() else {
+                                    break;
+                                };
+                                if !c.is_face_up() || c.is_joker() {
+                                    break;
+                                }
+                                sum += c.rank() as u32;
+                                buf[k] = q;
+                                if sum % div == 0 {
+                                    emit(&buf[..=k]);
+                                }
+                            }
+                        }
                     }
                 }
             }

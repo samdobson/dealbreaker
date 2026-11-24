@@ -857,6 +857,20 @@ impl Game {
         }
         match mv.action {
             Action::Transfer { from, to, count } => {
+                if let Some(discard) = self.group_of(to).replace_on_drop {
+                    let existing = s.piles[to as usize].len() as u16;
+                    if existing > 0 {
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: to,
+                                to: discard,
+                                count: existing,
+                            },
+                        );
+                    }
+                }
                 self.push(s, j, Op::Shift { from, to, count });
                 if let Some(cb) = &self.choose_base {
                     if s.base_rank.is_none() {

@@ -282,6 +282,8 @@ impl Game {
                 },
                 hidden: false,
                 reach: g.reach.clone(),
+                reach_both_ways: g.reach_both_ways,
+                replace_on_drop: None,
                 compact: g.compact,
                 requires_rank_on_prev: g.requires_rank_on_prev,
                 match_longest_rank: g.match_longest_rank,
@@ -368,6 +370,12 @@ impl Game {
             }
         };
         let npiles = start as usize;
+        for (gi, g) in rules.groups.iter().enumerate() {
+            if let Some(name) = &g.replace_on_drop {
+                let dgi = find(name)?;
+                groups[gi].replace_on_drop = Some(groups[dgi as usize].start);
+            }
+        }
 
         // Covering layouts.
         let mut covered_by = vec![Vec::new(); npiles];
@@ -536,6 +544,22 @@ impl Game {
 
         let mut removal = Vec::new();
         for r in &rules.removal {
+            match &r.kind {
+                RemovalKind::BetweenMatch { max_len } => {
+                    if *max_len == 0 || *max_len > 4 {
+                        return err("between_match max_len must be 1..=4");
+                    }
+                }
+                RemovalKind::ContiguousSumMultiple { divisor, max_len } => {
+                    if *divisor == 0 {
+                        return err("contiguous_sum_multiple divisor must be at least 1");
+                    }
+                    if *max_len == 0 || *max_len > 4 {
+                        return err("contiguous_sum_multiple max_len must be 1..=4");
+                    }
+                }
+                _ => {}
+            }
             let mut from = 0u64;
             for n in &r.from {
                 from |= 1 << find(n)?;

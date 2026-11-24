@@ -373,6 +373,13 @@ pub struct GroupRules {
     /// it (Accordion: 1 and 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reach: Option<Vec<u16>>,
+    /// With `reach`: also accept from piles this many places before the destination pile.
+    #[serde(default)]
+    pub reach_both_ways: bool,
+    /// When a card is placed on a non-empty pile of this group, first move the destination pile's
+    /// existing cards to this group's first pile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replace_on_drop: Option<String>,
     /// Keep the group packed: whenever a pile empties, the piles after it slide forward.
     #[serde(default)]
     pub compact: bool,
@@ -559,6 +566,8 @@ impl GroupRules {
             refill_from: Vec::new(),
             refill_count: None,
             reach: None,
+            reach_both_ways: false,
+            replace_on_drop: None,
             compact: false,
             suit: None,
             empty_suit: None,
@@ -1292,6 +1301,15 @@ pub enum RemovalKind {
     SameRank,
     /// Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).
     RankSet { ranks: Vec<u8> },
+    /// Remove two playable cards in the same group whose pile indices differ by one of
+    /// `distances`, when they match in suit or rank.
+    ReachSuitOrRank { distances: Vec<u16> },
+    /// Remove `1..=max_len` consecutive non-empty piles in a group when the piles immediately
+    /// before and after the run match in suit or rank.
+    BetweenMatch { max_len: u8 },
+    /// Remove `1..=max_len` consecutive non-empty piles in a group when the sum of their ranks is
+    /// a multiple of `divisor`.
+    ContiguousSumMultiple { divisor: u8, max_len: u8 },
 }
 
 /// When the game is won.

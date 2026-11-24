@@ -130,6 +130,10 @@ pub(crate) struct Group {
     pub hidden: bool,
     /// Accept only from piles of this group this many places later.
     pub reach: Option<Vec<u16>>,
+    /// With `reach`: also accept from piles earlier in the group.
+    pub reach_both_ways: bool,
+    /// When placing onto a non-empty pile of this group, move existing cards to this pile first.
+    pub replace_on_drop: Option<u16>,
     /// Slide piles forward to close gaps after every move.
     pub compact: bool,
     /// Each pile after the first only accepts ranks present on the previous pile.
@@ -296,6 +300,8 @@ impl Group {
             columns: None,
             hidden: true,
             reach: None,
+            reach_both_ways: false,
+            replace_on_drop: None,
             compact: false,
             requires_rank_on_prev: false,
             match_longest_rank: false,

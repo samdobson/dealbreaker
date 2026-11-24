@@ -2067,3 +2067,94 @@ fn require_valid_base_and_multi_source_refill_count() {
     r.win = WinRule::Empty(vec!["stock".into(), "waste".into(), "tableau".into()]);
     check(r, 0..40);
 }
+
+#[test]
+fn ribbon_replace_and_removals() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4, 5]);
+
+    // Relaxed ribbon with replace_on_drop + reach_both_ways + compact.
+    let mut row = GroupRules::new("tableau", PileKind::Tableau, 10)
+        .build(BuildBy::SuitOrRank, Dir::Any)
+        .moves(MoveUnit::Top)
+        .empty(EmptyRule::None)
+        .max_cards(1);
+    row.reach = Some(vec![1, 3]);
+    row.reach_both_ways = true;
+    row.replace_on_drop = Some("foundation".into());
+    row.compact = true;
+    let mut r_acc = Rules::new(
+        "mini-relaxed-ribbon",
+        pack.clone(),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::None, Dir::Up)
+                .empty(EmptyRule::None),
+            row,
+        ],
+        vec![
+            DealStep::to("tableau").piles(&[0, 1, 2]).each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.first_empty = true;
+    r_acc.stock = Some(st.clone());
+    r_acc.win = WinRule::Count {
+        group: "foundation".into(),
+        cards: 9,
+    };
+    check(r_acc, 0..40);
+
+    // ReachSuitOrRank, BetweenMatch, and ContiguousSumMultiple removals on compacting ribbons.
+    for (name, kind, target_cards) in [
+        (
+            "mini-reach-remove",
+            RemovalKind::ReachSuitOrRank {
+                distances: vec![1, 3],
+            },
+            10u16,
+        ),
+        (
+            "mini-between-match",
+            RemovalKind::BetweenMatch { max_len: 2 },
+            8u16,
+        ),
+        (
+            "mini-contiguous-sum",
+            RemovalKind::ContiguousSumMultiple {
+                divisor: 5,
+                max_len: 3,
+            },
+            10u16,
+        ),
+    ] {
+        let mut t = GroupRules::new("tableau", PileKind::Tableau, 10)
+            .empty(EmptyRule::None)
+            .moves(MoveUnit::None)
+            .max_cards(1);
+        t.compact = true;
+        let mut r = Rules::new(
+            name,
+            pack.clone(),
+            vec![
+                GroupRules::new("stock", PileKind::Stock, 1),
+                GroupRules::new("foundation", PileKind::Foundation, 1)
+                    .build(BuildBy::None, Dir::Up)
+                    .empty(EmptyRule::None),
+                t,
+            ],
+            vec![
+                DealStep::to("tableau").piles(&[0, 1, 2]).each(1),
+                DealStep::to("stock").rest().down(),
+            ],
+        );
+        r.stock = Some(st.clone());
+        r.removal = vec![RemovalRules::new(kind, &["tableau"], "foundation")];
+        r.win = WinRule::Count {
+            group: "foundation".into(),
+            cards: target_cards,
+        };
+        check(r, 0..40);
+    }
+}

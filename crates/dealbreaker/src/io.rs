@@ -175,6 +175,11 @@ impl Game {
 
     /// Check a position holds exactly the game's pack, in piles of legal sizes.
     pub fn validate(&self, s: &State) -> Result<(), StateError> {
+        if let Some(r) = s.base_rank {
+            if !(1..=13).contains(&r) {
+                return Err(StateError(format!("base_rank {r} is not 1..=13")));
+            }
+        }
         if s.piles.len() != self.num_piles() {
             return Err(StateError(format!(
                 "{} piles, expected {}",

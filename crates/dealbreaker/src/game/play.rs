@@ -1137,7 +1137,8 @@ impl Game {
             return;
         }
         let mut emptied: Vec<u16> = initial_emptied.to_vec();
-        loop {
+        let max_iters = s.piles.len().saturating_mul(16).max(256);
+        for _ in 0..max_iters {
             let mut changed = self.settle_compact(s, j);
             let mut next_emptied: Vec<u16> = Vec::new();
             if self.settle_refills(s, j, &emptied, &mut next_emptied) {

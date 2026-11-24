@@ -7,6 +7,37 @@ use super::{
     err, CompiledChooseBase, Game, Group, PileRules, Redeal, Removal, RulesError, Stock, Win,
 };
 
+const MAX_PILES: u16 = 1024;
+
+fn validate_rank(ctx: &str, r: u8) -> Result<(), RulesError> {
+    if !(1..=13).contains(&r) {
+        return err(format!("{ctx}: rank {r} is not 1..=13"));
+    }
+    Ok(())
+}
+
+fn check_refill_cycles(groups: &[Group]) -> Result<(), RulesError> {
+    // 0 = unvisited, 1 = visiting (on stack), 2 = visited.
+    let mut state = vec![0u8; groups.len()];
+    fn dfs(u: usize, groups: &[Group], state: &mut [u8]) -> bool {
+        state[u] = 1;
+        for &v in &groups[u].refill_from {
+            let v = v as usize;
+            if state[v] == 1 || (state[v] == 0 && dfs(v, groups, state)) {
+                return true;
+            }
+        }
+        state[u] = 2;
+        false
+    }
+    for i in 0..groups.len() {
+        if state[i] == 0 && dfs(i, groups, &mut state) {
+            return err("refill_from cannot contain cycles");
+        }
+    }
+    Ok(())
+}
+
 struct CompiledPack {
     rank_idx: [u8; 14],
     in_pack: [bool; FACES],
@@ -134,6 +165,18 @@ fn compile_pile_rules(
         PileKind::Tableau | PileKind::Cell => EmptyRule::Any,
         _ => EmptyRule::None,
     });
+    match &empty {
+        EmptyRule::Rank(r) => validate_rank(&g.name, *r)?,
+        EmptyRule::Ranks(rs) => {
+            for &r in rs {
+                validate_rank(&g.name, r)?;
+            }
+        }
+        EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first } => {
+            validate_rank(&g.name, *first)?;
+        }
+        _ => {}
+    }
     let moves = moves.unwrap_or(match g.kind {
         PileKind::Foundation | PileKind::Stock => MoveUnit::None,
         _ => MoveUnit::Top,
@@ -264,6 +307,10 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
         if g.count == 0 {
             return err(format!("group {:?} has no piles", g.name));
         }
+        let next_start = start
+            .checked_add(g.count)
+            .filter(|&n| n <= MAX_PILES)
+            .ok_or_else(|| RulesError(format!("too many piles (at most {MAX_PILES})")))?;
         if matches!(g.kind, PileKind::Stock | PileKind::Waste) && g.count != 1 {
             return err(format!(
                 "{:?}: stock and waste groups have exactly one pile",
@@ -399,10 +446,9 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             && !grp.has_positional_rules()
             && !has_after_pile;
         groups.push(grp);
-        start = start
-            .checked_add(g.count)
-            .ok_or_else(|| RulesError("too many piles".into()))?;
+        start = next_start;
     }
+    check_refill_cycles(&groups)?;
     Ok(CompiledGroups {
         groups,
         pile_group,
@@ -460,7 +506,10 @@ fn compile_redeal(
         after_pile: None,
     });
     pile_group.push(groups.len() as u16 - 1);
-    *start += 1;
+    *start = start
+        .checked_add(1)
+        .filter(|&n| n <= MAX_PILES)
+        .ok_or_else(|| RulesError(format!("too many piles (at most {MAX_PILES})")))?;
     Ok(Some(Redeal {
         group: gi,
         times: if rd.unlimited { u32::MAX } else { rd.times },
@@ -1300,13 +1349,20 @@ impl Game {
         let hands = match &sr.hands {
             crate::rules::Hands::Poker(table) => {
                 let points = points_table(&table.points());
+                let monotone = points.windows(2).all(|w| w[0] <= w[1]);
+                if !monotone && self.jokers > 2 {
+                    return err("score: non-monotone poker scoring supports at most 2 jokers");
+                }
                 HandScoring::Poker {
                     order: points_order(&points),
-                    monotone: points.windows(2).all(|w| w[0] <= w[1]),
+                    monotone,
                     points,
                 }
             }
             crate::rules::Hands::Cribbage(cr) => {
+                if self.jokers > 2 {
+                    return err("score: cribbage scoring supports at most 2 jokers");
+                }
                 let starter = match &cr.starter {
                     None => None,
                     Some(n) => {
@@ -1394,14 +1450,15 @@ fn resolve_group_piles(group: &Group, indices: &[u16], ctx: &str) -> Result<Vec<
 fn layout_covers(layout: &Layout, count: u16) -> Result<Vec<Vec<u16>>, String> {
     match layout {
         Layout::Pyramid { rows } => {
-            let rows = *rows;
-            if rows * (rows + 1) / 2 != count {
+            let rows = *rows as u32;
+            let need = rows * (rows + 1) / 2;
+            if need != count as u32 {
                 return Err(format!(
-                    "a {rows}-row pyramid has {} piles, not {count}",
-                    rows * (rows + 1) / 2
+                    "a {rows}-row pyramid has {need} piles, not {count}"
                 ));
             }
-            let mut v = Vec::new();
+            let rows = rows as u16;
+            let mut v = Vec::with_capacity(count as usize);
             for r in 0..rows {
                 for i in 0..=r {
                     if r + 1 < rows {

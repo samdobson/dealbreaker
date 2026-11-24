@@ -1,5 +1,21 @@
 import { init, Solver, presets } from "./index.js";
 
+const ALLOWED_METHODS = new Set([
+  "rules",
+  "deal",
+  "dealMicrosoft",
+  "dealOrdered",
+  "validate",
+  "solve",
+  "best",
+  "score",
+  "hint",
+  "legalSteps",
+  "playStep",
+  "isWon",
+  "render",
+]);
+
 let solver = null;
 
 self.onmessage = async (event) => {
@@ -30,7 +46,7 @@ self.onmessage = async (event) => {
         if (!solver) {
           throw new Error("WorkerSolver is not initialized");
         }
-        if (typeof solver[method] !== "function") {
+        if (!ALLOWED_METHODS.has(method) || typeof solver[method] !== "function") {
           throw new Error(`Unknown method: ${method}`);
         }
         result = solver[method](...args);

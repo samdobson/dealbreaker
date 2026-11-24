@@ -149,7 +149,7 @@ impl<'c> Stop<'c> {
         #[cfg(not(target_arch = "wasm32"))]
         let deadline = opts
             .timeout_ms
-            .map(|ms| std::time::Instant::now() + Duration::from_millis(ms));
+            .and_then(|ms| std::time::Instant::now().checked_add(Duration::from_millis(ms)));
         #[cfg(target_arch = "wasm32")]
         let _ = opts;
         Stop {

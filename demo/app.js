@@ -227,10 +227,16 @@ function renderCardEl(cardStr, topPx) {
   div.className = "card" + (c.down ? " down" : c.joker ? " joker" : c.red ? " red" : "");
   div.style.top = `${topPx}px`;
   if (!c.down) {
-    div.innerHTML =
-      `<span>${c.text}${c.suit}</span>` +
-      `<span class="card-center">${c.suit}</span>` +
-      `<span class="card-bot">${c.text}${c.suit}</span>`;
+    const label = `${c.text}${c.suit}`;
+    const top = document.createElement("span");
+    top.textContent = label;
+    const center = document.createElement("span");
+    center.className = "card-center";
+    center.textContent = c.suit;
+    const bot = document.createElement("span");
+    bot.className = "card-bot";
+    bot.textContent = label;
+    div.append(top, center, bot);
   }
   return div;
 }
@@ -480,18 +486,56 @@ async function encodeRulesParam(rulesObj) {
   return "r:" + toBase64Url(bytes);
 }
 
+const MAX_RULES_BYTES = 512 * 1024;
+
+async function readStreamWithLimit(readable, maxBytes) {
+  const reader = readable.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error(`Rules payload exceeds ${maxBytes} byte limit`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
+
 async function decodeRulesParam(encoded) {
   if (encoded.startsWith("z:") && typeof DecompressionStream === "function") {
     const bytes = fromBase64Url(encoded.slice(2));
+    if (bytes.byteLength > MAX_RULES_BYTES) {
+      throw new Error(`Rules payload exceeds ${MAX_RULES_BYTES} byte limit`);
+    }
     const ds = new DecompressionStream("deflate-raw");
     const writer = ds.writable.getWriter();
-    writer.write(bytes);
-    writer.close();
-    const raw = await new Response(ds.readable).text();
-    return JSON.parse(raw);
+    const writePromise = writer.write(bytes).then(() => writer.close());
+    const [decompressed] = await Promise.all([
+      readStreamWithLimit(ds.readable, MAX_RULES_BYTES),
+      writePromise.catch(() => {}),
+    ]);
+    return JSON.parse(new TextDecoder().decode(decompressed));
   }
   const payload = encoded.startsWith("r:") ? encoded.slice(2) : encoded;
-  return JSON.parse(new TextDecoder().decode(fromBase64Url(payload)));
+  const bytes = fromBase64Url(payload);
+  if (bytes.byteLength > MAX_RULES_BYTES) {
+    throw new Error(`Rules payload exceeds ${MAX_RULES_BYTES} byte limit`);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
 
 async function syncUrlHash() {

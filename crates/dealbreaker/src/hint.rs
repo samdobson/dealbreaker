@@ -159,36 +159,45 @@ fn hint_inner(
     #[cfg(feature = "parallel")]
     {
         use rayon::prelude::*;
-        let guesses: Vec<State> = (0..samples).map(|_| guess(&mut rng)).collect();
-        let outcomes: Vec<Option<Option<Step>>> = guesses
-            .par_iter()
-            .map(|g| {
-                if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
-                    return None;
+        const CHUNK: u32 = 256;
+        let mut remaining = samples;
+        while remaining > 0 {
+            if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                break;
+            }
+            let batch = remaining.min(CHUNK);
+            remaining -= batch;
+            let guesses: Vec<State> = (0..batch).map(|_| guess(&mut rng)).collect();
+            let outcomes: Vec<Option<Option<Step>>> = guesses
+                .par_iter()
+                .map(|g| {
+                    if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                        return None;
+                    }
+                    let r = match cancel {
+                        Some(c) => solve_with_cancel(game, g, &opts.solve, c),
+                        None => solve(game, g, &opts.solve),
+                    };
+                    let step = match r.outcome {
+                        Outcome::Solved(moves) => game.steps(g, &moves).into_iter().next(),
+                        _ => None,
+                    };
+                    Some(step)
+                })
+                .collect();
+            for item in outcomes {
+                let Some(step_opt) = item else {
+                    continue;
+                };
+                tried += 1;
+                if let Some(step) = step_opt {
+                    let key = format!("{step:?}");
+                    let e = votes.entry(key.clone()).or_insert_with(|| {
+                        order.push(key);
+                        (step, 0)
+                    });
+                    e.1 += 1;
                 }
-                let r = match cancel {
-                    Some(c) => solve_with_cancel(game, g, &opts.solve, c),
-                    None => solve(game, g, &opts.solve),
-                };
-                let step = match r.outcome {
-                    Outcome::Solved(moves) => game.steps(g, &moves).into_iter().next(),
-                    _ => None,
-                };
-                Some(step)
-            })
-            .collect();
-        for item in outcomes {
-            let Some(step_opt) = item else {
-                continue;
-            };
-            tried += 1;
-            if let Some(step) = step_opt {
-                let key = format!("{step:?}");
-                let e = votes.entry(key.clone()).or_insert_with(|| {
-                    order.push(key);
-                    (step, 0)
-                });
-                e.1 += 1;
             }
         }
     }
@@ -263,37 +272,46 @@ fn scored_hint(
     #[cfg(feature = "parallel")]
     {
         use rayon::prelude::*;
-        let guesses: Vec<State> = (0..samples).map(|_| guess()).collect();
-        let results: Vec<Option<Vec<(u64, u32)>>> = guesses
-            .par_iter()
-            .map(|g| {
-                let mut scores = vec![(0u64, 0u32); moves.len()];
-                for (i, &m) in moves.iter().enumerate() {
-                    if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
-                        return None;
-                    }
-                    let mut s = g.clone();
-                    if game.play(&mut s, m).is_err() {
-                        continue;
-                    }
-                    let r = match cancel {
-                        Some(c) => maximize_with_cancel(game, &s, &per, c),
-                        None => maximize(game, &s, &per),
-                    };
-                    scores[i].0 = r.score as u64;
-                    if game.target_score().is_some_and(|t| r.score >= t) {
-                        scores[i].1 = 1;
-                    }
-                }
-                Some(scores)
-            })
-            .collect();
-        for scores in results.into_iter().flatten() {
-            for (t, &(sc, w)) in totals.iter_mut().zip(&scores) {
-                t.0 += sc;
-                t.1 += w;
+        const CHUNK: u32 = 256;
+        let mut remaining = samples;
+        while remaining > 0 {
+            if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                break;
             }
-            completed += 1;
+            let batch = remaining.min(CHUNK);
+            remaining -= batch;
+            let guesses: Vec<State> = (0..batch).map(|_| guess()).collect();
+            let results: Vec<Option<Vec<(u64, u32)>>> = guesses
+                .par_iter()
+                .map(|g| {
+                    let mut scores = vec![(0u64, 0u32); moves.len()];
+                    for (i, &m) in moves.iter().enumerate() {
+                        if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                            return None;
+                        }
+                        let mut s = g.clone();
+                        if game.play(&mut s, m).is_err() {
+                            continue;
+                        }
+                        let r = match cancel {
+                            Some(c) => maximize_with_cancel(game, &s, &per, c),
+                            None => maximize(game, &s, &per),
+                        };
+                        scores[i].0 = r.score as u64;
+                        if game.target_score().is_some_and(|t| r.score >= t) {
+                            scores[i].1 = 1;
+                        }
+                    }
+                    Some(scores)
+                })
+                .collect();
+            for scores in results.into_iter().flatten() {
+                for (t, &(sc, w)) in totals.iter_mut().zip(&scores) {
+                    t.0 += sc;
+                    t.1 += w;
+                }
+                completed += 1;
+            }
         }
     }
     #[cfg(not(feature = "parallel"))]

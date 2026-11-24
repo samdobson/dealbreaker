@@ -67,7 +67,7 @@ pub(crate) enum HandScoring {
         starter: Option<u16>,
         starter_bound: StarterBound,
         /// Best fifteens, pairs and runs reachable from each rank multiset (see [`rank_key`]).
-        best: Arc<Vec<u16>>,
+        best: Arc<Vec<u32>>,
     },
 }
 
@@ -134,9 +134,9 @@ fn rank_bit(r: u8) -> u16 {
 /// Card counts for one line (or a pool of cards). Jokers are only counted.
 #[derive(Clone)]
 struct Counts {
-    face: [u8; FACES],
-    rank: [u8; 14],
-    suit: [u8; 4],
+    face: [u16; FACES],
+    rank: [u16; 14],
+    suit: [u16; 4],
     total: u32,
     jokers: u32,
     /// Ranks present, overall and per suit (see [`rank_bit`]).
@@ -210,7 +210,7 @@ fn poker_points(c: &Counts, points: &[u32; 10], monotone: bool) -> u32 {
 fn possible(have: &Counts, pool: &Counts, slots: u32, wild: u32) -> u16 {
     let mut set = 1u16;
     // Cards needed from the pool to hold `n` of rank r.
-    let need_rank = |r: usize, n: u8| -> Option<u32> {
+    let need_rank = |r: usize, n: u16| -> Option<u32> {
         let k = n.saturating_sub(have.rank[r]) as u32;
         (pool.rank[r] as u32 + wild >= k && k <= slots).then_some(k)
     };
@@ -334,7 +334,10 @@ fn rank_points(p: &CribbagePoints, count: &[u8; 14]) -> u32 {
             runs += len * ways;
         }
     }
-    fifteens * p.fifteen + pairs * p.pair + runs * p.run_card
+    fifteens
+        .saturating_mul(p.fifteen)
+        .saturating_add(pairs.saturating_mul(p.pair))
+        .saturating_add(runs.saturating_mul(p.run_card))
 }
 
 /// A cribbage hand's points: the line's cards plus the starter, jokers standing for whatever
@@ -362,14 +365,14 @@ fn cribbage_hand(p: &CribbagePoints, line: &[Card], starter: Option<Card>, full:
     }
     let mut pts = rank_points(p, &count);
     if full && line.len() >= 4 && line.iter().all(|c| c.suit() == line[0].suit()) {
-        pts += p.flush;
+        pts = pts.saturating_add(p.flush);
         if starter.is_some_and(|s| s.suit() == line[0].suit()) {
-            pts += p.flush_starter;
+            pts = pts.saturating_add(p.flush_starter);
         }
     }
     if let Some(st) = starter {
         if line.iter().any(|c| c.rank() == 11 && c.suit() == st.suit()) {
-            pts += p.nobs;
+            pts = pts.saturating_add(p.nobs);
         }
     }
     pts
@@ -394,8 +397,8 @@ fn rank_key(count: &[u8; 14]) -> usize {
 /// five-card multiset containing it with at most `cap` cards of a rank. Adding a card never
 /// loses rank points, so this bounds every such hand of five or fewer cards that contains the
 /// multiset.
-pub(crate) fn best_rank_points(p: &CribbagePoints, cap: u8) -> Vec<u16> {
-    let mut best = vec![0u16; 14usize.pow(MAX_HAND as u32)];
+pub(crate) fn best_rank_points(p: &CribbagePoints, cap: u8) -> Vec<u32> {
+    let mut best = vec![0u32; 14usize.pow(MAX_HAND as u32)];
     // Multisets by size, largest first, so each extension is known before it's needed.
     fn each(size: usize, min: usize, count: &mut [u8; 14], f: &mut dyn FnMut(&[u8; 14])) {
         if size == 0 {
@@ -412,7 +415,7 @@ pub(crate) fn best_rank_points(p: &CribbagePoints, cap: u8) -> Vec<u16> {
     for size in (0..=MAX_HAND).rev() {
         each(size, 1, &mut count, &mut |c| {
             let v = if size == MAX_HAND {
-                rank_points(p, c) as u16
+                rank_points(p, c)
             } else {
                 let mut c2 = *c;
                 (1..14)
@@ -455,11 +458,9 @@ impl Score {
         match &self.hands {
             HandScoring::Poker {
                 points, monotone, ..
-            } => self
-                .lines
-                .iter()
-                .map(|l| poker_points(&self.line_counts(s, l), points, *monotone))
-                .sum(),
+            } => self.lines.iter().fold(0u32, |acc, l| {
+                acc.saturating_add(poker_points(&self.line_counts(s, l), points, *monotone))
+            }),
             HandScoring::Cribbage {
                 points, starter, ..
             } => {
@@ -467,7 +468,7 @@ impl Score {
                     .filter(|_| self.grid_full(s))
                     .and_then(|p| s.piles[p as usize].last())
                     .map(|c| c.up());
-                let mut total = 0;
+                let mut total = 0u32;
                 let mut cards = Vec::new();
                 for line in &self.lines {
                     cards.clear();
@@ -477,10 +478,10 @@ impl Score {
                         full &= !pile.is_empty();
                         cards.extend(pile.iter().map(|c| c.up()));
                     }
-                    total += cribbage_hand(points, &cards, starter, full);
+                    total = total.saturating_add(cribbage_hand(points, &cards, starter, full));
                 }
                 if starter.is_some_and(|c| c.is_joker() || c.rank() == 11) {
-                    total += points.heels;
+                    total = total.saturating_add(points.heels);
                 }
                 total
             }
@@ -598,7 +599,7 @@ impl Score {
     fn cribbage_line_bound(
         &self,
         p: &CribbagePoints,
-        best: &[u16],
+        best: &[u32],
         have: &Counts,
         pool: &Counts,
         slots: u32,
@@ -609,16 +610,21 @@ impl Score {
         // A starter of one known real card is fixed; otherwise it's one more free choice.
         let known = (starter.total == 1 && starter.jokers == 0)
             .then(|| (1..14).find(|&r| starter.rank[r] > 0).unwrap());
-        let mut fixed = have.rank;
+        let fixed_n: usize =
+            have.rank.iter().map(|&c| c as usize).sum::<usize>() + usize::from(known.is_some());
+        let free = (have.jokers + slots) as usize + usize::from(has_starter && known.is_none());
+        if fixed_n + free > MAX_HAND {
+            // Bigger hands than the table knows: no useful bound.
+            return u32::MAX / 4;
+        }
+        let mut fixed = [0u8; 14];
+        for r in 1..14 {
+            fixed[r] = have.rank[r] as u8;
+        }
         if let Some(r) = known {
             fixed[r] += 1;
         }
-        let free = (have.jokers + slots) as usize + usize::from(has_starter && known.is_none());
-        let fixed_n: usize = fixed.iter().map(|&c| c as usize).sum();
-        let rank_part = if fixed_n + free > MAX_HAND {
-            // Bigger hands than the table knows: no useful bound.
-            return u32::MAX / 4;
-        } else if free == 0 {
+        let rank_part = if free == 0 {
             rank_points(p, &fixed)
         } else if free <= 2 {
             // Few enough to try every choice of ranks the arriving cards could have.
@@ -643,7 +649,7 @@ impl Score {
             }
             most
         } else {
-            best[rank_key(&fixed)] as u32
+            best[rank_key(&fixed)]
         };
         let mut pts = rank_part;
         // Flush: every real card of the full line in one suit, the rest able to follow.
@@ -656,7 +662,11 @@ impl Score {
                 let starter_too = suits
                     .iter()
                     .any(|&s| starter.suit[s] > 0 || starter.jokers > 0);
-                pts += p.flush + if starter_too { p.flush_starter } else { 0 };
+                pts = pts.saturating_add(p.flush).saturating_add(if starter_too {
+                    p.flush_starter
+                } else {
+                    0
+                });
             }
         }
         // Nobs: a jack in the line of the starter's suit.
@@ -667,7 +677,7 @@ impl Score {
                     || have.face[s * 13 + 10] > 0
             };
             if (0..4).any(|s| (starter.suit[s] > 0 || starter.jokers > 0) && can_get_jack(s)) {
-                pts += p.nobs;
+                pts = pts.saturating_add(p.nobs);
             }
         }
         pts
@@ -1039,7 +1049,7 @@ mod tests {
             let k = (rng.next_u64() % 5) as usize;
             let mut count = [0u8; 14];
             deck[..k].iter().for_each(|c| count[c.rank() as usize] += 1);
-            let b = best[rank_key(&count)] as u32;
+            let b = best[rank_key(&count)];
             let mut full = count;
             deck[k..5].iter().for_each(|c| full[c.rank() as usize] += 1);
             assert!(rank_points(&p, &full) <= b);

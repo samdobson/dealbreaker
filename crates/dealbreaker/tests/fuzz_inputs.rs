@@ -320,3 +320,104 @@ fn step_json_and_play_step_never_panic() {
         }
     }
 }
+
+#[test]
+fn adversarial_rules_and_options_never_panic_or_hang() {
+    // 1. Cyclic refill_from (self-cycle and 2-group cycle) must be rejected.
+    let mut self_cycle = presets::freecell();
+    self_cycle.groups[2].refill_from = vec!["tableau".into()];
+    assert!(Game::new(self_cycle).unwrap_err().0.contains("cycle"));
+
+    let mut two_cycle = presets::freecell();
+    two_cycle.groups[0].refill_from = vec!["tableau".into()];
+    two_cycle.groups[2].refill_from = vec!["cell".into()];
+    assert!(Game::new(two_cycle).unwrap_err().0.contains("cycle"));
+
+    // 2. Out-of-range ranks in EmptyRule variants must be rejected.
+    for bad_empty in [
+        EmptyRule::Rank(0),
+        EmptyRule::Rank(14),
+        EmptyRule::Rank(255),
+        EmptyRule::Ranks(vec![1, 14]),
+        EmptyRule::AfterLeft { first: 0 },
+        EmptyRule::AfterNeighbor { first: 99 },
+    ] {
+        let mut r = presets::freecell();
+        r.groups[2].empty = Some(bad_empty);
+        assert!(Game::new(r).unwrap_err().0.contains("1..=13"));
+    }
+
+    // 3. Out-of-range base_rank in StateData must be rejected.
+    let fc = Game::new(presets::freecell()).unwrap();
+    for bad_rank in [0u8, 14, 255] {
+        let mut data = fc.state_to_data(&fc.deal(1));
+        data.base_rank = Some(bad_rank);
+        assert!(fc.state_from_data(&data).unwrap_err().0.contains("1..=13"));
+    }
+
+    // 4. Pyramid rows u16 overflow (512 * 513 / 2 wraps mod 65536 to 256).
+    let mut pyr = presets::pyramid();
+    pyr.groups[2].count = 256;
+    pyr.groups[2].layout = Some(Layout::Pyramid { rows: 512 });
+    assert!(Game::new(pyr).is_err());
+
+    // 5. Excessive pile counts (and redeal scratch pile at boundary) must be rejected.
+    let mut huge = presets::freecell();
+    huge.groups[2].count = 2000;
+    assert!(Game::new(huge).unwrap_err().0.contains("too many piles"));
+
+    let mut boundary_redeal = presets::la_belle_lucie();
+    boundary_redeal.groups[1].count = 1020; // 4 foundations + 1020 tableau + 1 scratch > 1024
+    assert!(Game::new(boundary_redeal)
+        .unwrap_err()
+        .0
+        .contains("too many piles"));
+
+    // 6. Scored games with >2 jokers in Cribbage or non-monotone Poker must be rejected.
+    let mut crib = presets::cribbage_squares();
+    crib.pack.jokers = 3;
+    assert!(Game::new(crib).unwrap_err().0.contains("jokers"));
+
+    let mut poker = presets::poker_squares();
+    poker.pack.jokers = 3;
+    if let Some(sc) = &mut poker.score {
+        let mut pts = PokerTable::Named(PokerScoring::American).points();
+        pts.pair = 100;
+        pts.two_pair = 1; // non-monotone
+        sc.hands = Hands::Poker(PokerTable::Points(pts));
+    }
+    assert!(Game::new(poker).unwrap_err().0.contains("jokers"));
+
+    // 7. Large CribbagePoints must not overflow during compile_score / score / maximize.
+    let mut big_crib = presets::cribbage_squares();
+    if let Some(sc) = &mut big_crib.score {
+        if let Hands::Cribbage(ref mut cr) = sc.hands {
+            cr.points.fifteen = u32::MAX;
+            cr.points.pair = u32::MAX;
+            cr.points.run_card = u32::MAX;
+            cr.points.flush = u32::MAX;
+            cr.points.heels = u32::MAX;
+            cr.points.nobs = u32::MAX;
+        }
+    }
+    let g_big = Game::new(big_crib).unwrap();
+    let s_big = g_big.deal(1);
+    let _ = g_big.score(&s_big);
+    let _ = maximize(&g_big, &s_big, &SolveOptions::default().max_states(10));
+
+    // 8. Huge timeout_ms must not panic on Instant overflow.
+    let s = fc.deal(1);
+    let _ = solve(
+        &fc,
+        &s,
+        &SolveOptions::default().max_states(10).timeout_ms(u64::MAX),
+    );
+
+    // 9. Huge hint samples with pre-triggered cancel must return immediately without OOM.
+    let cancel = std::sync::atomic::AtomicBool::new(true);
+    let kl = Game::new(presets::klondike1()).unwrap();
+    let ks = kl.deal(1);
+    assert!(
+        hint_with_cancel(&kl, &ks, &HintOptions::default().samples(u32::MAX), &cancel,).is_none()
+    );
+}

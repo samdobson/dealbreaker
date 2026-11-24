@@ -7,10 +7,18 @@
 extern "C" {
 #endif
 
-/** Opaque compiled game rules handle. Thread-safe for concurrent read/search calls. */
+/**
+ * Opaque compiled game rules handle. Thread-safe for concurrent read/search calls.
+ * Must outlive all concurrent calls using this handle; do not call `dealbreaker_solver_free`
+ * until every in-flight call on other threads has returned.
+ */
 typedef struct DealbreakerSolver DealbreakerSolver;
 
-/** Opaque cooperative cancellation flag. Safe to trigger from another thread. */
+/**
+ * Opaque cooperative cancellation flag. Safe to trigger from another thread.
+ * Must outlive all concurrent searches using this flag; do not call `dealbreaker_cancel_free`
+ * until every search referencing it has returned.
+ */
 typedef struct DealbreakerCancel DealbreakerCancel;
 
 /** Free a string returned by any `dealbreaker_*` function. Passing NULL is a no-op. */

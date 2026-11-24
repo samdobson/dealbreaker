@@ -556,16 +556,11 @@ fn run(argv: &[String]) -> Result<(), String> {
             if !g.is_scored() {
                 return Err(format!("{} isn't played for points", g.name()));
             }
-            let range = a.get("--seeds").unwrap_or("1..100");
-            let (lo, hi) = range
-                .split_once("..")
-                .and_then(|(l, h)| Some((l.parse::<u64>().ok()?, h.parse::<u64>().ok()?)))
-                .ok_or_else(|| format!("--seeds wants A..B, got {range}"))?;
+            let (lo, hi) = parse_seed_range(a.get("--seeds").unwrap_or("1..100"))?;
             let o = search_opts(&a)?;
             let jobs = a.num::<usize>("--jobs")?;
-            let seeds: Vec<u64> = (lo..=hi).collect();
             let t = Instant::now();
-            let run_one = |&seed: &u64| {
+            let run_one = |seed: u64| {
                 let s = g.deal(seed);
                 let t1 = Instant::now();
                 let r = maximize(&g, &s, &o);
@@ -577,7 +572,7 @@ fn run(argv: &[String]) -> Result<(), String> {
                     t1.elapsed().as_secs_f64(),
                 )
             };
-            let results: Vec<_> = run_bench(&seeds, jobs, run_one)?;
+            let results: Vec<_> = run_bench(lo..=hi, jobs, run_one)?;
             let (mut total, mut proven, mut states) = (0u64, 0u32, 0u64);
             let (mut lowest, mut highest) = (u32::MAX, 0u32);
             for (seed, score, is_proven, st, dt) in results {
@@ -593,7 +588,7 @@ fn run(argv: &[String]) -> Result<(), String> {
                     );
                 }
             }
-            let n = hi - lo + 1;
+            let n = (hi as u128 - lo as u128 + 1) as u64;
             let secs = t.elapsed().as_secs_f64();
             let mean = total as f64 / n as f64;
             if a.has("--json") {
@@ -631,17 +626,12 @@ fn run(argv: &[String]) -> Result<(), String> {
                 ],
             )?;
             let g = load_game(game_arg()?, &a)?;
-            let range = a.get("--seeds").unwrap_or("1..100");
-            let (lo, hi) = range
-                .split_once("..")
-                .and_then(|(l, h)| Some((l.parse::<u64>().ok()?, h.parse::<u64>().ok()?)))
-                .ok_or_else(|| format!("--seeds wants A..B, got {range}"))?;
+            let (lo, hi) = parse_seed_range(a.get("--seeds").unwrap_or("1..100"))?;
             let o = search_opts(&a)?;
             let jobs = a.num::<usize>("--jobs")?;
             let ms = a.has("--microsoft");
-            let seeds: Vec<u64> = (lo..=hi).collect();
             let t = Instant::now();
-            let run_one = |&seed: &u64| -> Result<(u64, &'static str, u64, usize, f64), String> {
+            let run_one = |seed: u64| -> Result<(u64, &'static str, u64, usize, f64), String> {
                 let s = if ms {
                     g.deal_ordered(&microsoft_deal(seed as u32))
                         .map_err(|e| e.to_string())?
@@ -657,7 +647,7 @@ fn run(argv: &[String]) -> Result<(), String> {
                 };
                 Ok((seed, r.outcome.label(), r.states, steps, dt))
             };
-            let raw: Vec<Result<_, String>> = run_bench(&seeds, jobs, run_one)?;
+            let raw: Vec<Result<_, String>> = run_bench(lo..=hi, jobs, run_one)?;
             let (mut solved, mut unsolvable, mut gaveup) = (0, 0, 0);
             let mut states = 0u64;
             let mut steps_total = 0usize;
@@ -680,7 +670,7 @@ fn run(argv: &[String]) -> Result<(), String> {
                     println!("{seed}: {label} ({st} states, {dt:.3}s)");
                 }
             }
-            let n = hi - lo + 1;
+            let n = (hi as u128 - lo as u128 + 1) as u64;
             let secs = t.elapsed().as_secs_f64();
             if a.has("--json") {
                 let out = serde_json::json!({
@@ -719,12 +709,30 @@ fn run(argv: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+fn parse_seed_range(range: &str) -> Result<(u64, u64), String> {
+    let (lo, hi) = range
+        .split_once("..")
+        .and_then(|(l, h)| Some((l.parse::<u64>().ok()?, h.parse::<u64>().ok()?)))
+        .ok_or_else(|| format!("--seeds wants A..B, got {range}"))?;
+    if lo > hi {
+        return Err(format!("--seeds start ({lo}) must be <= end ({hi})"));
+    }
+    if hi - lo == u64::MAX {
+        return Err(format!("--seeds range too large: {range}"));
+    }
+    Ok((lo, hi))
+}
+
 /// Run a benchmark closure over `seeds`, in parallel when the `parallel` feature is enabled
 /// (unless `--jobs 1` is passed). Results are returned in input seed order.
-fn run_bench<T, F>(seeds: &[u64], jobs: Option<usize>, f: F) -> Result<Vec<T>, String>
+fn run_bench<T, F>(
+    seeds: std::ops::RangeInclusive<u64>,
+    jobs: Option<usize>,
+    f: F,
+) -> Result<Vec<T>, String>
 where
     T: Send,
-    F: Fn(&u64) -> T + Sync + Send,
+    F: Fn(u64) -> T + Sync + Send,
 {
     if jobs == Some(0) {
         return Err("--jobs must be at least 1".into());
@@ -733,21 +741,21 @@ where
     {
         use rayon::prelude::*;
         if jobs == Some(1) {
-            return Ok(seeds.iter().map(f).collect());
+            return Ok(seeds.map(f).collect());
         }
         if let Some(n) = jobs {
             let pool = rayon::ThreadPoolBuilder::new()
                 .num_threads(n)
                 .build()
                 .map_err(|e| format!("failed to build thread pool: {e}"))?;
-            return Ok(pool.install(|| seeds.par_iter().map(f).collect()));
+            return Ok(pool.install(|| seeds.into_par_iter().map(f).collect()));
         }
-        Ok(seeds.par_iter().map(f).collect())
+        Ok(seeds.into_par_iter().map(f).collect())
     }
     #[cfg(not(feature = "parallel"))]
     {
         let _ = jobs;
-        Ok(seeds.iter().map(f).collect())
+        Ok(seeds.map(f).collect())
     }
 }
 
@@ -1235,6 +1243,17 @@ mod tests {
         assert!(run(&argv(&["bench", "freecell", "--seeds", "bad"]))
             .unwrap_err()
             .contains("A..B"));
+        assert!(run(&argv(&["bench", "freecell", "--seeds", "10..5"]))
+            .unwrap_err()
+            .contains("<="));
+        assert!(run(&argv(&[
+            "bench",
+            "freecell",
+            "--seeds",
+            "0..18446744073709551615"
+        ]))
+        .unwrap_err()
+        .contains("too large"));
         assert!(run(&argv(&[
             "bench", "freecell", "--seeds", "1..2", "--jobs", "0"
         ]))

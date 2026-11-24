@@ -255,6 +255,35 @@ impl Game {
                         i += 1;
                     }
                 }
+            } else if step.set_base
+                && step.count == Some(1)
+                && step.counts.is_none()
+                && piles.len() > 1
+                && piles.iter().any(|&p| {
+                    let r = self.rule(p);
+                    r.empty_suit.is_some()
+                        || crate::card::Suit::ALL.into_iter().any(|su| {
+                            (r.admits & REAL_FACES) == (self.suit_faces[su as usize] & REAL_FACES)
+                        })
+                })
+            {
+                let Some(c) = deck.pop_front() else {
+                    return err("deal: ran out of cards");
+                };
+                let target = piles
+                    .iter()
+                    .copied()
+                    .find(|&p| {
+                        let r = self.rule(p);
+                        if let Some(es) = r.empty_suit {
+                            es == c.suit()
+                        } else {
+                            (r.admits & REAL_FACES)
+                                == (self.suit_faces[c.suit() as usize] & REAL_FACES)
+                        }
+                    })
+                    .unwrap_or(piles[0]);
+                put(&mut s, target, c);
             } else {
                 let counts: Vec<u16> = match (&step.counts, step.count) {
                     (Some(c), _) => {

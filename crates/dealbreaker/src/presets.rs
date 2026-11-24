@@ -213,6 +213,9 @@ fn to_waste(count: u16, redeals: Option<u32>) -> StockRules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     }
 }
 
@@ -457,6 +460,9 @@ pub fn spider(suits: u8) -> Rules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     });
     if suits >= 4 {
         // Tuned on deals 101-120, checked on 121-140: with four suits, cards out of sequence
@@ -523,6 +529,9 @@ pub fn scorpion() -> Rules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     });
     r
 }
@@ -583,6 +592,9 @@ pub fn gypsy() -> Rules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     });
     r
 }
@@ -687,6 +699,9 @@ pub fn golf() -> Rules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     });
     r.win = WinRule::Empty(vec!["tableau".into()]);
     r
@@ -795,6 +810,9 @@ pub fn aces_up() -> Rules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     });
     r.removal = vec![RemovalRules {
         kind: RemovalKind::LowerOfSuit,
@@ -829,6 +847,9 @@ fn hand_stock() -> StockRules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     }
 }
 
@@ -1176,6 +1197,9 @@ pub fn accordion() -> Rules {
         final_to: None,
         piles: None,
         final_piles: None,
+        deal_per_pile: false,
+        redeal_reverse: false,
+        deal_empty_first: false,
     });
     r.win = WinRule::AtMostPiles {
         group: "tableau".into(),

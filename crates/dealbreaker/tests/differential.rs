@@ -1648,3 +1648,149 @@ fn rotate_bottom_final_piles_and_moves_when_stock_empty() {
     r_fp.stock = Some(st);
     check(r_fp, 0..40);
 }
+
+#[test]
+fn alt_color_and_same_color_runs() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]);
+    let r_alt = Rules::new(
+        "mini-alt-run",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .complete_runs()
+                .build(BuildBy::Alternate, Dir::Down),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::AltColorRun),
+        ],
+        vec![DealStep::to("tableau").counts(&[3, 3, 2])],
+    );
+    check(r_alt, 0..40);
+
+    let r_sc = Rules::new(
+        "mini-same-color-run",
+        Pack::new(&[Suit::Spades, Suit::Clubs], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .complete_runs()
+                .build(BuildBy::SameColor, Dir::Down),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::SameColorRun),
+        ],
+        vec![DealStep::to("tableau").counts(&[3, 3, 2])],
+    );
+    check(r_sc, 0..40);
+}
+
+#[test]
+fn multi_card_refill_and_stock_modes() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    // Multi-card refill + deal_per_pile + redeal_reverse.
+    let mut r_per = Rules::new(
+        "mini-per-pile",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .empty(EmptyRule::None)
+                .refill_from(&["stock"])
+                .refill_count(2),
+            GroupRules::new("cell", PileKind::Cell, 2),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("cell").each(1),
+            DealStep::to("tableau").each(2),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.count = 2;
+    st.redeals = 1;
+    st.deal_per_pile = true;
+    st.redeal_reverse = true;
+    r_per.stock = Some(st);
+    check(r_per, 0..40);
+
+    // deal_empty_first.
+    let mut r_ef = Rules::new(
+        "mini-empty-first",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st2 = StockRules::to("tableau");
+    st2.deal_empty_first = true;
+    r_ef.stock = Some(st2);
+    check(r_ef, 0..40);
+}
+
+#[test]
+fn choose_base_and_empty_accepts_from() {
+    let pack = Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r_cb = Rules::new(
+        "mini-choose-base",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build_rule(Build::new(BuildBy::Alternate, Dir::Up).wrap())
+                .empty(EmptyRule::DealtBase)
+                .max_cards(4)
+                .pile(PileOverride::on(&[0]).empty_suit(Suit::Spades))
+                .pile(PileOverride::on(&[1]).empty_suit(Suit::Hearts)),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build_rule(Build::new(BuildBy::Alternate, Dir::Down).wrap())
+                .accepts_from(&["tableau", "waste"])
+                .empty_accepts_from(&["waste"]),
+            GroupRules::new("reserve", PileKind::Reserve, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("reserve").each(2),
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r_cb.stock = Some(StockRules::to("waste"));
+    let mut cb = ChooseBase::from("tableau");
+    cb.refill_from_stock = true;
+    cb.deal_waste = true;
+    r_cb.choose_base = Some(cb);
+    check(r_cb, 0..40);
+
+    // Dealt set_base with empty_suit matching.
+    let mut r_sb = Rules::new(
+        "mini-set-base-suit",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build_rule(Build::new(BuildBy::Alternate, Dir::Up).wrap())
+                .empty(EmptyRule::DealtBase)
+                .max_cards(4)
+                .pile(PileOverride::on(&[0]).empty_suit(Suit::Spades))
+                .pile(PileOverride::on(&[1]).empty_suit(Suit::Hearts)),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build_rule(Build::new(BuildBy::Alternate, Dir::Down).wrap())
+                .accepts_from(&["tableau", "waste"]),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("stock", PileKind::Stock, 1),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("foundation").each(1).set_base(),
+            DealStep::to("waste").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r_sb.stock = Some(StockRules::to("waste"));
+    check(r_sb, 0..40);
+}

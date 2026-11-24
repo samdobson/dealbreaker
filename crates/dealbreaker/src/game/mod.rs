@@ -86,8 +86,18 @@ pub(crate) enum Op {
     Flip(u16),
     /// `redeals_used += 1`.
     Redeal,
+    /// Set `s.base_rank = Some(r)` (undo restores `None`).
+    SetBaseRank(u8),
     /// Swap two cards of a pile (shuffles are recorded as swaps, so they undo exactly).
     Swap { pile: u16, i: u16, j: u16 },
+}
+
+/// Compiled opening base-rank choice rules.
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct CompiledChooseBase {
+    pub from_group: u16,
+    pub refill_from_stock: bool,
+    pub deal_waste: bool,
 }
 
 /// A compiled group.
@@ -99,8 +109,12 @@ pub(crate) struct Group {
     pub count: u16,
     /// Bitmask of groups whose cards this group accepts.
     pub accepts_from: u64,
+    /// Bitmask of groups whose cards an empty pile of this group accepts.
+    pub empty_accepts_from: u64,
     /// Groups to refill an emptied pile from, in order.
     pub refill_from: Vec<u16>,
+    /// Cards moved per automatic refill.
+    pub refill_count: u16,
     /// Its piles are interchangeable: permuting them gives an equivalent position.
     pub symmetric: bool,
     /// Becomes symmetric once the stock is empty and has no redeals left.
@@ -200,6 +214,9 @@ pub(crate) struct Stock {
     pub first_empty: bool,
     pub skip_empty: bool,
     pub face_up: bool,
+    pub deal_per_pile: bool,
+    pub redeal_reverse: bool,
+    pub deal_empty_first: bool,
 }
 
 impl Stock {
@@ -282,6 +299,7 @@ pub struct Game {
     /// True if `RemovalKind::LowerOfSuit` is soundly forced when available.
     pub(crate) force_lower_of_suit: bool,
     pub(crate) waste: Option<u16>,
+    pub(crate) choose_base: Option<CompiledChooseBase>,
     pub(crate) hooks: Option<std::sync::Arc<dyn crate::hooks::Hooks>>,
     pub(crate) score: Option<crate::score::Score>,
 }

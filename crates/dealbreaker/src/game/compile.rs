@@ -3,7 +3,9 @@
 use crate::card::{Card, FACES, JOKER, REAL_FACES};
 use crate::rules::*;
 
-use super::{err, Game, Group, PileRules, Redeal, Removal, RulesError, Stock, Win};
+use super::{
+    err, CompiledChooseBase, Game, Group, PileRules, Redeal, Removal, RulesError, Stock, Win,
+};
 
 impl Game {
     /// Check and compile rules.
@@ -210,6 +212,20 @@ impl Game {
                     m
                 }
             };
+            let empty_accepts_from = match &g.empty_accepts_from {
+                None => accepts_from,
+                Some(names) => {
+                    let mut m = 0u64;
+                    for n in names {
+                        m |= 1 << find(n)?;
+                    }
+                    m
+                }
+            };
+            let refill_count = g.refill_count.unwrap_or(1);
+            if refill_count == 0 {
+                return err(format!("{:?}: refill_count must be at least 1", g.name));
+            }
             let refill_from = g
                 .refill_from
                 .iter()
@@ -221,7 +237,9 @@ impl Game {
                 start,
                 count: g.count,
                 accepts_from,
+                empty_accepts_from,
                 refill_from,
+                refill_count,
                 symmetric: g.layout.is_none()
                     && g.piles.is_empty()
                     && g.reach.is_none()
@@ -280,7 +298,9 @@ impl Game {
                     start,
                     count: 1,
                     accepts_from: 0,
+                    empty_accepts_from: 0,
                     refill_from: Vec::new(),
+                    refill_count: 1,
                     symmetric: true,
                     symmetric_when_no_stock: false,
                     symmetric_when_no_redeal: false,
@@ -463,6 +483,9 @@ impl Game {
                     first_empty: sr.first_empty,
                     skip_empty: sr.skip_empty,
                     face_up: sr.face_up,
+                    deal_per_pile: sr.deal_per_pile,
+                    redeal_reverse: sr.redeal_reverse,
+                    deal_empty_first: sr.deal_empty_first,
                 })
             }
             (None, _) => None,
@@ -576,6 +599,17 @@ impl Game {
             _ => false,
         };
 
+        let choose_base = match &rules.choose_base {
+            None => None,
+            Some(cb) => {
+                let from_group = find(&cb.from)?;
+                Some(CompiledChooseBase {
+                    from_group,
+                    refill_from_stock: cb.refill_from_stock,
+                    deal_waste: cb.deal_waste,
+                })
+            }
+        };
         let simple_settle = !groups
             .iter()
             .any(|g| g.compact || g.compact_face_up || !g.refill_from.is_empty())
@@ -613,6 +647,7 @@ impl Game {
             num_sym_classes: 0,
             force_lower_of_suit: false,
             waste,
+            choose_base,
             hooks: None,
             score: None,
         };
@@ -876,7 +911,9 @@ impl Game {
                         let tgi = game.pile_group[to as usize] as usize;
                         let tg = &game.groups[tgi];
                         let tr = &game.pile_rules[to as usize];
-                        if tg.kind == PileKind::Stock || tg.accepts_from & (1 << fg) == 0 {
+                        if tg.kind == PileKind::Stock
+                            || (tg.accepts_from | tg.empty_accepts_from) & (1 << fg) == 0
+                        {
                             return false;
                         }
                         if from_kind == PileKind::Foundation && tg.kind == PileKind::Foundation {

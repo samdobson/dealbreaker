@@ -280,24 +280,45 @@ impl Game {
                 }
             }
             MoveUnit::AnyFaceUp => cards.iter().rev().take_while(|c| c.is_face_up()).count(),
-            MoveUnit::Run | MoveUnit::Supermove | MoveUnit::SuitRun | MoveUnit::TopOrWhole
+            MoveUnit::Run
+            | MoveUnit::Supermove
+            | MoveUnit::SuitRun
+            | MoveUnit::AltColorRun
+            | MoveUnit::SameColorRun
+            | MoveUnit::TopOrWhole
                 if self.jokers > 0 =>
             {
-                let n = self.movable_run_wild(g, cards, g.moves == MoveUnit::SuitRun);
+                let filter = match g.moves {
+                    MoveUnit::SuitRun => RunFilter::SameSuit,
+                    MoveUnit::AltColorRun => RunFilter::AltColor,
+                    MoveUnit::SameColorRun => RunFilter::SameColor,
+                    _ => RunFilter::Any,
+                };
+                let n = self.movable_run_wild(g, cards, filter);
                 if g.moves == MoveUnit::TopOrWhole && n != cards.len() {
                     1
                 } else {
                     n
                 }
             }
-            MoveUnit::Run | MoveUnit::Supermove | MoveUnit::SuitRun | MoveUnit::TopOrWhole => {
-                let suit_only = g.moves == MoveUnit::SuitRun;
+            MoveUnit::Run
+            | MoveUnit::Supermove
+            | MoveUnit::SuitRun
+            | MoveUnit::AltColorRun
+            | MoveUnit::SameColorRun
+            | MoveUnit::TopOrWhole => {
                 let mut n = 1;
                 while n < cards.len() {
                     let (under, over) = (cards[cards.len() - n - 1], cards[cards.len() - n]);
+                    let extra_ok = match g.moves {
+                        MoveUnit::SuitRun => under.suit() == over.suit(),
+                        MoveUnit::AltColorRun => under.color() != over.color(),
+                        MoveUnit::SameColorRun => under.color() == over.color(),
+                        _ => true,
+                    };
                     if !under.is_face_up()
                         || g.fits[under.face() as usize] >> over.face() & 1 == 0
-                        || (suit_only && under.suit() != over.suit())
+                        || !extra_ok
                     {
                         break;
                     }
@@ -313,15 +334,49 @@ impl Game {
         n.min(cards.len().saturating_sub(g.min_cards as usize))
     }
 
+    fn step_set_filtered(&self, r: &PileRules, set: u64, filter: RunFilter) -> u64 {
+        let mut out = 0u64;
+        let mut m = set & REAL_FACES;
+        while m != 0 {
+            let f = m.trailing_zeros() as usize;
+            let mut fit = r.fits[f];
+            match filter {
+                RunFilter::Any => {}
+                RunFilter::SameSuit => fit &= self.suit_faces[f / 13],
+                RunFilter::SameColor => {
+                    let s = f / 13;
+                    let mask = if s == 0 || s == 3 {
+                        self.suit_faces[0] | self.suit_faces[3]
+                    } else {
+                        self.suit_faces[1] | self.suit_faces[2]
+                    };
+                    fit &= mask;
+                }
+                RunFilter::AltColor => {
+                    let s = f / 13;
+                    let mask = if s == 0 || s == 3 {
+                        self.suit_faces[1] | self.suit_faces[2]
+                    } else {
+                        self.suit_faces[0] | self.suit_faces[3]
+                    };
+                    fit &= mask;
+                }
+            }
+            out |= fit;
+            m &= m - 1;
+        }
+        out & REAL_FACES
+    }
+
     /// The longest built run on top of `cards` when jokers may be among them. Between two real
     /// cards, the jokers must be able to stand for a built sequence joining them; jokers at
     /// the bottom of the run for one leading up to the cards above.
-    fn movable_run_wild(&self, r: &PileRules, cards: &[Card], suit_only: bool) -> usize {
+    fn movable_run_wild(&self, r: &PileRules, cards: &[Card], filter: RunFilter) -> usize {
         let len = cards.len();
         let top = cards[len - 1];
         let steps = |mut set: u64, k: usize| {
             for _ in 0..k {
-                set = self.step_set(r, set, suit_only);
+                set = self.step_set_filtered(r, set, filter);
             }
             set
         };
@@ -443,7 +498,20 @@ impl Game {
         let tg = self.group_of(to);
         let tr = self.rule(to);
         let fgi = self.pile_group[from as usize];
-        if tg.accepts_from & (1 << fgi) == 0 || matches!(tg.kind, PileKind::Stock) {
+        if let Some(cb) = &self.choose_base {
+            if s.base_rank.is_none()
+                && (fgi != cb.from_group || tg.kind != PileKind::Foundation || n != 1)
+            {
+                return false;
+            }
+        }
+        let dst = &s.piles[to as usize];
+        let mask = if dst.is_empty() {
+            tg.empty_accepts_from
+        } else {
+            tg.accepts_from
+        };
+        if mask & (1 << fgi) == 0 || matches!(tg.kind, PileKind::Stock) {
             return false;
         }
         if let Some(reach) = &tg.reach {
@@ -453,7 +521,6 @@ impl Game {
             }
         }
         let src = &s.piles[from as usize];
-        let dst = &s.piles[to as usize];
         if tg.accept_only_when_empty && !dst.is_empty() {
             return false;
         }
@@ -946,6 +1013,9 @@ impl Game {
 
     /// Can the stock deal (or the waste be turned back) now?
     pub fn can_deal(&self, s: &State) -> bool {
+        if self.choose_base.is_some() && s.base_rank.is_none() {
+            return false;
+        }
         if let Some(rd) = &self.redeal {
             if s.redeals_used >= rd.times {
                 return false;
@@ -1076,12 +1146,25 @@ impl Game {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum RunFilter {
+    Any,
+    SameSuit,
+    AltColor,
+    SameColor,
+}
+
 /// Whether `moves` moves built runs (used for joker run checks).
 #[inline]
 fn is_run_unit(moves: MoveUnit) -> bool {
     matches!(
         moves,
-        MoveUnit::Run | MoveUnit::SuitRun | MoveUnit::Supermove | MoveUnit::TopOrWhole
+        MoveUnit::Run
+            | MoveUnit::SuitRun
+            | MoveUnit::AltColorRun
+            | MoveUnit::SameColorRun
+            | MoveUnit::Supermove
+            | MoveUnit::TopOrWhole
     )
 }
 

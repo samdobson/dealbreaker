@@ -47,6 +47,7 @@ impl Game {
                 *c = c.flipped();
             }
             Op::Redeal => s.redeals_used += 1,
+            Op::SetBaseRank(r) => s.base_rank = Some(r),
             Op::Swap { pile, i, j } => s.piles[pile as usize].swap(i as usize, j as usize),
         }
     }
@@ -77,6 +78,7 @@ impl Game {
             ),
             Op::Flip(p) => self.do_op(s, Op::Flip(p)),
             Op::Redeal => s.redeals_used -= 1,
+            Op::SetBaseRank(_) => s.base_rank = None,
             Op::Swap { .. } => self.do_op(s, op),
         }
     }
@@ -157,7 +159,12 @@ impl Game {
                 }
                 return true;
             }
-            for p in tg.piles() {
+            let gather: Vec<u16> = if st.redeal_reverse {
+                tg.piles().rev().collect()
+            } else {
+                tg.piles().collect()
+            };
+            for p in gather {
                 while let Some(&top) = s.piles[p as usize].last() {
                     if top.is_face_up() {
                         self.push(
@@ -262,6 +269,40 @@ impl Game {
                                 }
                                 self.deal_from_stock(s, j, st.pile, p, 1);
                             }
+                        }
+                    }
+                    _ if st.deal_empty_first => {
+                        let all: Vec<u16> = match &st.piles {
+                            Some(ps) => ps.clone(),
+                            None => tg.piles().collect(),
+                        };
+                        let empties: Vec<u16> = all
+                            .iter()
+                            .copied()
+                            .filter(|&p| s.piles[p as usize].is_empty())
+                            .collect();
+                        let targets = if empties.is_empty() { all } else { empties };
+                        for _ in 0..count {
+                            for &p in &targets {
+                                if s.piles[st.pile as usize].is_empty() {
+                                    break;
+                                }
+                                self.deal_from_stock(s, j, st.pile, p, 1);
+                            }
+                        }
+                    }
+                    _ if st.deal_per_pile => {
+                        let targets: Vec<u16> = match &st.piles {
+                            Some(ps) => ps.clone(),
+                            None => tg.piles().collect(),
+                        };
+                        for &p in &targets {
+                            let rem = s.piles[st.pile as usize].len() as u16;
+                            if rem == 0 {
+                                break;
+                            }
+                            let n = count.min(rem);
+                            self.deal_from_stock(s, j, st.pile, p, n);
                         }
                     }
                     _ => {
@@ -671,18 +712,25 @@ impl Game {
                                     },
                                 );
                             } else {
-                                self.deal_from_stock(s, j, q, p, 1);
+                                let n = g.refill_count.min(s.piles[q as usize].len() as u16);
+                                self.deal_from_stock(s, j, q, p, n);
                             }
                         } else {
-                            self.push(
-                                s,
-                                j,
-                                Op::Shift {
-                                    from: q,
-                                    to: p,
-                                    count: 1,
-                                },
-                            );
+                            let mut moved = 0u16;
+                            while moved < g.refill_count
+                                && s.piles[q as usize].last().is_some_and(|c| c.is_face_up())
+                            {
+                                self.push(
+                                    s,
+                                    j,
+                                    Op::Shift {
+                                        from: q,
+                                        to: p,
+                                        count: 1,
+                                    },
+                                );
+                                moved += 1;
+                            }
                             if s.piles[q as usize].is_empty() {
                                 next_emptied.push(q);
                             }
@@ -691,17 +739,19 @@ impl Game {
                     }
                 }
             }
-            if let Some(st) = self.stock.as_ref().filter(|st| st.auto) {
-                let target = self.groups[st.target as usize].start;
-                if st.target_kind == PileKind::Waste
-                    && s.piles[target as usize].is_empty()
-                    && !s.piles[st.pile as usize].is_empty()
-                {
-                    let n = st
-                        .deal_count(s.redeals_used)
-                        .min(s.piles[st.pile as usize].len() as u16);
-                    self.deal_from_stock(s, j, st.pile, target, n);
-                    changed = true;
+            if !(self.choose_base.is_some() && s.base_rank.is_none()) {
+                if let Some(st) = self.stock.as_ref().filter(|st| st.auto) {
+                    let target = self.groups[st.target as usize].start;
+                    if st.target_kind == PileKind::Waste
+                        && s.piles[target as usize].is_empty()
+                        && !s.piles[st.pile as usize].is_empty()
+                    {
+                        let n = st
+                            .deal_count(s.redeals_used)
+                            .min(s.piles[st.pile as usize].len() as u16);
+                        self.deal_from_stock(s, j, st.pile, target, n);
+                        changed = true;
+                    }
                 }
             }
             if self.rules.auto_flip {
@@ -740,6 +790,31 @@ impl Game {
         match mv.action {
             Action::Transfer { from, to, count } => {
                 self.push(s, j, Op::Shift { from, to, count });
+                if let Some(cb) = &self.choose_base {
+                    if s.base_rank.is_none() {
+                        let r = s.piles[to as usize].last().unwrap().rank();
+                        self.push(s, j, Op::SetBaseRank(r));
+                        if cb.refill_from_stock {
+                            if let Some(sp) = self.stock_pile {
+                                if s.piles[from as usize].is_empty()
+                                    && !s.piles[sp as usize].is_empty()
+                                {
+                                    self.deal_from_stock(s, j, sp, from, 1);
+                                }
+                            }
+                        }
+                        if cb.deal_waste {
+                            if let Some(st) = &self.stock {
+                                if st.target_kind == PileKind::Waste
+                                    && !s.piles[st.pile as usize].is_empty()
+                                {
+                                    let dest = self.groups[st.target as usize].start;
+                                    self.deal_from_stock(s, j, st.pile, dest, 1);
+                                }
+                            }
+                        }
+                    }
+                }
                 self.settle_with(s, j, &[from]);
             }
             Action::Deal => {

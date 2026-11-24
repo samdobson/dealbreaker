@@ -90,6 +90,36 @@ pub struct Rules {
     /// position is judged winnable.
     #[serde(default, skip_serializing_if = "SearchHints::is_default")]
     pub search: SearchHints,
+    /// Opening choice of the foundation base rank: before a base rank is set, only a single-card
+    /// move from this group to a foundation is legal, and its rank becomes the base rank.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choose_base: Option<ChooseBase>,
+}
+
+/// Rules for choosing the foundation base rank on the opening move.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct ChooseBase {
+    /// Group whose cards may be played to a foundation to choose the base rank.
+    pub from: String,
+    /// Immediately deal one card from the stock to the emptied source pile after the choice.
+    #[serde(default)]
+    pub refill_from_stock: bool,
+    /// Immediately deal one card from the stock to the waste after the choice.
+    #[serde(default)]
+    pub deal_waste: bool,
+}
+
+impl ChooseBase {
+    pub fn from(group: &str) -> ChooseBase {
+        ChooseBase {
+            from: group.to_string(),
+            refill_from_stock: false,
+            deal_waste: false,
+        }
+    }
 }
 
 /// Heuristic weights and search tuning. They change how fast the solver finds a win (or how
@@ -151,6 +181,7 @@ impl Rules {
             auto_flip: true,
             safe_autoplay: true,
             search: SearchHints::default(),
+            choose_base: None,
         }
     }
 }
@@ -315,6 +346,10 @@ pub struct GroupRules {
     /// Only cards coming from these groups are accepted (default: any group).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accepts_from: Option<Vec<String>>,
+    /// Only cards coming from these groups are accepted onto an empty pile (default: same as
+    /// `accepts_from`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_accepts_from: Option<Vec<String>>,
     /// When a pile in this group empties, refill it automatically with the top card of the
     /// first non-empty pile of these groups, tried in order (Canfield's tableau from its
     /// reserve; many games from the waste, then the stock). Stock cards are turned face up.
@@ -325,6 +360,9 @@ pub struct GroupRules {
         skip_serializing_if = "Vec::is_empty"
     )]
     pub refill_from: Vec<String>,
+    /// Cards moved per automatic refill from `refill_from` (default 1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refill_count: Option<u16>,
     /// For piles that overlap (Pyramid, TriPeaks): which piles cover which.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout: Option<Layout>,
@@ -493,7 +531,9 @@ impl GroupRules {
             min_cards: None,
             max_accept: None,
             accepts_from: None,
+            empty_accepts_from: None,
             refill_from: Vec::new(),
+            refill_count: None,
             reach: None,
             compact: false,
             suit: None,
@@ -561,8 +601,18 @@ impl GroupRules {
         self
     }
 
+    pub fn empty_accepts_from(mut self, groups: &[&str]) -> Self {
+        self.empty_accepts_from = Some(groups.iter().map(|s| s.to_string()).collect());
+        self
+    }
+
     pub fn refill_from(mut self, groups: &[&str]) -> Self {
         self.refill_from = groups.iter().map(|s| s.to_string()).collect();
+        self
+    }
+
+    pub fn refill_count(mut self, n: u16) -> Self {
+        self.refill_count = Some(n);
         self
     }
 
@@ -789,6 +839,10 @@ pub enum MoveUnit {
     Run,
     /// Any built sequence from the top whose cards are all one suit (Spider).
     SuitRun,
+    /// Any built sequence from the top whose cards alternate in colour.
+    AltColorRun,
+    /// Any built sequence from the top whose cards are all one colour.
+    SameColorRun,
     /// Any number of face-up cards from the top, built or not (Yukon).
     AnyFaceUp,
     /// A built sequence, as long as free cells and empty piles would allow moving it one card at
@@ -873,6 +927,18 @@ pub struct StockRules {
     /// deal one card to each of these piles of `to` (indices within the group) instead of `piles`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub final_piles: Option<Vec<u16>>,
+    /// For a multi-pile target with `count > 1`: deal `count` cards to each pile in turn rather
+    /// than `count` rounds of one card per pile.
+    #[serde(default)]
+    pub deal_per_pile: bool,
+    /// When gathering a multi-pile target back into the stock on redeal, gather piles in reverse
+    /// order.
+    #[serde(default)]
+    pub redeal_reverse: bool,
+    /// For a multi-pile target: if any target piles are empty, deal only to the empty piles;
+    /// otherwise deal to every target pile.
+    #[serde(default)]
+    pub deal_empty_first: bool,
 }
 
 impl StockRules {
@@ -893,6 +959,9 @@ impl StockRules {
             final_to: None,
             piles: None,
             final_piles: None,
+            deal_per_pile: false,
+            redeal_reverse: false,
+            deal_empty_first: false,
         }
     }
 }

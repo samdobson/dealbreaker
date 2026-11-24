@@ -651,7 +651,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     touch(to, count);
                 }
                 Op::Flip(p) => touch(p, 1),
-                Op::Redeal => {}
+                Op::Redeal | Op::SetBaseRank(_) => {}
                 Op::Swap { pile, .. } => touch(pile, u16::MAX),
             }
         }
@@ -979,6 +979,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
     fn forced(&self, s: &State, moves: &[Move]) -> Option<Move> {
         // A joker might want any card as somewhere to stand, so nothing is forced with jokers.
         if self.g.jokers > 0
+            || (self.g.choose_base.is_some() && s.base_rank.is_none())
             || (!self.autoplay && !self.g.pile_rules.iter().any(|r| r.complete_runs))
         {
             return None;

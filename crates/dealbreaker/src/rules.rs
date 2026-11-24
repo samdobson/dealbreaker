@@ -464,6 +464,11 @@ pub struct GroupRules {
     /// within the source group rather than the first non-empty pile.
     #[serde(default)]
     pub refill_same_index: bool,
+    /// When refilling an emptied pile from `refill_from`, take from the pile at index `i % m`
+    /// within the source group (where `m` is the source group's size), falling back to the nearest
+    /// non-empty pile (`+1`, `-1`, `+2`, `-2`, ...).
+    #[serde(default)]
+    pub refill_nearest: bool,
     /// Only allow building onto a non-empty pile if its bottom card satisfies the pile's `empty`
     /// rule.
     #[serde(default)]
@@ -592,6 +597,7 @@ impl GroupRules {
             lock_build_dir: false,
             no_flip: false,
             refill_same_index: false,
+            refill_nearest: false,
             require_valid_base: false,
         }
     }
@@ -766,6 +772,11 @@ impl GroupRules {
         self
     }
 
+    pub fn refill_nearest(mut self) -> Self {
+        self.refill_nearest = true;
+        self
+    }
+
     pub fn require_valid_base(mut self) -> Self {
         self.require_valid_base = true;
         self
@@ -892,6 +903,9 @@ pub enum EmptyRule {
     /// In a grid: a card that could be built (by this pile's build rule) on the top card of
     /// the pile to the left; in the first column, a card of rank `first` (Montana's gaps).
     AfterLeft { first: u8 },
+    /// In a grid: like [`EmptyRule::AfterLeft`], or a card that the top card of the pile to the
+    /// right (if any) could be built on.
+    AfterNeighbor { first: u8 },
     /// A card whose rank is `offset` places after the top card of the pile at the same index in
     /// `group`, wrapping around the pack's rank sequence.
     AfterPile { group: String, offset: i8 },
@@ -1019,6 +1033,11 @@ pub struct StockRules {
     /// overrides `piles`; rounds past the end reuse the last entry.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub piles_per_round: Vec<Vec<u16>>,
+    /// When set, dealing requires at least 2 cards in the stock. If dealing leaves (or starts
+    /// with) exactly 2 cards in the stock, one card is dealt face up to this group's first pile
+    /// and the last card remaining in the stock is turned face up.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_split_to: Option<String>,
 }
 
 impl StockRules {
@@ -1044,6 +1063,7 @@ impl StockRules {
             deal_empty_first: false,
             divert_ranks: Vec::new(),
             piles_per_round: Vec::new(),
+            final_split_to: None,
         }
     }
 }

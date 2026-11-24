@@ -2158,3 +2158,80 @@ fn ribbon_replace_and_removals() {
         check(r, 0..40);
     }
 }
+
+#[test]
+fn neighbor_refill_nearest_and_final_split() {
+    // 1) AfterNeighbor grid (2 suits x 4 ranks, 10 slots = 2 rows of 5).
+    let grid_pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r_nb = Rules::new(
+        "mini-after-neighbor",
+        grid_pack,
+        vec![GroupRules::new("tableau", PileKind::Tableau, 10)
+            .build(BuildBy::Suit, Dir::Up)
+            .empty(EmptyRule::AfterNeighbor { first: 1 })
+            .moves(MoveUnit::Top)
+            .max_cards(1)
+            .layout(Layout::Grid { columns: 5 })],
+        vec![DealStep::to("tableau")
+            .piles(&[1, 2, 3, 4, 6, 7, 8, 9])
+            .each(1)],
+    );
+    r_nb.redeal = Some(RedealRules::new("tableau", RedealHow::GridShuffle));
+    r_nb.win = WinRule::Rows {
+        group: "tableau".into(),
+        length: Some(4),
+    };
+    check(r_nb, 0..40);
+
+    // 2) refill_nearest from face-down no-flip reserves.
+    let small_pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    let r_near = Rules::new(
+        "mini-refill-nearest",
+        small_pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("reserve", PileKind::Reserve, 3)
+                .moves(MoveUnit::None)
+                .no_flip(),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Suit, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top)
+                .max_accept(1)
+                .refill_from(&["reserve"])
+                .refill_nearest(),
+        ],
+        vec![
+            DealStep::to("reserve").counts(&[2, 2, 3]).down(),
+            DealStep::to("tableau").each(1),
+        ],
+    );
+    check(r_near, 0..40);
+
+    // 3) final_split_to: deal 2 to reserves, then when 2 remain in stock deal 1 to waste and flip last stock card.
+    let mut r_split = Rules::new(
+        "mini-final-split",
+        small_pack,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1)
+                .moves(MoveUnit::Top)
+                .no_flip(),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("reserve", PileKind::Reserve, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Run),
+        ],
+        vec![
+            DealStep::to("tableau").each(2),
+            DealStep::to("reserve").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("reserve");
+    st.final_split_to = Some("waste".into());
+    r_split.stock = Some(st);
+    check(r_split, 0..40);
+}

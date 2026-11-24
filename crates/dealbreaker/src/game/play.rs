@@ -198,7 +198,7 @@ impl Game {
             }
         }
         let stock_len = s.piles[st.pile as usize].len() as u16;
-        if stock_len > 0 {
+        if stock_len > 0 && !(st.final_split_to.is_some() && stock_len <= 2) {
             let count = st.deal_count(s.redeals_used);
             let round_targets = st.round_targets(s.redeals_used);
             if let Some(ft) = st
@@ -311,6 +311,17 @@ impl Game {
                             }
                         }
                     }
+                }
+            }
+        }
+        if let Some(split_dest) = st.final_split_to {
+            if s.piles[st.pile as usize].len() == 2 {
+                self.deal_from_stock(s, j, st.pile, split_dest, 1);
+                if s.piles[st.pile as usize]
+                    .last()
+                    .is_some_and(|c| !c.is_face_up())
+                {
+                    self.push(s, j, Op::Flip(st.pile));
                 }
             }
         }
@@ -709,6 +720,35 @@ impl Game {
                                 } else {
                                     None
                                 }
+                            } else if g.refill_nearest {
+                                if rg.count == 0 {
+                                    None
+                                } else {
+                                    let si = (p - g.start) % rg.count;
+                                    let q0 = rg.start + si;
+                                    if eligible(q0) {
+                                        Some(q0)
+                                    } else {
+                                        let mut found = None;
+                                        for d in 1..rg.count {
+                                            if si + d < rg.count {
+                                                let q = rg.start + si + d;
+                                                if eligible(q) {
+                                                    found = Some(q);
+                                                    break;
+                                                }
+                                            }
+                                            if si >= d {
+                                                let q = rg.start + si - d;
+                                                if eligible(q) {
+                                                    found = Some(q);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        found
+                                    }
+                                }
                             } else if g.refill_largest {
                                 let mut best: Option<(u16, usize)> = None;
                                 for q in rg.piles() {
@@ -1016,7 +1056,9 @@ impl Game {
             let r = self.rule(p);
             let allowed = match prev {
                 None => match r.empty {
-                    EmptyRule::AfterLeft { first } => self.rank_faces[first as usize],
+                    EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first } => {
+                        self.rank_faces[first as usize]
+                    }
                     _ => 0,
                 },
                 Some(set) => self.step_set(r, set, false),

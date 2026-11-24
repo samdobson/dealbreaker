@@ -300,6 +300,7 @@ impl Game {
                 lock_build_dir: g.lock_build_dir,
                 no_flip: g.no_flip,
                 refill_same_index: g.refill_same_index,
+                refill_nearest: g.refill_nearest,
                 require_valid_base: g.require_valid_base,
             };
             grp.symmetric = g.layout.is_none()
@@ -456,6 +457,16 @@ impl Game {
                         "stock final_piles",
                     )?),
                 };
+                let final_split_to = match &sr.final_split_to {
+                    None => None,
+                    Some(name) => {
+                        let ft = find(name)?;
+                        if matches!(groups[ft as usize].kind, PileKind::Stock) {
+                            return err("stock final_split_to can't be the stock");
+                        }
+                        Some(groups[ft as usize].start)
+                    }
+                };
                 if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
                     return err(
                         "stock skip_empty can't be combined with require_no_empty or first_empty",
@@ -495,6 +506,7 @@ impl Game {
                     redeal_reverse: sr.redeal_reverse,
                     deal_empty_first: sr.deal_empty_first,
                     divert_ranks: sr.divert_ranks.clone(),
+                    final_split_to,
                 })
             }
             (None, _) => None,
@@ -610,9 +622,11 @@ impl Game {
                 let cols = g.columns.ok_or_else(|| {
                     RulesError(format!("win by rows needs {group:?} to have a grid layout"))
                 })?;
-                let EmptyRule::AfterLeft { first } = pile_rules[g.start as usize].empty else {
+                let (EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first }) =
+                    pile_rules[g.start as usize].empty
+                else {
                     return err(format!(
-                        "win by rows needs {group:?} to use the after_left empty rule"
+                        "win by rows needs {group:?} to use the after_left or after_neighbor empty rule"
                     ));
                 };
                 let len = length.unwrap_or(cols - 1);
@@ -767,7 +781,9 @@ impl Game {
                 EmptyRule::Ranks(rs) => rs
                     .iter()
                     .fold(0u64, |m, &r| m | (real & self.rank_faces[r as usize])),
-                EmptyRule::AfterLeft { .. } | EmptyRule::AfterPile { .. } => return real,
+                EmptyRule::AfterLeft { .. }
+                | EmptyRule::AfterNeighbor { .. }
+                | EmptyRule::AfterPile { .. } => return real,
             };
             let mut cur = start_mask;
             if let Some(es) = pr.empty_suit {
@@ -1081,7 +1097,7 @@ impl Game {
         let symmetric = rg.piles.is_empty()
             && !matches!(
                 self.pile_rules[g.start as usize].empty,
-                EmptyRule::AfterLeft { .. }
+                EmptyRule::AfterLeft { .. } | EmptyRule::AfterNeighbor { .. }
             )
             && !g.has_positional_rules()
             && g.refill_from.is_empty()

@@ -167,6 +167,8 @@ pub(crate) struct Group {
     pub no_flip: bool,
     /// Refill each emptied pile from the same-index pile of `refill_from`.
     pub refill_same_index: bool,
+    /// Refill each emptied pile from the nearest non-empty pile of `refill_from`.
+    pub refill_nearest: bool,
     /// Only allow building on a non-empty pile if its bottom card satisfies the pile's `empty` rule.
     pub require_valid_base: bool,
 }
@@ -270,6 +272,7 @@ impl Group {
             || self.requires_prev_non_empty
             || self.final_from_same_index.is_some()
             || self.refill_same_index
+            || self.refill_nearest
     }
 
     /// True if moves to or from this group are gated on the stock being empty.
@@ -318,6 +321,7 @@ impl Group {
             lock_build_dir: false,
             no_flip: false,
             refill_same_index: false,
+            refill_nearest: false,
             require_valid_base: false,
         }
     }
@@ -346,6 +350,7 @@ pub(crate) struct Stock {
     pub redeal_reverse: bool,
     pub deal_empty_first: bool,
     pub divert_ranks: Vec<u8>,
+    pub final_split_to: Option<u16>,
 }
 
 impl Stock {

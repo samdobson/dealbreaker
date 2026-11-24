@@ -72,9 +72,9 @@ impl Game {
             EmptyRule::DealtBaseOffset(o) => s
                 .base_rank
                 .is_none_or(|b| card.rank() == self.rank_from(b, *o)),
-            EmptyRule::AfterLeft { .. } | EmptyRule::AfterPile { .. } => {
-                self.empty_set(pile, s) >> card.face() & 1 != 0
-            }
+            EmptyRule::AfterLeft { .. }
+            | EmptyRule::AfterNeighbor { .. }
+            | EmptyRule::AfterPile { .. } => self.empty_set(pile, s) >> card.face() & 1 != 0,
         }
     }
 
@@ -127,6 +127,40 @@ impl Game {
                     0
                 };
                 real & self.accept_set(r, left, base, false)
+            }
+            EmptyRule::AfterNeighbor { first } => {
+                let first = *first;
+                let g = self.group_of(pile);
+                let cols = g.columns.unwrap_or(g.count);
+                if (pile - g.start) % cols == 0 {
+                    return real & self.rank_faces[first as usize];
+                }
+                let mut out = 0u64;
+                let left = &s.piles[pile as usize - 1];
+                if !left.is_empty() {
+                    let base = if left.iter().all(|c| c.is_joker()) {
+                        self.empty_set(pile - 1, s)
+                    } else {
+                        0
+                    };
+                    out |= real & self.accept_set(r, left, base, false);
+                }
+                if pile + 1 < g.start + g.count {
+                    let right = &s.piles[pile as usize + 1];
+                    if let Some(&rc) = right.last() {
+                        if rc.is_face_up() && !rc.is_joker() {
+                            let mut m = real;
+                            while m != 0 {
+                                let f = m.trailing_zeros() as usize;
+                                if r.fits[f] >> rc.face() & 1 != 0 {
+                                    out |= 1 << f;
+                                }
+                                m &= m - 1;
+                            }
+                        }
+                    }
+                }
+                out
             }
             EmptyRule::AfterPile { .. } => {
                 let (ref_gi, offset) = r.after_pile.unwrap();
@@ -1221,6 +1255,9 @@ impl Game {
         }
         let Some(st) = &self.stock else { return false };
         if !s.piles[st.pile as usize].is_empty() {
+            if st.final_split_to.is_some() && s.piles[st.pile as usize].len() < 2 {
+                return false;
+            }
             let rtargets = st.round_targets(s.redeals_used);
             let any_non_empty = || rtargets.iter().any(|&p| !s.piles[p as usize].is_empty());
             let any_empty = || rtargets.iter().any(|&p| s.piles[p as usize].is_empty());

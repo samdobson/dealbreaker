@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a bug, incorrect verdict, panic, or binding issue
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Core Rust crate (dealbreaker)
+        - CLI (dealbreaker-cli)
+        - JavaScript / TypeScript / WASM
+        - Python (dealbreaker-py)
+        - C ABI (dealbreaker-ffi)
+        - Documentation / Web Demo
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. 1.3.0
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the preset/seed, custom rules JSON, or position JSON that triggers the issue.
+      render: json
+    validations:
+      required: false

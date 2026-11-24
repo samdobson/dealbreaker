@@ -1,0 +1,18 @@
+name: Feature request
+description: Suggest a new solitaire rule mechanic, preset, binding feature, or CLI enhancement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or game mechanic
+      description: What game, rule mechanic, or workflow are you trying to support?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch how you would expect this to look in JSON rules, the Rust/JS/Python/C API, or the CLI.
+    validations:
+      required: false

@@ -7,6 +7,28 @@ releases. Build values with their constructors (`Rules::new`, `GroupRules::new`,
 give `match`es on rule enums a wildcard arm. Changes to search heuristics or preset tuning may
 change which solution is found and how fast, never a verdict ("unsolvable" stays a proof).
 
+## 1.3.0
+
+### Bindings, Distribution & Documentation
+
+- Added Python bindings (`crates/dealbreaker-py`, PyO3/maturin) with GIL release during search and automated PyPI wheel/sdist publishing.
+- Added C ABI crate (`crates/dealbreaker-ffi`) with C header (`dealbreaker.h`), module map, XCFramework build script, and pre-built FFI release archives.
+- Added multi-arch `FROM scratch` Docker image publishing to GHCR (`ghcr.io/samdobson/dealbreaker`), `cargo-binstall` metadata, and static Linux `musl` CLI release binaries.
+- Added VitePress documentation site with auto-generated reference pages and a live WebAssembly web demo deployed to GitHub Pages.
+- Added optional `schema` feature (`schemars`) and checked-in JSON Schemas (`docs/schemas/*.schema.json`) for rules, states, steps, solve options, and hint options.
+
+### Solver, Core & CLI
+
+- Added optional `parallel` feature (`rayon`) for multi-threaded `hint()` Monte Carlo sampling and CLI `bench`.
+- Allowed `"?"` / `"~?"` unknown face-down card placeholders in `hint()` positions (sampling only over the remaining unseen cards).
+- Expanded CLI with `--version`, `validate`, `hint --json`, stdin (`-`) support for rules/positions, and strict rejection of unknown flags.
+- Expanded rules model with:
+  - Opening base-rank choice (`Rules::choose_base`), `Dir::UpAny`, `MoveUnit::AltColorRun` / `SameColorRun`, `EmptyRule::AfterNeighbor` / `AfterPile`, and `SwapBases`.
+  - Group rules: `min_cards`, `empty_accepts_from`, `non_empty_max_accept`, `refill_count`, `refill_same_index`, `refill_nearest`, `refill_first_face_down`, `reach_both_ways`, `replace_on_drop`, `requires_prev_non_empty`, `max_same_rank`, `moves_when_stock_empty`, `moves_when_any_empty`, `moves_when_same_index_empty`, `flip_only_last`, `no_flip`, `final_from_same_index`, `lock_build_dir`, `lock_pile_dir`, `require_valid_base`, `supermove_complete_run`, `unrestricted_from`, `rank_sequence`, `unique_suits`, and `no_build_single_while_stock`.
+  - Stock & redeal rules: `count_per_round`, `piles`, `piles_per_round`, `final_to`, `final_piles`, `final_split_to`, `deal_per_pile`, `deal_empty_first`, `divert_ranks`, `require_no_empty_group`, `redeal_reverse`, `redeal_shuffle`, `redeal_deal_all_alternating`, and `RedealHow::GridShuffleRandomGaps` / `RotateBottom` / `DealRows` / `RedistributePile` / `ShuffleRedeal`.
+  - Deal, removal & win rules: `DealStep::{limit, one_per_suit, split_on_rank, auto_foundation, divert_ranks, drain_foundations}`, `RemovalKind::{ReachSuitOrRank, BetweenMatch, ContiguousSumMultiple}`, `WinRule::{CountAndSpread, AllFull}`, and optional `build` override on `WinRule::Rows`.
+- Fixed talon compression when waste/stock refills are active and hardened soundness invariants in rule compilation.
+
 ## 1.2.0
 
 ### JavaScript / TypeScript & Distribution

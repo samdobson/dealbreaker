@@ -201,6 +201,17 @@ impl Game {
                     }
                     self.deal_from_stock(s, j, st.pile, p, 1);
                 }
+            } else if let Some(fp) = st
+                .final_piles
+                .as_ref()
+                .filter(|fp| stock_len as usize <= fp.len())
+            {
+                for &p in fp {
+                    if s.piles[st.pile as usize].is_empty() {
+                        break;
+                    }
+                    self.deal_from_stock(s, j, st.pile, p, 1);
+                }
             } else {
                 match st.target_kind {
                     PileKind::Waste | PileKind::Foundation => {
@@ -289,6 +300,28 @@ impl Game {
         let gp = rd.gather;
         let len = |s: &State, p: u16| s.piles[p as usize].len() as u16;
         match rd.how {
+            RedealHow::RotateBottom => {
+                for p in g.piles() {
+                    let n = len(s, p);
+                    if n > 1 {
+                        for i in 0..n - 1 {
+                            self.push(
+                                s,
+                                j,
+                                Op::Swap {
+                                    pile: p,
+                                    i,
+                                    j: i + 1,
+                                },
+                            );
+                        }
+                    }
+                }
+                if rd.times != u32::MAX {
+                    self.push(s, j, Op::Redeal);
+                }
+                return;
+            }
             RedealHow::Regroup { per_pile } | RedealHow::Shuffle { per_pile } => {
                 // Last pile first, so the first pile's cards end on top of the gathered stack.
                 for p in g.piles().rev() {

@@ -261,6 +261,13 @@ impl Game {
         if let Some(n) = self.hooks.as_ref().and_then(|h| h.movable(self, s, pile)) {
             return n.min(cards.len());
         }
+        if self.group_of(pile).moves_when_stock_empty
+            && self
+                .stock_pile
+                .is_some_and(|sp| !s.piles[sp as usize].is_empty())
+        {
+            return 0;
+        }
         let g = self.rule(pile);
         let n = match g.moves {
             MoveUnit::None => 0,
@@ -962,6 +969,10 @@ impl Game {
                             .any(|p| !s.piles[p as usize].is_empty())
                     });
                 return can_shift || can_refill;
+            }
+            if rd.how == RedealHow::RotateBottom {
+                let g = &self.groups[rd.group as usize];
+                return g.piles().any(|p| s.piles[p as usize].len() > 1);
             }
             return true;
         }

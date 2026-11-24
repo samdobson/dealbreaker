@@ -136,6 +136,8 @@ pub(crate) struct Group {
     pub requires_prev_non_empty: bool,
     /// Most consecutive face-up cards of the same rank allowed at the top of a pile.
     pub max_same_rank: Option<u8>,
+    /// Cards may leave piles of this group only once the stock pile is empty.
+    pub moves_when_stock_empty: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -190,6 +192,7 @@ pub(crate) struct Stock {
     pub count_per_round: Vec<u16>,
     pub final_to: Option<u16>,
     pub piles: Option<Vec<u16>>,
+    pub final_piles: Option<Vec<u16>>,
     pub redeals: u32,
     pub require_no_empty: bool,
     pub auto: bool,

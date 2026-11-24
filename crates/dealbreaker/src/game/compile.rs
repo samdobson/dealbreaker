@@ -248,6 +248,7 @@ impl Game {
                 refill_on_empty: g.refill_on_empty,
                 requires_prev_non_empty: g.requires_prev_non_empty,
                 max_same_rank: g.max_same_rank,
+                moves_when_stock_empty: g.moves_when_stock_empty,
             });
             start = start
                 .checked_add(g.count)
@@ -297,6 +298,7 @@ impl Game {
                     refill_on_empty: false,
                     requires_prev_non_empty: false,
                     max_same_rank: None,
+                    moves_when_stock_empty: false,
                 });
                 pile_rules.push(PileRules {
                     build: Build::default(),
@@ -408,6 +410,25 @@ impl Game {
                         Some(out)
                     }
                 };
+                let final_piles = match &sr.final_piles {
+                    None => None,
+                    Some(ix) => {
+                        if ix.is_empty() {
+                            return err("stock final_piles must not be empty");
+                        }
+                        let mut out = Vec::with_capacity(ix.len());
+                        for &i in ix {
+                            if i >= groups[target as usize].count {
+                                return err(format!(
+                                    "stock final_piles: {:?} has no pile {i}",
+                                    sr.to
+                                ));
+                            }
+                            out.push(groups[target as usize].start + i);
+                        }
+                        Some(out)
+                    }
+                };
                 if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
                     return err(
                         "stock skip_empty can't be combined with require_no_empty or first_empty",
@@ -430,6 +451,7 @@ impl Game {
                     count_per_round: sr.count_per_round.clone(),
                     final_to,
                     piles,
+                    final_piles,
                     redeals: if sr.unlimited_redeals {
                         u32::MAX
                     } else {

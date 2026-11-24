@@ -1605,3 +1605,46 @@ fn limit_deal_waste_max_and_min_cards() {
     r_waste.stock = Some(st);
     check(r_waste, 0..40);
 }
+
+#[test]
+fn rotate_bottom_final_piles_and_moves_when_stock_empty() {
+    let mut r_rot = Rules::new(
+        "mini rotate bottom",
+        Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build_rule(Build::new(BuildBy::Suit, Dir::Either).wrap())
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::None),
+        ],
+        vec![DealStep::to("tableau").rest()],
+    );
+    let mut rd = RedealRules::new("tableau", RedealHow::RotateBottom);
+    rd.times = 2;
+    r_rot.redeal = Some(rd);
+    check(r_rot, 0..40);
+
+    let mut r_fp = Rules::new(
+        "mini final_piles + moves_when_stock_empty",
+        Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .moves(MoveUnit::Top)
+                .moves_when_stock_empty(),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Any),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.final_piles = Some(vec![1, 2]);
+    r_fp.stock = Some(st);
+    check(r_fp, 0..40);
+}

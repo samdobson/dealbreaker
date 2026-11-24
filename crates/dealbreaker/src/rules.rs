@@ -396,6 +396,9 @@ pub struct GroupRules {
     /// Most consecutive face-up cards of the same rank allowed at the top of a pile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_same_rank: Option<u8>,
+    /// Cards may leave piles of this group only once the stock pile is empty.
+    #[serde(default)]
+    pub moves_when_stock_empty: bool,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -510,6 +513,7 @@ impl GroupRules {
             refill_on_empty: false,
             requires_prev_non_empty: false,
             max_same_rank: None,
+            moves_when_stock_empty: false,
         }
     }
 
@@ -640,6 +644,11 @@ impl GroupRules {
 
     pub fn max_same_rank(mut self, n: u8) -> Self {
         self.max_same_rank = Some(n);
+        self
+    }
+
+    pub fn moves_when_stock_empty(mut self) -> Self {
+        self.moves_when_stock_empty = true;
         self
     }
 }
@@ -860,6 +869,10 @@ pub struct StockRules {
     /// Specific piles of `to` to deal to (indices within the group). Default: all piles.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub piles: Option<Vec<u16>>,
+    /// For a multi-pile target: when the remaining stock has at most `final_piles.len()` cards,
+    /// deal one card to each of these piles of `to` (indices within the group) instead of `piles`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_piles: Option<Vec<u16>>,
 }
 
 impl StockRules {
@@ -879,6 +892,7 @@ impl StockRules {
             count_per_round: Vec::new(),
             final_to: None,
             piles: None,
+            final_piles: None,
         }
     }
 }
@@ -935,6 +949,8 @@ pub enum RedealHow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         refill_from: Option<String>,
     },
+    /// Move each pile's bottom card to its top (Crescent).
+    RotateBottom,
 }
 
 /// One step of the opening deal.

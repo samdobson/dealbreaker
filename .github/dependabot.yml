@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # schemars::JsonSchema is part of the public API under --features schema;
+      # defer major upgrades (0.8 -> 1.x) to a breaking 2.0 release.
+      - dependency-name: "schemars"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "cargo"
     directory: "/crates/dealbreaker-py"

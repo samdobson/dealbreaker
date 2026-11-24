@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the npm package in js/ (WASM target: web, used by both browsers/bundlers and Node).
-# Needs: rustup target add wasm32-unknown-unknown; cargo install wasm-bindgen-cli --version 0.2.100
+# Needs: rustup target add wasm32-unknown-unknown; cargo install wasm-bindgen-cli --version 0.2.130
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

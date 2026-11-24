@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -42,7 +42,7 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+      - run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
       - run: ./scripts/build-npm.sh
 
       - name: Assemble Pages site

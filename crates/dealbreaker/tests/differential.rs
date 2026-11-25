@@ -3283,3 +3283,69 @@ fn empty_open_after_bases_relaxes_the_empty_rule() {
     };
     check(r, 0..100);
 }
+
+#[test]
+fn routed_deal_steps() {
+    let pack = || Pack::new(&[Suit::Spades, Suit::Hearts, Suit::Clubs], &[1, 2, 3, 4]);
+    let tableau = |n| {
+        GroupRules::new("tableau", PileKind::Tableau, n)
+            .build(BuildBy::Any, Dir::Down)
+            .moves(MoveUnit::Top)
+            .empty(EmptyRule::Any)
+    };
+    let mut by_rank = DealStep::to("reserve").rest();
+    by_rank.route = Some(DealRoute::Rank { first_rank: 2 });
+    check(
+        Rules::new(
+            "mini route by rank",
+            pack(),
+            vec![
+                GroupRules::new("foundation", PileKind::Foundation, 3),
+                GroupRules::new("reserve", PileKind::Reserve, 3),
+                tableau(2),
+            ],
+            vec![
+                DealStep::to("foundation").ranks(&[1]),
+                DealStep::to("tableau").each(1),
+                by_rank,
+            ],
+        ),
+        0..40,
+    );
+
+    let mut by_suit = DealStep::to("tableau").piles(&[0, 1, 2]).rest();
+    by_suit.route = Some(DealRoute::Suit);
+    check(
+        Rules::new(
+            "mini route by suit",
+            pack(),
+            vec![
+                GroupRules::new("foundation", PileKind::Foundation, 3),
+                tableau(4),
+            ],
+            vec![by_suit],
+        ),
+        0..40,
+    );
+
+    let mut chain = DealStep::to("tableau").rest();
+    chain.route = Some(DealRoute::Chain {
+        rank: 4,
+        to: "foundation".into(),
+    });
+    check(
+        Rules::new(
+            "mini route chain",
+            pack(),
+            vec![
+                GroupRules::new("foundation", PileKind::Foundation, 3)
+                    .build_rule(Build::new(BuildBy::Any, Dir::Up).wrap())
+                    .empty(EmptyRule::Rank(4))
+                    .max_cards(4),
+                tableau(3),
+            ],
+            vec![chain],
+        ),
+        0..40,
+    );
+}

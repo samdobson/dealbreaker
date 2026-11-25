@@ -4,6 +4,7 @@ use crate::card::{Card, REAL_FACES};
 use crate::rng::Rng;
 
 use super::{err, Game, RulesError, State};
+use crate::rules::DealRoute;
 
 impl Game {
     // ----- Dealing --------------------------------------------------------------------------
@@ -241,6 +242,49 @@ impl Game {
                 taken.sort_by_key(|c| c.suit() as u8);
                 for (i, c) in taken.into_iter().enumerate() {
                     put(&mut s, piles[i % piles.len()], c);
+                }
+            } else if let (Some(route), true) = (&step.route, step.rest) {
+                if let DealRoute::Chain { rank, to } = route {
+                    let tg = self
+                        .groups
+                        .iter()
+                        .find(|g| &g.name == to)
+                        .ok_or_else(|| RulesError(format!("deal: no group named {to:?}")))?;
+                    let mut started = 0u16;
+                    while let Some(c) = deck.pop_front() {
+                        if c.rank() == *rank {
+                            if started >= tg.count {
+                                return err("deal: more chain starts than piles");
+                            }
+                            put(&mut s, tg.start + started, c);
+                            started += 1;
+                        } else {
+                            let at = started.saturating_sub(1) as usize;
+                            if at >= piles.len() {
+                                return err("deal: a routed card has no pile");
+                            }
+                            put(&mut s, piles[at], c);
+                        }
+                    }
+                }
+                while let Some(c) = deck.pop_front() {
+                    let at = match route {
+                        DealRoute::Chain { .. } => unreachable!(),
+                        DealRoute::Rank { first_rank } => {
+                            (c.rank() as i32 - *first_rank as i32).max(0) as usize
+                        }
+                        DealRoute::Suit => self
+                            .rules
+                            .pack
+                            .suits
+                            .iter()
+                            .position(|&x| !c.is_joker() && x == c.suit())
+                            .unwrap_or(0),
+                    };
+                    if at >= piles.len() {
+                        return err("deal: a routed card has no pile");
+                    }
+                    put(&mut s, piles[at], c);
                 }
             } else if step.rest {
                 if let Some(split_r) = step.split_on_rank {

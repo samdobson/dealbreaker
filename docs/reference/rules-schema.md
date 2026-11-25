@@ -82,17 +82,17 @@ One group of identical piles.
 | `empty` | [EmptyRule](#emptyrule) \| `null` | — | What an empty pile accepts. Default: foundations take the pack's first rank; tableaux and cells take any card; reserves, stock and waste take none. |
 | `empty_accepts_from` | `array` \| `null` | — | Only cards coming from these groups are accepted onto an empty pile (default: same as `accepts_from`). |
 | `empty_max_accept` | `integer` \| `null` | — | Most cards that may be placed onto an empty pile in one move. Default: same as `max_accept`. |
+| `accept_when_same_index_empty` | `string` \| `null` | — | Pile `i` of this group accepts cards only while pile `i` of the named group is empty, except cards coming from that very pile (the groups must have the same pile count). |
+| `requires_same_index_non_empty` | `string` \| `null` | — | Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count). |
+| `flip_after_prev_empty` | `boolean` | `false` | A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies). |
+| `flip_when_any_empty` | `string` \| `null` | — | A face-down top card turns up only while some pile of the named group is empty. |
+| `exclude_suit` | [Suit](#suit) \| `null` | — | Piles accept no card of this suit, and nothing may be built on one. |
 | `empty_suit` | [Suit](#suit) \| `null` | — | Empty piles accept only cards of this suit (non-empty piles follow `build` as usual). |
 | `final_from_same_index` | `string` \| `null` | — | When a pile is one card shy of `max_cards`, its final card must come from the pile at the same index within this group (overriding `accepts_from`). |
 | `flip_only_last` | `boolean` | `false` | Only automatically turn a pile's face-down top card face up when it is the sole card left in the pile. |
 | `kind` *(required)* | [PileKind](#pilekind) | — |  |
 | `layout` | [Layout](#layout) \| `null` | — | For piles that overlap (Pyramid, TriPeaks): which piles cover which. |
 | `lock_build_dir` | `boolean` | `false` | When `build.dir` is `either`, the first two-card pile in this group locks the build direction (up or down) for every pile in the group. |
-| `exclude_suit` | [Suit](#suit) \| `null` | — | Piles accept no card of this suit, and nothing may be built on one. |
-| `accept_when_same_index_empty` | `string` \| `null` | — | Pile `i` of this group accepts cards only while pile `i` of the named group is empty, except cards coming from that very pile (the groups must have the same pile count). |
-| `requires_same_index_non_empty` | `string` \| `null` | — | Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count). |
-| `flip_after_prev_empty` | `boolean` | `false` | A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies). |
-| `flip_when_any_empty` | `string` \| `null` | — | A face-down top card turns up only while some pile of the named group is empty. |
 | `freeze_when_built` | `boolean` | `false` | A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it. |
 | `lock_pile_dir` | `boolean` | `false` | When `build.dir` is `either`, each pile locks its own build direction (up or down) once it holds two cards. |
 | `match_longest_rank` | `boolean` | `false` | A pile with fewer cards than the longest pile in this group only accepts a card whose rank matches the card at the same index in the longest pile. |
@@ -150,8 +150,8 @@ How cards are built on one another.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `blocked_ranks` | `integer`[] | — | Nothing may be built on cards of these ranks (Golf: kings). |
-| `gap_ranks` | `integer`[] | — | With a stripped pack: ranks that are not adjacent to the pack rank just below them (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds. |
 | `by` *(required)* | [BuildBy](#buildby) | — |  |
+| `gap_ranks` | `integer`[] | — | With a stripped pack: ranks that are not adjacent to the pack rank just below them (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds. |
 | `dir` | [Dir](#dir) | `"down"` |  |
 | `step` | `integer` | `1` | Ranks between consecutive cards (default 1). |
 | `wrap` | `boolean` | `false` | The sequence wraps: king to ace and ace to king. |

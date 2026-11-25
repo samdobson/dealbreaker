@@ -1463,6 +1463,26 @@ pub struct DealStep {
     /// accepting foundation (restricted to `divert_ranks` if set).
     #[serde(default, skip_serializing_if = "is_false")]
     pub drain_foundations: bool,
+    /// With `rest`: send each card to the selected pile its rank or suit names instead of dealing
+    /// round-robin (Lady of the Manor's reserves by rank, Four Colours' rows by suit).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route: Option<DealRoute>,
+}
+
+/// How a `rest` deal step picks each card's pile.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum DealRoute {
+    /// Pile `i` of the selection takes the cards of rank `first_rank + i` (ranks are 1 = ace).
+    Rank { first_rank: u8 },
+    /// Pile `i` of the selection takes the cards of the pack's `i`th suit.
+    Suit,
+    /// Each card of `rank` starts the next pile of group `to`; every other card goes on the
+    /// selected pile with the index of the latest such start (Xerxes: the nines start the
+    /// foundations and the cards after each one go on the matching row).
+    Chain { rank: u8, to: String },
 }
 
 impl DealStep {

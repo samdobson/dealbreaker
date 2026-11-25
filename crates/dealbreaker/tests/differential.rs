@@ -3450,3 +3450,29 @@ fn stock_requires_group_empty() {
     )];
     check(r, 0..40);
 }
+
+#[test]
+fn mirror_build_pairs_ranks_from_both_ends() {
+    // Of five ranks the first goes on the last, the second on the fourth, the third on itself.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    let mut r = Rules::new(
+        "mini-mirror",
+        pack,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Mirror)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any)
+                .accepts_from(&["waste"]),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r.stock = Some(StockRules::to("waste"));
+    r.win = WinRule::Empty(vec!["stock".into(), "waste".into()]);
+    check(r, 0..60);
+}

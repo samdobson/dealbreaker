@@ -623,6 +623,13 @@
           "enum": [
             "double_up"
           ]
+        },
+        {
+          "description": "The card's position in the pack's ranks mirrors the one below it: the first on the last, the second on the second last, and so on (Eiffel Tower: A on K, 2 on Q, 7 on 7).",
+          "type": "string",
+          "enum": [
+            "mirror"
+          ]
         }
       ]
     },

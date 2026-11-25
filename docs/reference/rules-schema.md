@@ -187,6 +187,7 @@ Rank direction from a card to the card placed on it.
 - `"down_any"` — Any strictly lower rank in the pack's rank sequence (no wrap).
 - `"down_or_same"` — Same rank or one step down.
 - `"double_up"` — The card's position in the pack's ranks is double the one below it, plus one, modulo the number of ranks (Doublets: A 2 4 8 3 6 Q J 9 5 T 7 A).
+- `"mirror"` — The card's position in the pack's ranks mirrors the one below it: the first on the last, the second on the second last, and so on (Eiffel Tower: A on K, 2 on Q, 7 on 7).
 
 ### EmptyRule {#emptyrule}
 

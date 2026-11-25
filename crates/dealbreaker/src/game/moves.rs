@@ -673,6 +673,26 @@ impl Game {
                 .all(|w| w[1].is_face_up() && fits[w[0].face() as usize] >> w[1].face() & 1 != 0)
     }
 
+    /// Does the run on top of pile `p` (face up, each card fitting on the one below) include a
+    /// card of rank `rank`?
+    pub(crate) fn top_run_has_rank(&self, p: u16, cards: &[Card], rank: u8) -> bool {
+        let fits = &self.rule(p).fits;
+        let mut i = cards.len();
+        while i > 0 {
+            let c = cards[i - 1];
+            if !c.is_face_up()
+                || (i < cards.len() && fits[c.face() as usize] >> cards[i].face() & 1 == 0)
+            {
+                return false;
+            }
+            if c.rank() == rank {
+                return true;
+            }
+            i -= 1;
+        }
+        false
+    }
+
     /// Is the top `n` cards of `cards` a complete sequence matching `by`, ready for a complete-run foundation?
     fn is_complete_run(&self, cards: &[Card], n: usize, by: BuildBy, wrap: bool) -> bool {
         if n != self.nranks as usize || cards.len() < n {
@@ -1815,6 +1835,15 @@ impl Game {
             }
             if st.max_deals.is_some_and(|m| s.redeals_used >= m) {
                 return false;
+            }
+            if let Some(r) = st.skip_run_with_rank {
+                if st
+                    .targets
+                    .iter()
+                    .all(|&p| self.top_run_has_rank(p, &s.piles[p as usize], r))
+                {
+                    return false;
+                }
             }
             if let Some(from) = st.skip_built_from {
                 if st

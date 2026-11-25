@@ -3737,3 +3737,53 @@ fn rank_distance_removal_and_limited_deals() {
     };
     check(r, 0..60);
 }
+
+#[test]
+fn stock_skips_piles_with_a_king_run_on_top() {
+    let mut r = Rules::new(
+        "mini skip king runs",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Suit, Dir::Up)
+                .moves(MoveUnit::None),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Any),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.skip_run_with_rank = Some(4);
+    r.stock = Some(st);
+    check(r, 0..60);
+}
+
+#[test]
+fn separate_decks_deal_one_pack_then_the_next() {
+    let mut r = Rules::new(
+        "mini separate decks",
+        small(1..=3, &[Suit::Clubs], 2),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 1),
+            GroupRules::new("tableau", PileKind::Tableau, 1).moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").rest()],
+    );
+    r.separate_decks = true;
+    let g = Game::new(r).unwrap();
+    for seed in 0..20 {
+        let s = g.deal(seed);
+        let ranks: Vec<u8> = s.piles[1].iter().map(|c| c.rank()).collect();
+        assert_eq!(ranks[..3].iter().map(|&r| r as u32).sum::<u32>(), 6);
+        assert_eq!(ranks[3..].iter().map(|&r| r as u32).sum::<u32>(), 6);
+        let mut a = ranks[..3].to_vec();
+        a.sort();
+        assert_eq!(a, vec![1, 2, 3]);
+    }
+}

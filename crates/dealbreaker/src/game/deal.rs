@@ -32,7 +32,15 @@ impl Game {
 
     pub(super) fn try_deal(&self, seed: u64) -> Result<State, RulesError> {
         let mut deck = self.pack_cards();
-        Rng::new(seed).shuffle(&mut deck);
+        let rng = &mut Rng::new(seed);
+        if self.rules.separate_decks && self.rules.pack.copies > 1 {
+            let n = deck.len() / self.rules.pack.copies as usize;
+            for chunk in deck.chunks_mut(n) {
+                rng.shuffle(chunk);
+            }
+        } else {
+            rng.shuffle(&mut deck);
+        }
         for cr in self.rules.deck_first.iter().rev() {
             if let Some(at) = deck
                 .iter()

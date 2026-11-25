@@ -306,6 +306,22 @@ impl Game {
                     self.deal_from_stock(s, j, st.pile, p, n);
                 }
             }
+            _ if st.skip_run_with_rank.is_some() => {
+                let r = st.skip_run_with_rank.unwrap();
+                let targets: Vec<u16> = round_targets
+                    .iter()
+                    .copied()
+                    .filter(|&p| !self.top_run_has_rank(p, &s.piles[p as usize], r))
+                    .collect();
+                for _ in 0..count {
+                    for &p in &targets {
+                        if s.piles[st.pile as usize].is_empty() {
+                            break;
+                        }
+                        self.deal_from_stock(s, j, st.pile, p, 1);
+                    }
+                }
+            }
             _ if st.skip_built_from.is_some() => {
                 let from = st.skip_built_from.unwrap();
                 let targets: Vec<u16> = round_targets

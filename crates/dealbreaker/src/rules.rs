@@ -98,6 +98,10 @@ pub struct Rules {
     /// (Royal Marriage: the queen of hearts first). Only for seeded deals.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub deck_first: Vec<CardRef>,
+    /// Shuffle each copy of the pack on its own, so one whole pack is dealt before the next
+    /// (Microbe). Only for seeded deals.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub separate_decks: bool,
     /// Cards put at the bottom of the shuffled pack before dealing, in the order they are dealt
     /// (Royal Marriage: the king of hearts last). Only for seeded deals.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -201,6 +205,7 @@ impl Rules {
             search: SearchHints::default(),
             choose_base: None,
             deck_first: Vec::new(),
+            separate_decks: false,
             deck_last: Vec::new(),
         }
     }
@@ -1362,6 +1367,10 @@ pub struct StockRules {
     /// The most times the stock may deal (a limit on draws, not on turning a waste back).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_deals: Option<u32>,
+    /// A deal passes over every target pile whose top built run (face up, as far as the pile's
+    /// build rule goes) includes a card of this rank (Fechter's Game: a king run on top).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skip_run_with_rank: Option<u8>,
 }
 
 impl StockRules {
@@ -1394,6 +1403,7 @@ impl StockRules {
             require_group_empty: None,
             skip_built_from: None,
             max_deals: None,
+            skip_run_with_rank: None,
         }
     }
 }

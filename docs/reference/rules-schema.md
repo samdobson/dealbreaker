@@ -34,6 +34,7 @@ A complete description of one solitaire game.
 | `safe_autoplay` | `boolean` | — | Let the solver play cards to foundations automatically when it can prove nothing could ever need to be built on them. Sound for in-suit foundations; default true. |
 | `score` | [ScoreRules](#scorerules) \| `null` | — | Points for the position, for games played for a score (Poker Squares). |
 | `search` | [SearchHints](#searchhints) | — | Tuning for the solver's heuristic. Changes how fast a win is found, never whether a position is judged winnable. |
+| `separate_decks` | `boolean` | — | Shuffle each copy of the pack on its own, so one whole pack is dealt before the next (Microbe). Only for seeded deals. |
 | `stock` | [StockRules](#stockrules) \| `null` | — | How the stock deals. Needs a group of kind `stock`. A stock without these rules only feeds refills (`refill_from`). |
 | `win` | [WinRule](#winrule) | — |  |
 
@@ -284,6 +285,7 @@ How the stock deals.
 | `require_no_empty_group` | `string` \| `null` | — | The stock may not deal while any pile of this named group is empty. |
 | `skip_built_from` | `integer` \| `null` | — | A deal passes over every target pile that is a whole built run from this rank (1 = ace) down to its last card, face up (Churchill: finished king piles). Nothing deals when every pile is passed over. |
 | `skip_empty` | `boolean` | — | For a multi-pile target: deal only to non-empty piles (or to the first pile if all are empty). |
+| `skip_run_with_rank` | `integer` \| `null` | — | A deal passes over every target pile whose top built run (face up, as far as the pile's build rule goes) includes a card of this rank (Fechter's Game: a king run on top). |
 | `to` *(required)* | `string` | — | Group the stock deals to. If it is a waste or foundation, `count` cards go onto its first pile. Otherwise (tableau, reserve, cell), `count` rounds of one card go to each pile in turn while cards remain. |
 | `unlimited_redeals` | `boolean` | — | The waste may be turned back any number of times (overrides `redeals`). |
 

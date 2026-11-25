@@ -2026,6 +2026,32 @@
           "additionalProperties": false
         },
         {
+          "description": "Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1, Neptune: 1), counting ace as 1 and king as 13 with no wrap.",
+          "type": "object",
+          "required": [
+            "rank_distance"
+          ],
+          "properties": {
+            "rank_distance": {
+              "type": "object",
+              "required": [
+                "distances"
+              ],
+              "properties": {
+                "distances": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "uint8",
+                    "minimum": 0.0
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
           "description": "Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).",
           "type": "object",
           "required": [
@@ -2394,6 +2420,15 @@
         "first_empty": {
           "description": "For a multi-pile target: deal `count` cards into the first empty pile instead of one to every pile (Accordion).",
           "type": "boolean"
+        },
+        "max_deals": {
+          "description": "The most times the stock may deal (a limit on draws, not on turning a waste back).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
         },
         "only_when_empty": {
           "description": "Deal only when the target pile is empty: each card must be played before the next is turned (Calculation, Sir Tommy).",

@@ -400,6 +400,9 @@ impl Game {
         let stock_len = s.piles[st.pile as usize].len() as u16;
         if stock_len > 0 && !(st.final_split_to.is_some() && stock_len <= 2) {
             self.deal_stock_round(s, j, st, stock_len);
+            if st.max_deals.is_some() {
+                self.push(s, j, Op::Redeal); // counts this deal
+            }
         }
         if let Some(split_dest) = st.final_split_to {
             if s.piles[st.pile as usize].len() == 2 {

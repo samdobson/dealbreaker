@@ -457,6 +457,7 @@ pub(crate) struct Stock {
     pub require_no_empty_group: Option<u16>,
     pub require_group_empty: Option<u16>,
     pub skip_built_from: Option<u8>,
+    pub max_deals: Option<u32>,
 }
 
 impl Stock {
@@ -486,6 +487,7 @@ impl Stock {
             || self.require_no_empty_group.is_some()
             || self.require_group_empty.is_some()
             || self.skip_built_from.is_some()
+            || self.max_deals.is_some()
             || self.skip_empty
             || self.first_empty
             || self.deal_empty_first

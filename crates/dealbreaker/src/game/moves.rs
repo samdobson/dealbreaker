@@ -1515,6 +1515,16 @@ impl Game {
                         }
                     }
                 }
+                RemovalKind::RankDistance { distances } => {
+                    for (i, &(p, c)) in tops.iter().enumerate() {
+                        for &(q, d) in &tops[i + 1..] {
+                            let gap = (c.rank() as i16 - d.rank() as i16).unsigned_abs() as u8;
+                            if c.is_joker() || d.is_joker() || distances.contains(&gap) {
+                                emit(&[p, q]);
+                            }
+                        }
+                    }
+                }
                 RemovalKind::PairsSumOtherSuit { total } => {
                     for (i, &(p, c)) in tops.iter().enumerate() {
                         for &(q, d) in &tops[i + 1..] {
@@ -1802,6 +1812,9 @@ impl Game {
                 {
                     return false;
                 }
+            }
+            if st.max_deals.is_some_and(|m| s.redeals_used >= m) {
+                return false;
             }
             if let Some(from) = st.skip_built_from {
                 if st

@@ -3700,3 +3700,40 @@ fn each_row_score_win() {
     r.win = WinRule::EachRowScore { at_least: 2 };
     check(r, 0..40);
 }
+
+#[test]
+fn rank_distance_removal_and_limited_deals() {
+    let r = {
+        let mut r = Rules::new(
+            "mini cheops-ish",
+            Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]),
+            vec![
+                GroupRules::new("stock", PileKind::Stock, 1),
+                GroupRules::new("cell", PileKind::Reserve, 1).moves(MoveUnit::None),
+                GroupRules::new("discard", PileKind::Foundation, 1)
+                    .build(BuildBy::None, Dir::Up)
+                    .empty(EmptyRule::None),
+                GroupRules::new("tableau", PileKind::Tableau, 4)
+                    .empty(EmptyRule::None)
+                    .moves(MoveUnit::None),
+            ],
+            vec![
+                DealStep::to("tableau").each(1),
+                DealStep::to("stock").rest().down(),
+            ],
+        );
+        let mut st = StockRules::to("cell");
+        st.max_deals = Some(2);
+        st.require_group_empty = Some("cell".into());
+        r.stock = Some(st);
+        r.removal = vec![RemovalRules::new(
+            RemovalKind::RankDistance {
+                distances: vec![0, 1],
+            },
+            &["tableau", "cell"],
+            "discard",
+        )];
+        r
+    };
+    check(r, 0..60);
+}

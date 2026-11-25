@@ -271,6 +271,7 @@ How the stock deals.
 | `final_split_to` | `string` \| `null` | — | When set, dealing requires at least 2 cards in the stock. If dealing leaves (or starts with) exactly 2 cards in the stock, one card is dealt face up to this group's first pile and the last card remaining in the stock is turned face up. |
 | `final_to` | `string` \| `null` | — | For a multi-pile target: when the remaining stock has at most as many cards as this group has piles, deal one card to each pile of this group instead of `to`. |
 | `first_empty` | `boolean` | — | For a multi-pile target: deal `count` cards into the first empty pile instead of one to every pile (Accordion). |
+| `max_deals` | `integer` \| `null` | — | The most times the stock may deal (a limit on draws, not on turning a waste back). |
 | `only_when_empty` | `boolean` | — | Deal only when the target pile is empty: each card must be played before the next is turned (Calculation, Sir Tommy). |
 | `piles` | `array` \| `null` | — | Specific piles of `to` to deal to (indices within the group). Default: all piles. |
 | `piles_per_round` | `integer`[][] | — | Target pile indices within `to` for each round (0-indexed by redeals used). When non-empty, overrides `piles`; rounds past the end reuse the last entry. |
@@ -359,6 +360,7 @@ Jokers are wild in removals: a joker pairs with any card (another joker too) and
 
 - `{ "pairs_sum": ... }` (`object`) — Remove two playable cards whose ranks add up to `total` (Pyramid: 13), or one card whose rank is listed in `alone` (Pyramid: kings).
 - `{ "pairs_sum_same_suit": ... }` (`object`) — Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
+- `{ "rank_distance": ... }` (`object`) — Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1, Neptune: 1), counting ace as 1 and king as 13 with no wrap.
 - `{ "pairs_sum_other_suit": ... }` (`object`) — Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).
 - `"lower_of_suit"` — Remove a playable card when another playable card is of the same suit and higher in the pack's rank order (Aces Up).
 - `"same_rank"` — Remove two playable cards of the same rank (Nestor, Simple Pairs).

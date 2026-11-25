@@ -769,6 +769,7 @@ fn compile_stock(
                 require_no_empty_group,
                 require_group_empty,
                 skip_built_from: sr.skip_built_from,
+                max_deals: sr.max_deals,
             };
             if s.redeals > 0 && s.target_kind == PileKind::Foundation {
                 return err("redeals can't gather from a foundation group");

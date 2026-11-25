@@ -1359,6 +1359,9 @@ pub struct StockRules {
     /// every pile is passed over.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skip_built_from: Option<u8>,
+    /// The most times the stock may deal (a limit on draws, not on turning a waste back).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_deals: Option<u32>,
 }
 
 impl StockRules {
@@ -1390,6 +1393,7 @@ impl StockRules {
             require_no_empty_group: None,
             require_group_empty: None,
             skip_built_from: None,
+            max_deals: None,
         }
     }
 }
@@ -1685,6 +1689,9 @@ pub enum RemovalKind {
     },
     /// Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
     PairsSumSameSuit { total: u8 },
+    /// Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1,
+    /// Neptune: 1), counting ace as 1 and king as 13 with no wrap.
+    RankDistance { distances: Vec<u8> },
     /// Remove two playable cards of different suits whose ranks add up to `total` (Exit's
     /// queen and king).
     PairsSumOtherSuit { total: u8 },

@@ -230,6 +230,7 @@ fn compile_pile_rules(
         && matches!(build.dir, Dir::Up | Dir::Down)
         && (!build.wrap || max_cards <= pack.nranks as u16)
         && build.blocked_ranks.is_empty()
+        && build.gap_ranks.is_empty()
         && matches!(
             empty,
             EmptyRule::Rank(_) | EmptyRule::DealtBase | EmptyRule::DealtBaseOffset(_)
@@ -452,6 +453,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             supermove_complete_run: g.supermove_complete_run,
             unrestricted_from,
             lock_pile_dir: g.lock_pile_dir,
+            freeze_when_built: g.freeze_when_built,
             rank_sequence: g.rank_sequence.clone(),
             unique_suits: g.unique_suits,
             no_build_single_while_stock: g.no_build_single_while_stock,
@@ -1155,6 +1157,7 @@ impl Game {
                 pr.build.by == BuildBy::Any
                     && pr.build.dir == Dir::Any
                     && pr.build.blocked_ranks.is_empty()
+                    && pr.build.gap_ranks.is_empty()
                     && pr.empty == EmptyRule::Any
                     && pr.empty_suit.is_none()
                     && pr.max_cards == u16::MAX

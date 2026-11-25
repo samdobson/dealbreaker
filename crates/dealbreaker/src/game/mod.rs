@@ -185,6 +185,8 @@ pub(crate) struct Group {
     pub unrestricted_from: u64,
     /// When `build.dir` is `either`, each pile locks its own build direction once it has 2 cards.
     pub lock_pile_dir: bool,
+    /// A full, fully built pile may not be moved from.
+    pub freeze_when_built: bool,
     /// Fixed rank sequence required by pile depth.
     pub rank_sequence: Vec<u8>,
     /// No two non-empty piles in this group may share the same suit on their bottom card.
@@ -366,6 +368,7 @@ impl Group {
             supermove_complete_run: false,
             unrestricted_from: 0,
             lock_pile_dir: false,
+            freeze_when_built: false,
             rank_sequence: Vec::new(),
             unique_suits: false,
             no_build_single_while_stock: false,

@@ -88,6 +88,7 @@ One group of identical piles.
 | `kind` *(required)* | [PileKind](#pilekind) | — |  |
 | `layout` | [Layout](#layout) \| `null` | — | For piles that overlap (Pyramid, TriPeaks): which piles cover which. |
 | `lock_build_dir` | `boolean` | `false` | When `build.dir` is `either`, the first two-card pile in this group locks the build direction (up or down) for every pile in the group. |
+| `freeze_when_built` | `boolean` | `false` | A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it. |
 | `lock_pile_dir` | `boolean` | `false` | When `build.dir` is `either`, each pile locks its own build direction (up or down) once it holds two cards. |
 | `match_longest_rank` | `boolean` | `false` | A pile with fewer cards than the longest pile in this group only accepts a card whose rank matches the card at the same index in the longest pile. |
 | `max_accept` | `integer` \| `null` | — | Most cards the pile accepts in one move. Default: 1 for foundations (a whole suit for `complete_runs`), unlimited otherwise. |
@@ -142,6 +143,7 @@ How cards are built on one another.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `blocked_ranks` | `integer`[] | — | Nothing may be built on cards of these ranks (Golf: kings). |
+| `gap_ranks` | `integer`[] | — | With a stripped pack: ranks that are not adjacent to the pack rank just below them (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds. |
 | `by` *(required)* | [BuildBy](#buildby) | — |  |
 | `dir` | [Dir](#dir) | `"down"` |  |
 | `step` | `integer` | `1` | Ranks between consecutive cards (default 1). |

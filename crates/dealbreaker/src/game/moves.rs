@@ -42,17 +42,19 @@ impl Game {
         }
         let n = self.nranks as i16;
         let step = b.step as i16;
-        let up = |from: u8, to: u8| -> bool {
+        let up = |from: u8, to: u8, to_rank: u8| -> bool {
             let d = to as i16 - from as i16;
-            d == step || (b.wrap && d == step - n)
+            (d == step && !(step == 1 && b.gap_ranks.contains(&to_rank)))
+                || (b.wrap && d == step - n)
         };
+        let (ur, or) = (under.rank(), over.rank());
         match b.dir {
-            Dir::Up => up(u, o),
+            Dir::Up => up(u, o, or),
             Dir::UpAny => o > u,
-            Dir::Down => up(o, u),
+            Dir::Down => up(o, u, ur),
             Dir::DownAny => o < u,
-            Dir::DownOrSame => u == o || up(o, u),
-            Dir::Either => up(u, o) || up(o, u),
+            Dir::DownOrSame => u == o || up(o, u, ur),
+            Dir::Either => up(u, o, or) || up(o, u, ur),
             Dir::Same => u == o,
             Dir::Any => true,
         }
@@ -377,6 +379,12 @@ impl Game {
             }
         }
         let g = self.rule(pile);
+        if grp.freeze_when_built
+            && cards.len() >= g.max_cards as usize
+            && cards.windows(2).all(|w| self.fits(&g.build, w[0], w[1]))
+        {
+            return 0;
+        }
         let n = match g.moves {
             MoveUnit::None => 0,
             MoveUnit::Top => 1,

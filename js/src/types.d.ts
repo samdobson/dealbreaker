@@ -27,6 +27,7 @@ export interface Build {
   wrap?: boolean;
   step?: number;
   blocked_ranks?: number[];
+  gap_ranks?: number[];
 }
 
 export type EmptyRule =
@@ -125,6 +126,7 @@ export interface GroupRules {
   supermove_complete_run?: boolean;
   unrestricted_from?: string[];
   lock_pile_dir?: boolean;
+  freeze_when_built?: boolean;
   rank_sequence?: number[];
   unique_suits?: boolean;
   no_build_single_while_stock?: boolean;

@@ -2944,3 +2944,49 @@ fn same_base_down_or_same_locked_flip_and_suit_or_same_rank() {
     };
     check(r5, 0..40);
 }
+
+#[test]
+fn freeze_when_built_closes_complete_piles() {
+    // 2 suits x 3 ranks = 6 cards in 3 piles of at most 2: a pile of two same-rank cards is closed.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let mut tab = GroupRules::new("tableau", PileKind::Tableau, 4)
+        .build(BuildBy::Any, Dir::Same)
+        .empty(EmptyRule::Any)
+        .moves(MoveUnit::Run)
+        .max_cards(2);
+    tab.freeze_when_built = true;
+    let mut r = Rules::new(
+        "mini-freeze-when-built",
+        pack,
+        vec![tab],
+        vec![DealStep::to("tableau").counts(&[2, 2, 2, 0])],
+    );
+    r.win = WinRule::PilesBuilt {
+        group: "tableau".into(),
+        length: Some(2),
+        build: Some(Build::new(BuildBy::Any, Dir::Same)),
+        empty: Vec::new(),
+        non_empty: false,
+        pile: None,
+    };
+    check(r, 0..40);
+}
+
+#[test]
+fn gap_ranks_break_adjacency_in_stripped_packs() {
+    // Ace and 5..8 of two suits: the ace is not next to the 5.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 5, 6, 7, 8]);
+    let r = Rules::new(
+        "mini-gap-ranks",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 4)
+                .build_rule(Build::new(BuildBy::Suit, Dir::Either).gap_ranks(&[5]))
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").counts(&[3, 3, 2, 2])],
+    );
+    check(r, 0..40);
+}

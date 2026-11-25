@@ -186,6 +186,15 @@
         "by": {
           "$ref": "#/definitions/BuildBy"
         },
+        "gap_ranks": {
+          "description": "With a stripped pack: ranks that are not adjacent to the pack rank just below them (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
         "dir": {
           "default": "down",
           "allOf": [
@@ -839,6 +848,11 @@
         },
         "lock_build_dir": {
           "description": "When `build.dir` is `either`, the first two-card pile in this group locks the build direction (up or down) for every pile in the group.",
+          "default": false,
+          "type": "boolean"
+        },
+        "freeze_when_built": {
+          "description": "A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it.",
           "default": false,
           "type": "boolean"
         },

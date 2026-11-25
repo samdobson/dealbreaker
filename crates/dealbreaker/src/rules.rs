@@ -531,6 +531,9 @@ pub struct GroupRules {
     /// holds two cards.
     #[serde(default, skip_serializing_if = "is_false")]
     pub lock_pile_dir: bool,
+    /// A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub freeze_when_built: bool,
     /// Fixed sequence of ranks required at each pile depth (index 0 for the bottom card, index 1
     /// for the second, etc.). Replaces the rank check of `empty` and `build.dir`; `build.by`,
     /// `suit`, `empty_suit`, `color`, and `max_cards` still apply.
@@ -703,6 +706,7 @@ impl GroupRules {
             supermove_complete_run: false,
             unrestricted_from: None,
             lock_pile_dir: false,
+            freeze_when_built: false,
             rank_sequence: Vec::new(),
             non_empty_max_accept: None,
             unique_suits: false,
@@ -922,6 +926,11 @@ impl GroupRules {
         self
     }
 
+    pub fn freeze_when_built(mut self) -> Self {
+        self.freeze_when_built = true;
+        self
+    }
+
     pub fn rank_sequence(mut self, ranks: &[u8]) -> Self {
         self.rank_sequence = ranks.to_vec();
         self
@@ -946,6 +955,10 @@ pub struct Build {
     /// Nothing may be built on cards of these ranks (Golf: kings).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blocked_ranks: Vec<u8>,
+    /// With a stripped pack: ranks that are not adjacent to the pack rank just below them
+    /// (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gap_ranks: Vec<u8>,
 }
 
 impl Build {
@@ -972,6 +985,11 @@ impl Build {
         self.blocked_ranks = ranks.to_vec();
         self
     }
+
+    pub fn gap_ranks(mut self, ranks: &[u8]) -> Self {
+        self.gap_ranks = ranks.to_vec();
+        self
+    }
 }
 
 impl Default for Build {
@@ -982,6 +1000,7 @@ impl Default for Build {
             wrap: false,
             step: 1,
             blocked_ranks: Vec::new(),
+            gap_ranks: Vec::new(),
         }
     }
 }

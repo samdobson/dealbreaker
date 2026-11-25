@@ -1064,6 +1064,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
                                 tg.build.dir,
                                 crate::rules::Dir::Up | crate::rules::Dir::Down
                             ) && !tgr.requires_prev_non_empty
+                                && tgr.requires_same_index_non_empty.is_none()
                                 && !tgr.requires_rank_on_prev
                                 && !tgr.match_longest_rank));
                     if !self.autoplay || count != 1 || (!tg.autoplay && !fast_found) {

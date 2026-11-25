@@ -809,6 +809,24 @@
           "format": "uint16",
           "minimum": 0.0
         },
+        "requires_same_index_non_empty": {
+          "description": "Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exclude_suit": {
+          "description": "Piles accept no card of this suit, and nothing may be built on one.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Suit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "empty_suit": {
           "description": "Empty piles accept only cards of this suit (non-empty piles follow `build` as usual).",
           "anyOf": [

@@ -162,6 +162,8 @@ pub(crate) struct Group {
     pub moves_when_any_empty: Option<u16>,
     /// Cards may leave pile `i` of this group only once pile `i` of this group is empty.
     pub moves_when_same_index_empty: Option<u16>,
+    /// Cards may be added to pile `i` only once pile `i` of this group is non-empty.
+    pub requires_same_index_non_empty: Option<u16>,
     /// Only auto-flip the top card of a pile when it is the last remaining card.
     pub flip_only_last: bool,
     /// When a pile is one card shy of `max_cards`, its final card must come from the same-index
@@ -185,6 +187,8 @@ pub(crate) struct Group {
     pub unrestricted_from: u64,
     /// When `build.dir` is `either`, each pile locks its own build direction once it has 2 cards.
     pub lock_pile_dir: bool,
+    /// No card of this suit may be added, or built on.
+    pub exclude_suit: Option<crate::card::Suit>,
     /// A full, fully built pile may not be moved from.
     pub freeze_when_built: bool,
     /// Fixed rank sequence required by pile depth.
@@ -304,6 +308,7 @@ impl Group {
             || self.requires_prev_non_empty
             || self.final_from_same_index.is_some()
             || self.moves_when_same_index_empty.is_some()
+            || self.requires_same_index_non_empty.is_some()
             || self.flip_when_same_index_full.is_some()
             || self.refill_same_index
             || self.refill_nearest
@@ -357,6 +362,7 @@ impl Group {
             moves_when_stock_empty: false,
             moves_when_any_empty: None,
             moves_when_same_index_empty: None,
+            requires_same_index_non_empty: None,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,
@@ -368,6 +374,7 @@ impl Group {
             supermove_complete_run: false,
             unrestricted_from: 0,
             lock_pile_dir: false,
+            exclude_suit: None,
             freeze_when_built: false,
             rank_sequence: Vec::new(),
             unique_suits: false,

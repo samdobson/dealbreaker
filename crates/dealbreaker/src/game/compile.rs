@@ -194,7 +194,10 @@ fn compile_pile_rules(
     let mut admits = 0u64;
     for f in 0..JOKER {
         let c = Card::from_face(f);
-        if suit.is_none_or(|s| c.suit() == s) && color.is_none_or(|k| c.color() == k) {
+        if suit.is_none_or(|s| c.suit() == s)
+            && color.is_none_or(|k| c.color() == k)
+            && g.exclude_suit != Some(c.suit())
+        {
             admits |= 1 << f;
         }
     }
@@ -219,6 +222,7 @@ fn compile_pile_rules(
         && !g.complete_runs
         && !g.requires_rank_on_prev
         && !g.requires_prev_non_empty
+        && g.requires_same_index_non_empty.is_none()
         && !g.match_longest_rank
         && !g.lock_build_dir
         && !g.lock_pile_dir
@@ -393,6 +397,19 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
                 Some(ref_gi)
             }
         };
+        let requires_same_index_non_empty = match &g.requires_same_index_non_empty {
+            None => None,
+            Some(name) => {
+                let ref_gi = find_group(rules, name)?;
+                if rules.groups[ref_gi as usize].count != g.count {
+                    return err(format!(
+                        "{:?}: requires_same_index_non_empty group {:?} must have the same pile count",
+                        g.name, name
+                    ));
+                }
+                Some(ref_gi)
+            }
+        };
         let flip_when_same_index_full = match &g.flip_when_same_index_full {
             None => None,
             Some(name) => {
@@ -442,6 +459,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             moves_when_stock_empty: g.moves_when_stock_empty,
             moves_when_any_empty,
             moves_when_same_index_empty,
+            requires_same_index_non_empty,
             flip_only_last: g.flip_only_last,
             final_from_same_index,
             lock_build_dir: g.lock_build_dir,
@@ -453,6 +471,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             supermove_complete_run: g.supermove_complete_run,
             unrestricted_from,
             lock_pile_dir: g.lock_pile_dir,
+            exclude_suit: g.exclude_suit,
             freeze_when_built: g.freeze_when_built,
             rank_sequence: g.rank_sequence.clone(),
             unique_suits: g.unique_suits,
@@ -729,6 +748,10 @@ fn mark_positional_sources(groups: &mut [Group], pile_rules: &[PileRules]) -> Ve
         }
         if let Some(r) = groups[i].moves_when_same_index_empty {
             mark(groups, r as usize, true);
+        }
+        if let Some(r) = groups[i].requires_same_index_non_empty {
+            mark(groups, r as usize, true);
+            mark(groups, i, true);
         }
         if let Some(r) = groups[i].flip_when_same_index_full {
             mark(groups, r as usize, false);
@@ -1042,7 +1065,11 @@ impl Game {
         for p in 0..self.pile_rules.len() {
             let mut t = [0u64; FACES];
             let pr = &self.pile_rules[p];
+            let excluded = self.groups[self.pile_group[p] as usize].exclude_suit;
             for (u, row) in t.iter_mut().enumerate() {
+                if u < JOKER as usize && excluded == Some(Card::from_face(u as u8).suit()) {
+                    continue;
+                }
                 for o in 0..FACES {
                     if pr.admits >> o & 1 != 0
                         && self.fits(
@@ -1178,6 +1205,7 @@ impl Game {
                     && !gr.accept_only_when_empty
                     && !gr.requires_rank_on_prev
                     && !gr.requires_prev_non_empty
+                    && gr.requires_same_index_non_empty.is_none()
                     && !gr.match_longest_rank
                     && gr.max_same_rank.is_none()
                     && (pr.admits & all_real_in_pack) == all_real_in_pack

@@ -127,6 +127,8 @@ export interface GroupRules {
   supermove_complete_run?: boolean;
   unrestricted_from?: string[];
   lock_pile_dir?: boolean;
+  requires_same_index_non_empty?: string;
+  exclude_suit?: Suit;
   freeze_when_built?: boolean;
   rank_sequence?: number[];
   unique_suits?: boolean;

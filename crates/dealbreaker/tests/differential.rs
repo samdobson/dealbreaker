@@ -3050,3 +3050,60 @@ fn same_suit_removal_with_count_and_empty_win() {
     };
     check(r, 0..40);
 }
+
+#[test]
+fn exclude_suit_keeps_a_suit_off_a_group() {
+    // Hearts never go onto the tableau, nor does anything go onto a heart.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut tab = GroupRules::new("tableau", PileKind::Tableau, 3)
+        .build(BuildBy::Any, Dir::Down)
+        .empty(EmptyRule::Any)
+        .moves(MoveUnit::Run);
+    tab.exclude_suit = Some(Suit::Hearts);
+    let r = Rules::new(
+        "mini-exclude-suit",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Suit, Dir::Up)
+                .empty(EmptyRule::Any)
+                .max_cards(4),
+            tab,
+        ],
+        vec![DealStep::to("tableau").counts(&[3, 3, 2])],
+    );
+    check(r, 0..100);
+}
+
+#[test]
+fn requires_same_index_non_empty_gates_a_second_foundation_row() {
+    // Rank 3 of a suit may start its own foundation only once that suit's 1-2 foundation has begun.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let low = GroupRules::new("low", PileKind::Foundation, 2)
+        .build(BuildBy::Suit, Dir::Up)
+        .empty(EmptyRule::Rank(1))
+        .max_cards(2)
+        .pile(PileOverride::on(&[0]).suit(Suit::Clubs))
+        .pile(PileOverride::on(&[1]).suit(Suit::Hearts));
+    let high = GroupRules::new("high", PileKind::Foundation, 2)
+        .build(BuildBy::Suit, Dir::Up)
+        .empty(EmptyRule::Rank(3))
+        .max_cards(1)
+        .pile(PileOverride::on(&[0]).suit(Suit::Clubs))
+        .pile(PileOverride::on(&[1]).suit(Suit::Hearts))
+        .requires_same_index_non_empty("low");
+    let r = Rules::new(
+        "mini-same-index-non-empty",
+        pack,
+        vec![
+            low,
+            high,
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").counts(&[2, 2, 2])],
+    );
+    check(r, 0..60);
+}

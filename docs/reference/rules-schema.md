@@ -88,6 +88,8 @@ One group of identical piles.
 | `kind` *(required)* | [PileKind](#pilekind) | — |  |
 | `layout` | [Layout](#layout) \| `null` | — | For piles that overlap (Pyramid, TriPeaks): which piles cover which. |
 | `lock_build_dir` | `boolean` | `false` | When `build.dir` is `either`, the first two-card pile in this group locks the build direction (up or down) for every pile in the group. |
+| `exclude_suit` | [Suit](#suit) \| `null` | — | Piles accept no card of this suit, and nothing may be built on one. |
+| `requires_same_index_non_empty` | `string` \| `null` | — | Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count). |
 | `freeze_when_built` | `boolean` | `false` | A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it. |
 | `lock_pile_dir` | `boolean` | `false` | When `build.dir` is `either`, each pile locks its own build direction (up or down) once it holds two cards. |
 | `match_longest_rank` | `boolean` | `false` | A pile with fewer cards than the longest pile in this group only accepts a card whose rank matches the card at the same index in the longest pile. |

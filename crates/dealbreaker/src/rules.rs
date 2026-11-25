@@ -422,6 +422,9 @@ pub struct GroupRules {
     /// Piles accept only cards of this suit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub suit: Option<Suit>,
+    /// Piles accept no card of this suit, and nothing may be built on one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exclude_suit: Option<Suit>,
     /// Empty piles accept only cards of this suit (non-empty piles follow `build` as usual).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub empty_suit: Option<Suit>,
@@ -486,6 +489,10 @@ pub struct GroupRules {
     /// Cards may leave pile `i` of this group only once pile `i` of the named group is empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub moves_when_same_index_empty: Option<String>,
+    /// Cards may be added to pile `i` of this group only once pile `i` of the named group is
+    /// non-empty (the groups must have the same pile count).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requires_same_index_non_empty: Option<String>,
     /// Only automatically turn a pile's face-down top card face up when it is the sole card left
     /// in the pile.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -677,6 +684,7 @@ impl GroupRules {
             compact: false,
             suit: None,
             empty_suit: None,
+            exclude_suit: None,
             color: None,
             piles: Vec::new(),
             layout: None,
@@ -695,6 +703,7 @@ impl GroupRules {
             moves_when_stock_empty: false,
             moves_when_any_empty: None,
             moves_when_same_index_empty: None,
+            requires_same_index_non_empty: None,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,
@@ -863,6 +872,11 @@ impl GroupRules {
 
     pub fn moves_when_any_empty(mut self, group: &str) -> Self {
         self.moves_when_any_empty = Some(group.to_string());
+        self
+    }
+
+    pub fn requires_same_index_non_empty(mut self, group: &str) -> Self {
+        self.requires_same_index_non_empty = Some(group.to_string());
         self
     }
 

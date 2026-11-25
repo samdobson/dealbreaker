@@ -872,6 +872,12 @@ impl Game {
                 }
             }
         }
+        if let Some(ref_gi) = tg.requires_same_index_non_empty {
+            let ref_pile = self.groups[ref_gi as usize].start + (to - tg.start);
+            if s.piles[ref_pile as usize].is_empty() {
+                return false;
+            }
+        }
         if tg.requires_prev_non_empty
             && dst.is_empty()
             && to > tg.start

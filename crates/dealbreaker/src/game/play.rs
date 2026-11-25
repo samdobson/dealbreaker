@@ -396,7 +396,15 @@ impl Game {
                 }
             }
         }
-        if !self.simple_settle || st.target_kind != PileKind::Waste || st.face_up || self.has_covers
+        if !self.simple_settle
+            && !(self.compress_talon
+                && st.target_kind == PileKind::Waste
+                && !st.auto
+                && !st.face_up
+                && !self.has_covers)
+            || st.target_kind != PileKind::Waste
+            || st.face_up
+            || self.has_covers
         {
             self.settle(s, j);
         }

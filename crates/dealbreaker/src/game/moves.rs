@@ -1088,12 +1088,17 @@ impl Game {
                 if !self.available(s, to) {
                     continue;
                 }
+                let swap_possible = match tg.swap_bases {
+                    None => false,
+                    Some(SwapBases::BothSingle) => dst.len() == 1,
+                    Some(SwapBases::EitherPile) => !dst_empty,
+                };
                 let mut from_mask = if dst_empty {
                     tg.empty_accepts_from
                 } else {
                     tg.accepts_from
                 } | tg.unrestricted_from;
-                if tg.swap_bases.is_some() {
+                if swap_possible {
                     from_mask |= 1u64 << tgi;
                 }
                 if let Some(ref_gi) = tg.final_from_same_index {
@@ -1109,7 +1114,6 @@ impl Game {
                     || tr.complete_runs
                     || tg.unrestricted_from != 0
                     || !tg.rank_sequence.is_empty()
-                    || tg.swap_bases.is_some()
                     || tg.final_from_same_index.is_some()
                 {
                     u64::MAX
@@ -1125,12 +1129,12 @@ impl Game {
                         continue;
                     }
                     let m = tr.fits[top.face() as usize];
-                    if m == 0 {
+                    if m == 0 && !swap_possible {
                         continue;
                     }
                     m
                 };
-                union_accept_mask |= accept_mask;
+                union_accept_mask |= if swap_possible { u64::MAX } else { accept_mask };
                 active_targets.push((to, accept_mask, from_mask));
             }
             if active_targets.is_empty() {
@@ -1307,8 +1311,21 @@ impl Game {
                     }
                     if let Some(mask) = fit_mask {
                         if mask >> src[src_len - n].face() & 1 == 0 {
+                            if n == 1
+                                && tgi == fg as usize
+                                && tg.swap_bases.is_some()
+                                && from < to
+                                && self.can_swap(s, from, to)
+                            {
+                                out.push(Move::new(Action::Transfer { from, to, count: 1 }));
+                            }
                             continue;
                         }
+                    }
+                    // Swapping two piles is symmetric (`from <-> to`); emit each pair once.
+                    if n == 1 && from > to && tg.swap_bases.is_some() && self.can_swap(s, from, to)
+                    {
+                        continue;
                     }
                     if self.can_place_with_limit(s, from, to, n, supermove_cap) {
                         out.push(Move::new(Action::Transfer {

@@ -574,7 +574,7 @@ fn effective_search(g: &Game, ordered_foundations: &[u16]) -> crate::rules::Sear
         s.blocker_weight = 4;
     }
     if g.total_cards > 60 {
-        s.fast_share = s.fast_share.max(90);
+        s.fast_share = s.fast_share.max(98);
     }
     s
 }
@@ -966,6 +966,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
                 | crate::rules::MoveUnit::SuitRun
                 | crate::rules::MoveUnit::AnyFaceUp
                 | crate::rules::MoveUnit::Supermove
+                | crate::rules::MoveUnit::TopOrWhole
         ) {
             return false;
         }
@@ -1009,13 +1010,23 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     if tg.complete_runs {
                         return Some(m);
                     }
+                    let tgr = g.group_of(to);
                     let fast_found = self.fast
                         && g.pile_kind(to) == PileKind::Foundation
                         && count == 1
                         && g.score.is_none()
                         && g.redeal.is_none()
-                        && !g.rule(to).complete_runs
-                        && g.rule(to).build.by != BuildBy::None;
+                        && !tg.complete_runs
+                        && (tg.autoplay
+                            || tg.build.dir == crate::rules::Dir::Same
+                            || (tg.build.by == BuildBy::Suit
+                                && matches!(
+                                    tg.build.dir,
+                                    crate::rules::Dir::Up | crate::rules::Dir::Down
+                                )
+                                && !tgr.requires_prev_non_empty
+                                && !tgr.requires_rank_on_prev
+                                && !tgr.match_longest_rank));
                     if !self.autoplay || count != 1 || (!tg.autoplay && !fast_found) {
                         continue;
                     }
@@ -1023,6 +1034,9 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     if s.piles[from as usize].len() == 1 && !g.group_of(from).refill_from.is_empty()
                     {
                         continue;
+                    }
+                    if fast_found && tg.build.dir == crate::rules::Dir::Same {
+                        return Some(m);
                     }
                     let card = *s.piles[from as usize].last().unwrap();
                     let counts = on_found.get_or_insert_with(|| self.foundation_counts(s));
@@ -1054,9 +1068,14 @@ impl<'g, 'c> Ctx<'g, 'c> {
                             }
                         }
                     }
+                    let need_copies = if self.fast && g.copies > 1 {
+                        1
+                    } else {
+                        g.copies
+                    };
                     if g.dependents[card.face() as usize]
                         .iter()
-                        .all(|&f| counts[f as usize] >= g.copies)
+                        .all(|&f| counts[f as usize] >= need_copies)
                     {
                         return Some(m);
                     }
@@ -1211,12 +1230,17 @@ impl<'g, 'c> Ctx<'g, 'c> {
             let gi = g.pile_group[p] as usize;
             let gr = &g.groups[gi];
             if gr.kind == PileKind::Stock {
-                // Cards still to be dealt onto the tableau are work to come; counting them keeps
-                // a deal from looking like pure loss.
-                if g.stock
-                    .as_ref()
-                    .is_some_and(|st| st.target_kind == PileKind::Tableau)
-                {
+                // Cards still to be dealt onto a building tableau are work to come; counting them
+                // offsets the disorder penalty of a deal so dealing isn't avoided indefinitely.
+                // On a non-building tableau (e.g. a supply row), dealing adds no disorder and
+                // buries existing cards, so don't reward dealing.
+                if g.stock.as_ref().is_some_and(|st| {
+                    st.target_kind == PileKind::Tableau
+                        && st
+                            .targets
+                            .first()
+                            .is_some_and(|&tp| self.builds[tp as usize])
+                }) {
                     h += wt.stock_weight * pile.len() as u32;
                 }
                 continue;
@@ -1234,7 +1258,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
             if gr.kind == PileKind::Reserve {
                 // Only penalize cards buried in a stacked reserve; single-card reserve slots
                 // (e.g. a bouquet) are exposed and act like free cards.
-                h += pile.len().saturating_sub(1) as u32;
+                h += wt.down_weight * pile.len().saturating_sub(1) as u32;
             }
             if gr.kind == PileKind::Waste
                 && g.compress_talon
@@ -1255,6 +1279,23 @@ impl<'g, 'c> Ctx<'g, 'c> {
             {
                 // Non-refilling single-card tableau slots act as free cells.
                 h += wt.cell_weight * pile.len() as u32;
+            } else if gr.kind == PileKind::Tableau
+                && !self.builds[p]
+                && g.stock.as_ref().is_some_and(|st| {
+                    st.target as usize == gi && st.target_kind == PileKind::Tableau
+                })
+            {
+                // Cards buried below the top of a non-building supply row must be dug out.
+                h += wt.down_weight * pile.len().saturating_sub(1) as u32;
+            }
+            if gr.kind == PileKind::Tableau
+                && (gr.require_valid_base || gr.swap_bases.is_some())
+                && !matches!(g.win, crate::game::Win::AllFull(wgi) if wgi as usize == gi)
+                && !pile
+                    .first()
+                    .is_some_and(|&c| g.empty_accepts(p as u16, c, s))
+            {
+                h += pw;
             }
             if self.builds[p] && gr.kind == PileKind::Tableau && !pile.is_empty() {
                 h += wt.disorder_weight;

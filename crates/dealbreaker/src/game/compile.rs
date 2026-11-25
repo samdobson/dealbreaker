@@ -822,6 +822,35 @@ fn compile_win(
             Ok(Win::Score(*at_least))
         }
         WinRule::AllFull { group } => Ok(Win::AllFull(find_group(rules, group)?)),
+        WinRule::PilesBuilt {
+            group,
+            length,
+            build,
+            empty,
+            non_empty,
+            pile,
+        } => {
+            let gi = find_group(rules, group)?;
+            if let Some(pi) = pile {
+                if *pi >= groups[gi as usize].count {
+                    return err(format!(
+                        "piles_built win: pile index {pi} out of range for {group:?}"
+                    ));
+                }
+            }
+            let empty_gs = empty
+                .iter()
+                .map(|n| find_group(rules, n))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Win::PilesBuilt {
+                group: gi,
+                length: *length,
+                has_build: build.is_some(),
+                empty: empty_gs,
+                non_empty: *non_empty,
+                pile: *pile,
+            })
+        }
     }
 }
 
@@ -882,9 +911,21 @@ impl Game {
         }
         let (covered_by, has_covers) = compile_covers(&rules, &groups, npiles)?;
         let (stock, stock_pile) = compile_stock(&rules, &mut groups)?;
-        let is_refill_source = mark_positional_sources(&mut groups, &pile_rules);
+        let mut is_refill_source = mark_positional_sources(&mut groups, &pile_rules);
         let removal = compile_removals(&rules, &groups)?;
         let win = compile_win(&rules, &groups, &pile_rules)?;
+        if let Win::PilesBuilt {
+            group,
+            pile: Some(_),
+            ..
+        } = &win
+        {
+            let gi = *group as usize;
+            groups[gi].symmetric = false;
+            groups[gi].symmetric_when_no_stock = false;
+            groups[gi].symmetric_when_no_redeal = false;
+            is_refill_source[gi] = true;
+        }
 
         let waste = groups
             .iter()
@@ -981,7 +1022,12 @@ impl Game {
             }
             self.pile_rules[p].fits = t;
         }
-        if let WinRule::RowsBuilt { build: b, .. } = &self.rules.win {
+        let win_build = match &self.rules.win {
+            WinRule::RowsBuilt { build, .. } => Some(build),
+            WinRule::PilesBuilt { build: Some(b), .. } => Some(b),
+            _ => None,
+        };
+        if let Some(b) = win_build {
             let mut t = [0u64; FACES];
             for (u, row) in t.iter_mut().enumerate() {
                 for o in 0..FACES {

@@ -1020,6 +1020,8 @@ pub enum Dir {
     Any,
     /// Any strictly higher rank in the pack's rank sequence (no wrap).
     UpAny,
+    /// Any strictly lower rank in the pack's rank sequence (no wrap).
+    DownAny,
 }
 
 /// What an empty pile accepts.
@@ -1493,6 +1495,8 @@ pub enum RemovalKind {
     /// Remove `1..=max_len` consecutive non-empty piles in a group when the sum of their ranks is
     /// a multiple of `divisor`.
     ContiguousSumMultiple { divisor: u8, max_len: u8 },
+    /// Remove two playable cards of the same rank when that rank is listed in `ranks`.
+    SameRankIn { ranks: Vec<u8> },
 }
 
 /// When the game is won.
@@ -1535,6 +1539,24 @@ pub enum WinRule {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         length: Option<u16>,
         build: Build,
+    },
+    /// Every non-empty pile of `group` (or the single pile at `pile`) satisfies optional `length`
+    /// and `build` sequence checks, and every group in `empty` is empty.
+    PilesBuilt {
+        group: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        length: Option<u16>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        build: Option<Build>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        empty: Vec<String>,
+        /// Require at least one non-empty pile in `group`.
+        #[serde(default, skip_serializing_if = "is_false")]
+        non_empty: bool,
+        /// Check only this 0-based pile index within `group` (it must be non-empty if `length` or
+        /// `non_empty` is set).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pile: Option<u16>,
     },
 }
 

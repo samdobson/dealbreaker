@@ -39,6 +39,7 @@ impl Game {
             Dir::Up => up(u, o),
             Dir::UpAny => o > u,
             Dir::Down => up(o, u),
+            Dir::DownAny => o < u,
             Dir::Either => up(u, o) || up(o, u),
             Dir::Same => u == o,
             Dir::Any => true,
@@ -1202,6 +1203,24 @@ impl Game {
                         }
                         for &(q, d) in &tops[i + 1..] {
                             if c.is_joker() || d.is_joker() || c.rank() + d.rank() == *total {
+                                emit(&[p, q]);
+                            }
+                        }
+                    }
+                }
+                RemovalKind::SameRankIn { ranks } => {
+                    for (i, &(p, c)) in tops.iter().enumerate() {
+                        for &(q, d) in &tops[i + 1..] {
+                            let ok = if c.is_joker() && d.is_joker() {
+                                true
+                            } else if c.is_joker() {
+                                ranks.contains(&d.rank())
+                            } else if d.is_joker() {
+                                ranks.contains(&c.rank())
+                            } else {
+                                c.rank() == d.rank() && ranks.contains(&c.rank())
+                            };
+                            if ok {
                                 emit(&[p, q]);
                             }
                         }

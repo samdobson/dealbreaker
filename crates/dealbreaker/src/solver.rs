@@ -1150,6 +1150,48 @@ impl<'g, 'c> Ctx<'g, 'c> {
                         h += pw * (want - good) as u32;
                     }
                 }
+                if let crate::game::Win::PilesBuilt {
+                    group,
+                    length,
+                    has_build,
+                    empty,
+                    pile,
+                    ..
+                } = &g.win
+                {
+                    for &eg in empty {
+                        for p in g.groups[eg as usize].piles() {
+                            h += pw * s.piles[p as usize].len() as u32;
+                        }
+                    }
+                    if let Some(pi) = pile {
+                        let p = (g.groups[*group as usize].start + *pi) as usize;
+                        let want = length.unwrap_or(g.total_cards) as usize;
+                        h += pw * want.saturating_sub(s.piles[p].len()) as u32;
+                    } else if *has_build {
+                        let fits = g.row_win_fits.as_ref().unwrap();
+                        let mut bad = 0u32;
+                        for p in g.groups[*group as usize].piles() {
+                            let cards = &s.piles[p as usize];
+                            if cards.is_empty() {
+                                continue;
+                            }
+                            let mut good = 1usize;
+                            for w in cards.windows(2) {
+                                if w[0].is_face_up()
+                                    && w[1].is_face_up()
+                                    && fits[w[0].face() as usize] >> w[1].face() & 1 != 0
+                                {
+                                    good += 1;
+                                } else {
+                                    break;
+                                }
+                            }
+                            bad += (cards.len() - good) as u32;
+                        }
+                        h += pw * bad;
+                    }
+                }
             }
         }
         for (p, pile) in s.piles.iter().enumerate() {

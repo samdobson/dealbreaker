@@ -2742,3 +2742,104 @@ fn redeal_deal_rows_redistribute_shuffle_and_alternating() {
     r4.stock = Some(st4);
     check(r4, 0..40);
 }
+
+#[test]
+fn piles_built_down_any_and_pairs_sum_same_rank() {
+    // 1) Dir::DownAny + WinRule::PilesBuilt targeting a specific pile index (symmetry must be off).
+    let pack1 = Pack::new(&[Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r1 = Rules::new(
+        "mini-tower-target",
+        pack1,
+        vec![GroupRules::new("tableau", PileKind::Tableau, 3)
+            .build(BuildBy::Any, Dir::DownAny)
+            .empty(EmptyRule::Any)
+            .moves(MoveUnit::Top)],
+        vec![
+            DealStep::to("tableau").piles(&[0]).each(2),
+            DealStep::to("tableau").piles(&[1]).each(2),
+        ],
+    );
+    r1.win = WinRule::PilesBuilt {
+        group: "tableau".into(),
+        length: Some(4),
+        build: Some(Build::new(BuildBy::Any, Dir::Down)),
+        empty: Vec::new(),
+        non_empty: true,
+        pile: Some(2),
+    };
+    check(r1, 0..40);
+
+    // 2) WinRule::PilesBuilt across all non-empty piles with required empty stock.
+    let pack2 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let mut r2 = Rules::new(
+        "mini-piles-built",
+        pack2,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::SuitRun),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r2.stock = Some(StockRules::to("tableau"));
+    r2.win = WinRule::PilesBuilt {
+        group: "tableau".into(),
+        length: Some(3),
+        build: Some(Build::new(BuildBy::Suit, Dir::Down)),
+        empty: vec!["stock".into()],
+        non_empty: true,
+        pile: None,
+    };
+    check(r2, 0..40);
+
+    // 3) RemovalKind::PairsSum with same_rank pairs + WinRule::Count.
+    let pack3 = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5, 6]);
+    let mut r3 = Rules::new(
+        "mini-pairs-sum-same-rank",
+        pack3,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::None, Dir::Up)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::None),
+            {
+                let mut t = GroupRules::new("tableau", PileKind::Tableau, 4)
+                    .empty(EmptyRule::None)
+                    .moves(MoveUnit::None);
+                t.max_cards = Some(1);
+                t.refill_from = vec!["stock".into()];
+                t
+            },
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r3.removal = vec![
+        RemovalRules::new(
+            RemovalKind::PairsSum {
+                total: 5,
+                alone: Vec::new(),
+            },
+            &["tableau"],
+            "foundation",
+        ),
+        RemovalRules::new(
+            RemovalKind::SameRankIn { ranks: vec![5, 6] },
+            &["tableau"],
+            "foundation",
+        ),
+    ];
+    r3.win = WinRule::Count {
+        group: "foundation".into(),
+        cards: 12,
+    };
+    check(r3, 0..40);
+}

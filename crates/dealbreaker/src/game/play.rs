@@ -1321,6 +1321,62 @@ impl Game {
                         .piles()
                         .all(|p| s.piles[p as usize].len() <= 1)
             }
+            Win::PilesBuilt {
+                group,
+                length,
+                has_build,
+                empty,
+                non_empty,
+                pile,
+            } => {
+                if !empty.iter().all(|&g| {
+                    self.groups[g as usize]
+                        .piles()
+                        .all(|p| s.piles[p as usize].is_empty())
+                }) {
+                    return false;
+                }
+                let check_pile = |cards: &[Card]| -> bool {
+                    if let Some(l) = length {
+                        if cards.len() != *l as usize {
+                            return false;
+                        }
+                    }
+                    if *has_build {
+                        let fits = self.row_win_fits.as_ref().unwrap();
+                        if cards.iter().any(|c| !c.is_face_up()) {
+                            return false;
+                        }
+                        if !cards
+                            .windows(2)
+                            .all(|w| fits[w[0].face() as usize] >> w[1].face() & 1 != 0)
+                        {
+                            return false;
+                        }
+                    }
+                    true
+                };
+                if let Some(pi) = pile {
+                    let p = (self.groups[*group as usize].start + *pi) as usize;
+                    let cards = &s.piles[p];
+                    if (*non_empty || length.is_some()) && cards.is_empty() {
+                        return false;
+                    }
+                    return check_pile(cards);
+                }
+                let mut any = false;
+                for p in self.groups[*group as usize].piles() {
+                    let cards = &s.piles[p as usize];
+                    if cards.is_empty() {
+                        continue;
+                    }
+                    any = true;
+                    if !check_pile(cards) {
+                        return false;
+                    }
+                }
+                !*non_empty || any
+            }
         }
     }
 

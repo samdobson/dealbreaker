@@ -449,6 +449,16 @@ pub(crate) enum Win {
     Score(u32),
     /// Every pile in `group` holds `max_cards` cards with a valid base card.
     AllFull(u16),
+    /// Non-empty piles of `group` (or single `pile` index) satisfy optional `length` and `build`,
+    /// with every group in `empty` empty.
+    PilesBuilt {
+        group: u16,
+        length: Option<u16>,
+        has_build: bool,
+        empty: Vec<u16>,
+        non_empty: bool,
+        pile: Option<u16>,
+    },
 }
 
 /// A game ready to play and solve: [`Rules`] compiled into tables.

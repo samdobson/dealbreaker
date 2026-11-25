@@ -201,6 +201,10 @@ pub(crate) struct Group {
     pub refill_first_face_down: bool,
     /// Auto-flip pile `i` when pile `i` of this group reaches `max_cards`.
     pub flip_when_same_index_full: Option<u16>,
+    /// A face-down top turns up only once the previous pile is empty.
+    pub flip_after_prev_empty: bool,
+    /// A face-down top turns up only while some pile of this group is empty.
+    pub flip_when_any_empty: Option<u16>,
 }
 
 #[derive(Clone, Debug)]
@@ -310,6 +314,8 @@ impl Group {
             || self.moves_when_same_index_empty.is_some()
             || self.requires_same_index_non_empty.is_some()
             || self.flip_when_same_index_full.is_some()
+            || self.flip_after_prev_empty
+            || self.flip_when_any_empty.is_some()
             || self.refill_same_index
             || self.refill_nearest
     }
@@ -327,6 +333,8 @@ impl Group {
             || self.compact_face_up
             || !self.refill_from.is_empty()
             || self.flip_when_same_index_full.is_some()
+            || self.flip_after_prev_empty
+            || self.flip_when_any_empty.is_some()
     }
 
     /// Internal single-pile scratch group (used for redeal gathering).
@@ -381,6 +389,8 @@ impl Group {
             no_build_single_while_stock: false,
             refill_first_face_down: false,
             flip_when_same_index_full: None,
+            flip_after_prev_empty: false,
+            flip_when_any_empty: None,
         }
     }
 }

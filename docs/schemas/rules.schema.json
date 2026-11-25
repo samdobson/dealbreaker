@@ -816,6 +816,18 @@
             "null"
           ]
         },
+        "flip_after_prev_empty": {
+          "description": "A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies).",
+          "default": false,
+          "type": "boolean"
+        },
+        "flip_when_any_empty": {
+          "description": "A face-down top card turns up only while some pile of the named group is empty.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "exclude_suit": {
           "description": "Piles accept no card of this suit, and nothing may be built on one.",
           "anyOf": [

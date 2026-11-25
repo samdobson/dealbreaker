@@ -302,7 +302,11 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
         && !stock_redeals_non_waste
         && !stock_sensitive_to_empty
         && rules.pack.jokers == 0
-        && !rules.groups.iter().any(|gr| gr.no_build_single_while_stock);
+        && !rules.groups.iter().any(|gr| {
+            gr.no_build_single_while_stock
+                || gr.flip_when_any_empty.is_some()
+                || gr.flip_after_prev_empty
+        });
 
     let mut groups = Vec::new();
     let mut pile_group = Vec::new();
@@ -410,6 +414,10 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
                 Some(ref_gi)
             }
         };
+        let flip_when_any_empty = match &g.flip_when_any_empty {
+            None => None,
+            Some(name) => Some(find_group(rules, name)?),
+        };
         let flip_when_same_index_full = match &g.flip_when_same_index_full {
             None => None,
             Some(name) => {
@@ -478,6 +486,8 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             no_build_single_while_stock: g.no_build_single_while_stock,
             refill_first_face_down: g.refill_first_face_down,
             flip_when_same_index_full,
+            flip_after_prev_empty: g.flip_after_prev_empty,
+            flip_when_any_empty,
         };
         grp.symmetric = g.layout.is_none()
             && g.piles.is_empty()

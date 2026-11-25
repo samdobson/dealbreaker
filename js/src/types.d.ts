@@ -127,6 +127,8 @@ export interface GroupRules {
   supermove_complete_run?: boolean;
   unrestricted_from?: string[];
   lock_pile_dir?: boolean;
+  flip_after_prev_empty?: boolean;
+  flip_when_any_empty?: string;
   requires_same_index_non_empty?: string;
   exclude_suit?: Suit;
   freeze_when_built?: boolean;

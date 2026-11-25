@@ -903,6 +903,17 @@ impl Game {
             let tp = self.groups[tg as usize].start + idx;
             return s.piles[tp as usize].len() >= self.rule(tp).max_cards as usize;
         }
+        if g.flip_after_prev_empty && p > g.start && !s.piles[p as usize - 1].is_empty() {
+            return false;
+        }
+        if let Some(ng) = g.flip_when_any_empty {
+            if !self.groups[ng as usize]
+                .piles()
+                .any(|q| s.piles[q as usize].is_empty())
+            {
+                return false;
+            }
+        }
         !g.no_flip
             && (g.kind != PileKind::Stock || self.stock.as_ref().is_some_and(|st| st.face_up))
             && (!g.flip_only_last || s.piles[p as usize].len() == 1)

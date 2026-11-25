@@ -3107,3 +3107,34 @@ fn requires_same_index_non_empty_gates_a_second_foundation_row() {
     );
     check(r, 0..60);
 }
+
+#[test]
+fn flip_gates_open_reserve_piles_in_order() {
+    // Reserve piles are dealt face down; each turns up only after the one before is empty and
+    // while some tableau pile is empty.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let mut reserve = GroupRules::new("reserve", PileKind::Reserve, 2)
+        .moves(MoveUnit::Top)
+        .empty(EmptyRule::None);
+    reserve.flip_after_prev_empty = true;
+    reserve.flip_when_any_empty = Some("tableau".into());
+    let r = Rules::new(
+        "mini-flip-gates",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Suit, Dir::Up)
+                .max_cards(3),
+            reserve,
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![
+            DealStep::to("reserve").each(2).down(),
+            DealStep::to("tableau").each(1),
+        ],
+    );
+    check(r, 0..60);
+}

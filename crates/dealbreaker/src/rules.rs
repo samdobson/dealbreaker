@@ -566,6 +566,13 @@ pub struct GroupRules {
     /// its `max_cards` capacity (overrides `no_flip`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flip_when_same_index_full: Option<String>,
+    /// A face-down top card turns up only once the previous pile of this group is empty (the
+    /// first pile always qualifies).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub flip_after_prev_empty: bool,
+    /// A face-down top card turns up only while some pile of the named group is empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flip_when_any_empty: Option<String>,
 }
 
 /// When two piles in the same group may swap their contents on a move from one to the other.
@@ -722,6 +729,8 @@ impl GroupRules {
             no_build_single_while_stock: false,
             refill_first_face_down: false,
             flip_when_same_index_full: None,
+            flip_after_prev_empty: false,
+            flip_when_any_empty: None,
         }
     }
 

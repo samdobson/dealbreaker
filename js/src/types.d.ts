@@ -135,6 +135,7 @@ export interface GroupRules {
   require_valid_base?: boolean;
   swap_bases?: SwapBases;
   move_from_frontier?: Frontier;
+  empty_open_after_bases?: number;
   supermove_complete_run?: boolean;
   unrestricted_from?: string[];
   lock_pile_dir?: boolean;

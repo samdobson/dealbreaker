@@ -1134,6 +1134,15 @@
           "default": false,
           "type": "boolean"
         },
+        "empty_open_after_bases": {
+          "description": "With an `empty` rule of one rank: once this many piles of the group start with a card of that rank, empty piles accept any card (Scorpion Towers).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
         "move_from_frontier": {
           "description": "Cards may leave only the first or last non-empty pile of this group.",
           "anyOf": [

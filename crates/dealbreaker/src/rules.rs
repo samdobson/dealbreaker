@@ -500,6 +500,10 @@ pub struct GroupRules {
     /// Cards may leave only the first or last non-empty pile of this group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub move_from_frontier: Option<Frontier>,
+    /// With an `empty` rule of one rank: once this many piles of the group start with a card of
+    /// that rank, empty piles accept any card (Scorpion Towers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_open_after_bases: Option<u16>,
     /// Only automatically turn a pile's face-down top card face up when it is the sole card left
     /// in the pile.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -732,6 +736,7 @@ impl GroupRules {
             requires_same_index_non_empty: None,
             accept_when_same_index_empty: None,
             move_from_frontier: None,
+            empty_open_after_bases: None,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,

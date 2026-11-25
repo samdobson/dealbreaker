@@ -3256,3 +3256,30 @@ fn double_up_foundation_with_skipped_ranks() {
     };
     check(r, 0..60);
 }
+
+#[test]
+fn empty_open_after_bases_relaxes_the_empty_rule() {
+    // Empty piles take only a 3 until two piles start with a 3, then anything.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let mut tab = GroupRules::new("tableau", PileKind::Tableau, 4)
+        .build(BuildBy::Suit, Dir::Down)
+        .empty(EmptyRule::Rank(3))
+        .moves(MoveUnit::Run);
+    tab.empty_open_after_bases = Some(2);
+    let mut r = Rules::new(
+        "mini-empty-open",
+        pack,
+        vec![tab],
+        vec![DealStep::to("tableau").counts(&[2, 2, 1, 1])],
+    );
+    r.win = WinRule::PilesBuilt {
+        group: "tableau".into(),
+        length: Some(3),
+        build: Some(Build::new(BuildBy::Suit, Dir::Down)),
+        empty: Vec::new(),
+        non_empty: false,
+        pile: None,
+        bottom: None,
+    };
+    check(r, 0..100);
+}

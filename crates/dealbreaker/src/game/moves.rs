@@ -91,6 +91,9 @@ impl Game {
         {
             return false;
         }
+        if self.empty_is_open(pile, s) {
+            return true;
+        }
         match &r.empty {
             EmptyRule::None => false,
             EmptyRule::Any => true,
@@ -105,6 +108,19 @@ impl Game {
             | EmptyRule::AfterPile { .. }
             | EmptyRule::SameBase => self.empty_set(pile, s) >> card.face() & 1 != 0,
         }
+    }
+
+    /// Whether `empty_open_after_bases` has opened the empty piles of `pile`'s group to any card.
+    fn empty_is_open(&self, pile: u16, s: &State) -> bool {
+        let g = self.group_of(pile);
+        let (Some(need), EmptyRule::Rank(k)) = (g.empty_open_after_bases, &self.rule(pile).empty)
+        else {
+            return false;
+        };
+        g.piles()
+            .filter(|&p| s.piles[p as usize].first().is_some_and(|c| c.rank() == *k))
+            .count()
+            >= need as usize
     }
 
     /// The rank `offset` places after `base` in the pack's sequence of ranks, going round.
@@ -136,6 +152,9 @@ impl Game {
                     }
                 }
             }
+        }
+        if self.empty_is_open(pile, s) {
+            return real;
         }
         match &r.empty {
             EmptyRule::None => 0,

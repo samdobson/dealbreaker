@@ -125,6 +125,7 @@ One group of identical piles.
 | `requires_rank_on_prev` | `boolean` | `false` | Each pile after the first only accepts a card whose rank is already present on the previous pile in the group (when empty, it must match the previous pile's bottom card). |
 | `suit` | [Suit](#suit) \| `null` | — | Piles accept only cards of this suit. |
 | `supermove_complete_run` | `boolean` | `false` | With `moves: supermove`, also allow moving a complete suit-length built run regardless of empty cells and columns. |
+| `empty_open_after_bases` | `integer` \| `null` | — | With an `empty` rule of one rank: once this many piles of the group start with a card of that rank, empty piles accept any card (Scorpion Towers). |
 | `move_from_frontier` | [Frontier](#frontier) \| `null` | — | Cards may leave only the first or last non-empty pile of this group. |
 | `swap_bases` | [SwapBases](#swapbases) \| `null` | — | When set, moving from one pile of this group onto another may swap the two piles instead of building. |
 | `unique_suits` | `boolean` | `false` | No two non-empty piles in this group may share the same suit on their bottom card. |

@@ -146,6 +146,7 @@ impl Game {
             if piles.is_empty() {
                 return err("deal: no piles selected");
             }
+            let mut passed: Vec<Card> = Vec::new();
             let orient = |c: Card| if step.face_up { c } else { c.down() };
             let mut first: Option<Card> = None;
             let mut put = |s: &mut State, p: u16, c: Card| {
@@ -310,7 +311,15 @@ impl Game {
                 'deal_rows: for r in 0..rows {
                     for (i, &p) in piles.iter().enumerate() {
                         if counts[i] > r {
-                            let Some(c) = deck.pop_front() else {
+                            let mut next = deck.pop_front();
+                            while let Some(c) = next {
+                                if !step.skip_ranks.contains(&c.rank()) {
+                                    break;
+                                }
+                                passed.push(c);
+                                next = deck.pop_front();
+                            }
+                            let Some(c) = next else {
                                 if allow_short {
                                     break 'deal_rows;
                                 }
@@ -352,6 +361,7 @@ impl Game {
                     }
                 }
             }
+            deck.extend(passed);
             if step.kings_to_bottom {
                 for &p in &piles {
                     let pile = &mut s.piles[p as usize];

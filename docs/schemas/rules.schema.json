@@ -444,6 +444,15 @@
           "default": true,
           "type": "boolean"
         },
+        "skip_ranks": {
+          "description": "Cards of these ranks met while dealing this step are passed over and put at the bottom of the pack instead (Doublets' kings).",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
         "kings_to_bottom": {
           "description": "After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen).",
           "default": false,
@@ -559,6 +568,27 @@
           "type": "string",
           "enum": [
             "up_any"
+          ]
+        },
+        {
+          "description": "Any strictly lower rank in the pack's rank sequence (no wrap).",
+          "type": "string",
+          "enum": [
+            "down_any"
+          ]
+        },
+        {
+          "description": "Same rank or one step down.",
+          "type": "string",
+          "enum": [
+            "down_or_same"
+          ]
+        },
+        {
+          "description": "The card's position in the pack's ranks is double the one below it, plus one, modulo the number of ranks (Doublets: A 2 4 8 3 6 Q J 9 5 T 7 A).",
+          "type": "string",
+          "enum": [
+            "double_up"
           ]
         }
       ]

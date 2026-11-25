@@ -176,6 +176,9 @@ Rank direction from a card to the card placed on it.
 - `"same"` — Same rank.
 - `"any"` — Any rank at all (a pile that takes anything, subject to `by`).
 - `"up_any"` — Any strictly higher rank in the pack's rank sequence (no wrap).
+- `"down_any"` — Any strictly lower rank in the pack's rank sequence (no wrap).
+- `"down_or_same"` — Same rank or one step down.
+- `"double_up"` — The card's position in the pack's ranks is double the one below it, plus one, modulo the number of ranks (Doublets: A 2 4 8 3 6 Q J 9 5 T 7 A).
 
 ### EmptyRule {#emptyrule}
 
@@ -305,6 +308,7 @@ Cards come off the shuffled pack in order. With `count` or `counts`, they are de
 | `divert_ranks` | `array` \| `null` | — | During this step, divert dealt cards of these ranks to the first foundation that accepts them; with `drain_foundations`, restrict draining to these ranks. |
 | `drain_foundations` | `boolean` | `false` | After each dealt row, repeatedly move exposed top cards of the selected piles onto any accepting foundation (restricted to `divert_ranks` if set). |
 | `face_up` | `boolean` | `true` | Face up (default) or face down. |
+| `skip_ranks` | `integer`[] | — | Cards of these ranks met while dealing this step are passed over and put at the bottom of the pack instead (Doublets' kings). |
 | `kings_to_bottom` | `boolean` | `false` | After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen). |
 | `limit` | `integer` \| `null` | — | With `ranks` (and no `count`): take at most this many matching cards in total instead of all of them. |
 | `of_base` | `boolean` | `false` | Take every remaining card of the dealt base rank out of the pack and put one on each selected pile in turn (requires an earlier step with `set_base`). |

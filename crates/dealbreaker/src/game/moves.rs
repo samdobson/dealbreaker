@@ -54,6 +54,7 @@ impl Game {
             Dir::Down => up(o, u, ur),
             Dir::DownAny => o < u,
             Dir::DownOrSame => u == o || up(o, u, ur),
+            Dir::DoubleUp => o as i16 == (2 * u as i16 + 1) % n,
             Dir::Either => up(u, o, or) || up(o, u, ur),
             Dir::Same => u == o,
             Dir::Any => true,

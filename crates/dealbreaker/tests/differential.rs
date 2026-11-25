@@ -3225,3 +3225,34 @@ fn move_from_frontier_lets_only_the_end_pile_move() {
     );
     check(r, 0..60);
 }
+
+#[test]
+fn double_up_foundation_with_skipped_ranks() {
+    // Of five ranks, positions double up as 0 -> 1 -> 3 -> 2 -> 0; the fifth is a dead end that
+    // never reaches the foundation, so it is dealt past the first cards.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    let mut r = Rules::new(
+        "mini-double-up",
+        pack,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::Any, Dir::DoubleUp)
+                .empty(EmptyRule::Any)
+                .max_cards(10),
+            GroupRules::new("cell", PileKind::Reserve, 2).moves(MoveUnit::Top),
+        ],
+        vec![
+            DealStep::to("foundation").each(1).skip_ranks(&[5]),
+            DealStep::to("cell").each(1).skip_ranks(&[5]),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r.stock = Some(StockRules::to("waste"));
+    r.win = WinRule::Count {
+        group: "foundation".into(),
+        cards: 8,
+    };
+    check(r, 0..60);
+}

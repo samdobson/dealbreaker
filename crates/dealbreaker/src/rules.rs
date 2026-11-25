@@ -1099,6 +1099,9 @@ pub enum Dir {
     DownAny,
     /// Same rank or one step down.
     DownOrSame,
+    /// The card's position in the pack's ranks is double the one below it, plus one, modulo the
+    /// number of ranks (Doublets: A 2 4 8 3 6 Q J 9 5 T 7 A).
+    DoubleUp,
 }
 
 /// What an empty pile accepts.
@@ -1414,6 +1417,10 @@ pub struct DealStep {
     /// Face up (default) or face down.
     #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub face_up: bool,
+    /// Cards of these ranks met while dealing this step are passed over and put at the bottom of
+    /// the pack instead (Doublets' kings).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skip_ranks: Vec<u8>,
     /// After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen).
     #[serde(default, skip_serializing_if = "is_false")]
     pub kings_to_bottom: bool,
@@ -1489,6 +1496,11 @@ impl DealStep {
 
     pub fn down(mut self) -> Self {
         self.face_up = false;
+        self
+    }
+
+    pub fn skip_ranks(mut self, ranks: &[u8]) -> Self {
+        self.skip_ranks = ranks.to_vec();
         self
     }
 

@@ -19,7 +19,16 @@ export type BuildBy =
   | "other_suit"
   | "suit_or_rank";
 
-export type Dir = "down" | "up" | "up_any" | "either" | "same" | "any";
+export type Dir =
+  | "down"
+  | "up"
+  | "up_any"
+  | "down_any"
+  | "down_or_same"
+  | "double_up"
+  | "either"
+  | "same"
+  | "any";
 
 export interface Build {
   by: BuildBy;
@@ -202,6 +211,7 @@ export interface DealStep {
   limit?: number;
   face_up?: boolean;
   kings_to_bottom?: boolean;
+  skip_ranks?: number[];
   one_each?: boolean;
   collect?: number[];
   set_base?: boolean;

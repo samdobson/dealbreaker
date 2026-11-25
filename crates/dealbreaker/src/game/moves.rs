@@ -91,6 +91,18 @@ impl Game {
         {
             return false;
         }
+        if (g.unique_ranks || g.same_suit_group || g.same_rank_group)
+            && g.piles().any(|p| {
+                p != pile
+                    && s.piles[p as usize].first().is_some_and(|c| {
+                        (g.unique_ranks && c.rank() == card.rank())
+                            || (g.same_suit_group && c.suit() != card.suit())
+                            || (g.same_rank_group && c.rank() != card.rank())
+                    })
+            })
+        {
+            return false;
+        }
         if self.empty_is_open(pile, s) {
             return true;
         }
@@ -149,6 +161,27 @@ impl Game {
                         if !c.is_joker() {
                             real &= !self.suit_faces[c.suit() as usize];
                         }
+                    }
+                }
+            }
+        }
+        if g.unique_ranks || g.same_suit_group || g.same_rank_group {
+            for p in g.piles() {
+                if p == pile {
+                    continue;
+                }
+                if let Some(&c) = s.piles[p as usize].first() {
+                    if c.is_joker() {
+                        continue;
+                    }
+                    if g.unique_ranks {
+                        real &= !self.rank_faces[c.rank() as usize];
+                    }
+                    if g.same_suit_group {
+                        real &= self.suit_faces[c.suit() as usize];
+                    }
+                    if g.same_rank_group {
+                        real &= self.rank_faces[c.rank() as usize];
                     }
                 }
             }
@@ -1470,6 +1503,18 @@ impl Game {
                         }
                     }
                 }
+                RemovalKind::PairsSumSameSuit { total } => {
+                    for (i, &(p, c)) in tops.iter().enumerate() {
+                        for &(q, d) in &tops[i + 1..] {
+                            let suited = c.is_joker() || d.is_joker() || c.suit() == d.suit();
+                            if suited
+                                && (c.is_joker() || d.is_joker() || c.rank() + d.rank() == *total)
+                            {
+                                emit(&[p, q]);
+                            }
+                        }
+                    }
+                }
                 RemovalKind::SameRankIn { ranks } => {
                     for (i, &(p, c)) in tops.iter().enumerate() {
                         for &(q, d) in &tops[i + 1..] {
@@ -1727,6 +1772,14 @@ impl Game {
                 if self.groups[req_gi as usize]
                     .piles()
                     .any(|p| s.piles[p as usize].is_empty())
+                {
+                    return false;
+                }
+            }
+            if let Some(req_gi) = st.require_group_empty {
+                if self.groups[req_gi as usize]
+                    .piles()
+                    .any(|p| !s.piles[p as usize].is_empty())
                 {
                     return false;
                 }

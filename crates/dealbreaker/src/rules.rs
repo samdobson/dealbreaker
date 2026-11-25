@@ -564,6 +564,26 @@ pub struct GroupRules {
     /// No two non-empty piles in this group may share the same suit on their bottom card.
     #[serde(default, skip_serializing_if = "is_false")]
     pub unique_suits: bool,
+    /// No two non-empty piles in this group may share the same rank on their bottom card
+    /// (Elevens' reserves).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub unique_ranks: bool,
+    /// Every non-empty pile in this group must have the same suit on its bottom card as the
+    /// others (Suit Elevens' reserves).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub same_suit_group: bool,
+    /// Every non-empty pile in this group must have the same rank on its bottom card as the
+    /// others (Tens' reserves).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub same_rank_group: bool,
+    /// As soon as every pile of this group holds a card, move all their cards to the first pile
+    /// of the named group (Elevens' reserves going to the discard).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clear_when_full: Option<String>,
+    /// Refill emptied piles only while every pile of the named group is empty (Elevens Too:
+    /// rows are refilled only when the reserves are empty).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refill_when_empty: Option<String>,
     /// While the stock is non-empty, forbid building onto a single-card pile in this group and
     /// forbid moving a card from a single-card pile in this group onto another non-empty pile of
     /// this group.
@@ -752,6 +772,11 @@ impl GroupRules {
             rank_sequence: Vec::new(),
             non_empty_max_accept: None,
             unique_suits: false,
+            unique_ranks: false,
+            same_suit_group: false,
+            same_rank_group: false,
+            clear_when_full: None,
+            refill_when_empty: None,
             no_build_single_while_stock: false,
             refill_first_face_down: false,
             flip_when_same_index_full: None,
@@ -1286,6 +1311,10 @@ pub struct StockRules {
     /// The stock may not deal while any pile of this named group is empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub require_no_empty_group: Option<String>,
+    /// The stock may deal only while every pile of this named group is empty (The Lucky Number's
+    /// reserves).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub require_group_empty: Option<String>,
 }
 
 impl StockRules {
@@ -1315,6 +1344,7 @@ impl StockRules {
             piles_per_round: Vec::new(),
             final_split_to: None,
             require_no_empty_group: None,
+            require_group_empty: None,
         }
     }
 }
@@ -1604,6 +1634,8 @@ pub enum RemovalKind {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         alone: Vec<u8>,
     },
+    /// Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
+    PairsSumSameSuit { total: u8 },
     /// Remove a playable card when another playable card is of the same suit and higher in the
     /// pack's rank order (Aces Up).
     LowerOfSuit,

@@ -228,6 +228,9 @@ fn compile_pile_rules(
         && !g.lock_build_dir
         && !g.lock_pile_dir
         && !g.unique_suits
+        && !g.unique_ranks
+        && !g.same_suit_group
+        && !g.same_rank_group
         && g.rank_sequence.is_empty()
         && g.unrestricted_from.is_none()
         && g.final_from_same_index.is_none()
@@ -291,6 +294,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
     let stock_sensitive_to_empty = rules.stock.as_ref().is_some_and(|sr| {
         sr.require_no_empty
             || sr.require_no_empty_group.is_some()
+            || sr.require_group_empty.is_some()
             || sr.skip_empty
             || sr.first_empty
             || sr.deal_empty_first
@@ -500,6 +504,19 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             freeze_when_built: g.freeze_when_built,
             rank_sequence: g.rank_sequence.clone(),
             unique_suits: g.unique_suits,
+            unique_ranks: g.unique_ranks,
+            same_suit_group: g.same_suit_group,
+            same_rank_group: g.same_rank_group,
+            clear_when_full: g
+                .clear_when_full
+                .as_ref()
+                .map(|n| find_group(rules, n))
+                .transpose()?,
+            refill_when_empty: g
+                .refill_when_empty
+                .as_ref()
+                .map(|n| find_group(rules, n))
+                .transpose()?,
             no_build_single_while_stock: g.no_build_single_while_stock,
             refill_first_face_down: g.refill_first_face_down,
             flip_when_same_index_full,
@@ -693,6 +710,10 @@ fn compile_stock(
                 None => None,
                 Some(name) => Some(find_group(rules, name)?),
             };
+            let require_group_empty = match &sr.require_group_empty {
+                None => None,
+                Some(name) => Some(find_group(rules, name)?),
+            };
             if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
                 return err(
                     "stock skip_empty can't be combined with require_no_empty or first_empty",
@@ -742,6 +763,7 @@ fn compile_stock(
                 divert_ranks: sr.divert_ranks.clone(),
                 final_split_to,
                 require_no_empty_group,
+                require_group_empty,
             };
             if s.redeals > 0 && s.target_kind == PileKind::Foundation {
                 return err("redeals can't gather from a foundation group");

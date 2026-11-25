@@ -20,7 +20,6 @@
     },
     "auto_flip": {
       "description": "Turn up a face-down card when it becomes the top of an uncovered pile. Default true.",
-      "default": true,
       "type": "boolean"
     },
     "choose_base": {
@@ -36,7 +35,6 @@
     },
     "deal": {
       "description": "The opening deal, step by step. Cards come off a shuffled pack.",
-      "default": [],
       "type": "array",
       "items": {
         "$ref": "#/definitions/DealStep"
@@ -54,35 +52,7 @@
       "type": "string"
     },
     "pack": {
-      "default": {
-        "copies": 1,
-        "ranks": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          10,
-          11,
-          12,
-          13
-        ],
-        "suits": [
-          "clubs",
-          "diamonds",
-          "hearts",
-          "spades"
-        ]
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/Pack"
-        }
-      ]
+      "$ref": "#/definitions/Pack"
     },
     "redeal": {
       "description": "Gathering the tableau and dealing it out again, as a player action (Cruel, La Belle Lucie, Montana). Can't be combined with `stock`.",
@@ -104,7 +74,6 @@
     },
     "safe_autoplay": {
       "description": "Let the solver play cards to foundations automatically when it can prove nothing could ever need to be built on them. Sound for in-suit foundations; default true.",
-      "default": true,
       "type": "boolean"
     },
     "score": {
@@ -138,12 +107,7 @@
       ]
     },
     "win": {
-      "default": "all_on_foundations",
-      "allOf": [
-        {
-          "$ref": "#/definitions/WinRule"
-        }
-      ]
+      "$ref": "#/definitions/WinRule"
     }
   },
   "additionalProperties": false,
@@ -186,6 +150,14 @@
         "by": {
           "$ref": "#/definitions/BuildBy"
         },
+        "dir": {
+          "default": "down",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Dir"
+            }
+          ]
+        },
         "gap_ranks": {
           "description": "With a stripped pack: ranks that are not adjacent to the pack rank just below them (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds.",
           "type": "array",
@@ -195,24 +167,14 @@
             "minimum": 0.0
           }
         },
-        "dir": {
-          "default": "down",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Dir"
-            }
-          ]
-        },
         "step": {
           "description": "Ranks between consecutive cards (default 1).",
-          "default": 1,
           "type": "integer",
           "format": "uint8",
           "minimum": 0.0
         },
         "wrap": {
           "description": "The sequence wraps: king to ace and ace to king.",
-          "default": false,
           "type": "boolean"
         }
       },
@@ -268,6 +230,13 @@
           "type": "string",
           "enum": [
             "suit_or_rank"
+          ]
+        },
+        {
+          "description": "Same rank of any suit, or same suit following `dir`.",
+          "type": "string",
+          "enum": [
+            "suit_or_same_rank"
           ]
         }
       ]
@@ -377,6 +346,68 @@
       },
       "additionalProperties": false
     },
+    "DealRoute": {
+      "description": "How a `rest` deal step picks each card's pile.",
+      "oneOf": [
+        {
+          "description": "Pile `i` of the selection takes the cards of rank `first_rank + i` (ranks are 1 = ace).",
+          "type": "object",
+          "required": [
+            "rank"
+          ],
+          "properties": {
+            "rank": {
+              "type": "object",
+              "required": [
+                "first_rank"
+              ],
+              "properties": {
+                "first_rank": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Pile `i` of the selection takes the cards of the pack's `i`th suit.",
+          "type": "string",
+          "enum": [
+            "suit"
+          ]
+        },
+        {
+          "description": "Each card of `rank` starts the next pile of group `to`; every other card goes on the selected pile with the index of the latest such start (Xerxes: the nines start the foundations and the cards after each one go on the matching row).",
+          "type": "object",
+          "required": [
+            "chain"
+          ],
+          "properties": {
+            "chain": {
+              "type": "object",
+              "required": [
+                "rank",
+                "to"
+              ],
+              "properties": {
+                "rank": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                },
+                "to": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "DealStep": {
       "description": "One step of the opening deal.\n\nCards come off the shuffled pack in order. With `count` or `counts`, they are dealt in rows: one card to each selected pile, then the next row, as a person would deal them.",
       "type": "object",
@@ -386,7 +417,6 @@
       "properties": {
         "auto_foundation": {
           "description": "During this step, place any dealt card directly on the first foundation that accepts it.",
-          "default": false,
           "type": "boolean"
         },
         "collect": {
@@ -436,26 +466,14 @@
         },
         "drain_foundations": {
           "description": "After each dealt row, repeatedly move exposed top cards of the selected piles onto any accepting foundation (restricted to `divert_ranks` if set).",
-          "default": false,
           "type": "boolean"
         },
         "face_up": {
           "description": "Face up (default) or face down.",
-          "default": true,
           "type": "boolean"
-        },
-        "skip_ranks": {
-          "description": "Cards of these ranks met while dealing this step are passed over and put at the bottom of the pack instead (Doublets' kings).",
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "format": "uint8",
-            "minimum": 0.0
-          }
         },
         "kings_to_bottom": {
           "description": "After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen).",
-          "default": false,
           "type": "boolean"
         },
         "limit": {
@@ -469,17 +487,14 @@
         },
         "of_base": {
           "description": "Take every remaining card of the dealt base rank out of the pack and put one on each selected pile in turn (requires an earlier step with `set_base`).",
-          "default": false,
           "type": "boolean"
         },
         "one_each": {
           "description": "With `ranks`: take only the first card of each listed rank, in the listed order (Calculation's A, 2, 3, 4).",
-          "default": false,
           "type": "boolean"
         },
         "one_per_suit": {
           "description": "Pull one card of each suit (in pack suit order) from the deck per round (repeated `count` times, default 1), placing them on the selected piles in turn.",
-          "default": false,
           "type": "boolean"
         },
         "piles": {
@@ -508,13 +523,31 @@
         },
         "rest": {
           "description": "Deal every remaining card, round-robin over the selected piles.",
-          "default": false,
           "type": "boolean"
+        },
+        "route": {
+          "description": "With `rest`: send each card to the selected pile its rank or suit names instead of dealing round-robin (Lady of the Manor's reserves by rank, Four Colours' rows by suit).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DealRoute"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "set_base": {
           "description": "The first card this step deals sets the base rank for [`EmptyRule::DealtBase`].",
-          "default": false,
           "type": "boolean"
+        },
+        "skip_ranks": {
+          "description": "Cards of these ranks met while dealing this step are passed over and put at the bottom of the pack instead (Doublets' kings).",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
         },
         "split_on_rank": {
           "description": "With `rest`: deal sequentially into each selected pile, advancing to the next pile whenever a card of this rank is dealt to a non-empty pile.",
@@ -735,6 +768,32 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "Any card if every pile in this group is empty; otherwise only a card matching the bottom card's rank of the first non-empty pile in this group.",
+          "type": "string",
+          "enum": [
+            "same_base"
+          ]
+        }
+      ]
+    },
+    "Frontier": {
+      "description": "Which pile of a group is the only one whose cards may move.",
+      "oneOf": [
+        {
+          "description": "The last non-empty pile of the group.",
+          "type": "string",
+          "enum": [
+            "last"
+          ]
+        },
+        {
+          "description": "The first non-empty pile of the group.",
+          "type": "string",
+          "enum": [
+            "first"
+          ]
         }
       ]
     },
@@ -748,12 +807,17 @@
       "properties": {
         "accept_only_when_empty": {
           "description": "Accept cards only when the destination pile is empty (even if `build` is set for moving runs).",
-          "default": false,
           "type": "boolean"
+        },
+        "accept_when_same_index_empty": {
+          "description": "Pile `i` of this group accepts cards only while pile `i` of the named group is empty, except cards coming from that very pile (the groups must have the same pile count).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "accept_when_stock_empty": {
           "description": "Accept cards only when the stock pile is empty.",
-          "default": false,
           "type": "boolean"
         },
         "accepts_from": {
@@ -777,6 +841,13 @@
             }
           ]
         },
+        "clear_when_full": {
+          "description": "As soon as every pile of this group holds a card, move all their cards to the first pile of the named group (Elevens' reserves going to the discard).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "color": {
           "description": "Piles accept only cards of this colour.",
           "anyOf": [
@@ -790,21 +861,17 @@
         },
         "compact": {
           "description": "Keep the group packed: whenever a pile empties, the piles after it slide forward.",
-          "default": false,
           "type": "boolean"
         },
         "compact_face_up": {
           "description": "When a pile in this group becomes empty, shift the movable face-up run from the next pile into it, leaving any face-down cards behind.",
-          "default": false,
           "type": "boolean"
         },
         "complete_runs": {
           "description": "Foundation only accepts a whole suit sequence at once, moved together (Spider).",
-          "default": false,
           "type": "boolean"
         },
         "count": {
-          "default": 1,
           "type": "integer",
           "format": "uint16",
           "minimum": 0.0
@@ -839,34 +906,17 @@
           "format": "uint16",
           "minimum": 0.0
         },
-        "accept_when_same_index_empty": {
-          "description": "Pile `i` of this group accepts cards only while pile `i` of the named group is empty, except cards coming from that very pile (the groups must have the same pile count).",
+        "empty_open_after_bases": {
+          "description": "With an `empty` rule of one rank: once this many piles of the group start with a card of that rank, empty piles accept any card (Scorpion Towers).",
           "type": [
-            "string",
+            "integer",
             "null"
-          ]
+          ],
+          "format": "uint16",
+          "minimum": 0.0
         },
-        "requires_same_index_non_empty": {
-          "description": "Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count).",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "flip_after_prev_empty": {
-          "description": "A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies).",
-          "default": false,
-          "type": "boolean"
-        },
-        "flip_when_any_empty": {
-          "description": "A face-down top card turns up only while some pile of the named group is empty.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "exclude_suit": {
-          "description": "Piles accept no card of this suit, and nothing may be built on one.",
+        "empty_suit": {
+          "description": "Empty piles accept only cards of this suit (non-empty piles follow `build` as usual).",
           "anyOf": [
             {
               "$ref": "#/definitions/Suit"
@@ -876,8 +926,8 @@
             }
           ]
         },
-        "empty_suit": {
-          "description": "Empty piles accept only cards of this suit (non-empty piles follow `build` as usual).",
+        "exclude_suit": {
+          "description": "Piles accept no card of this suit, and nothing may be built on one.",
           "anyOf": [
             {
               "$ref": "#/definitions/Suit"
@@ -894,9 +944,30 @@
             "null"
           ]
         },
+        "flip_after_prev_empty": {
+          "description": "A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies).",
+          "type": "boolean"
+        },
         "flip_only_last": {
           "description": "Only automatically turn a pile's face-down top card face up when it is the sole card left in the pile.",
-          "default": false,
+          "type": "boolean"
+        },
+        "flip_when_any_empty": {
+          "description": "A face-down top card turns up only while some pile of the named group is empty.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "flip_when_same_index_full": {
+          "description": "Auto-flip the top card of pile `i` in this group once pile `i` of the named group reaches its `max_cards` capacity (overrides `no_flip`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "freeze_when_built": {
+          "description": "A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it.",
           "type": "boolean"
         },
         "kind": {
@@ -915,22 +986,14 @@
         },
         "lock_build_dir": {
           "description": "When `build.dir` is `either`, the first two-card pile in this group locks the build direction (up or down) for every pile in the group.",
-          "default": false,
-          "type": "boolean"
-        },
-        "freeze_when_built": {
-          "description": "A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it.",
-          "default": false,
           "type": "boolean"
         },
         "lock_pile_dir": {
           "description": "When `build.dir` is `either`, each pile locks its own build direction (up or down) once it holds two cards.",
-          "default": false,
           "type": "boolean"
         },
         "match_longest_rank": {
           "description": "A pile with fewer cards than the longest pile in this group only accepts a card whose rank matches the card at the same index in the longest pile.",
-          "default": false,
           "type": "boolean"
         },
         "max_accept": {
@@ -969,6 +1032,17 @@
           "format": "uint16",
           "minimum": 0.0
         },
+        "move_from_frontier": {
+          "description": "Cards may leave only the first or last non-empty pile of this group.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Frontier"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "moves": {
           "description": "Which cards may leave a pile. Default: one card for tableaux, cells, reserves and the waste; none for foundations and the stock.",
           "anyOf": [
@@ -996,7 +1070,6 @@
         },
         "moves_when_stock_empty": {
           "description": "Cards may leave piles of this group only once the stock pile is empty.",
-          "default": false,
           "type": "boolean"
         },
         "name": {
@@ -1005,12 +1078,10 @@
         },
         "no_build_single_while_stock": {
           "description": "While the stock is non-empty, forbid building onto a single-card pile in this group and forbid moving a card from a single-card pile in this group onto another non-empty pile of this group.",
-          "default": false,
           "type": "boolean"
         },
         "no_flip": {
           "description": "Never automatically turn face-down cards in this group face up (cards may still be drawn face up by `refill_from`).",
-          "default": false,
           "type": "boolean"
         },
         "non_empty_max_accept": {
@@ -1052,7 +1123,6 @@
         },
         "reach_both_ways": {
           "description": "With `reach`: also accept from piles this many places before the destination pile.",
-          "default": false,
           "type": "boolean"
         },
         "refill_count": {
@@ -1066,7 +1136,6 @@
         },
         "refill_first_face_down": {
           "description": "When refilling an emptied pile from the stock with `refill_count > 1`, deal the first card face down unless it is the last card in the stock, and the remaining cards face up.",
-          "default": false,
           "type": "boolean"
         },
         "refill_from": {
@@ -1078,23 +1147,26 @@
         },
         "refill_largest": {
           "description": "When refilling from a multi-pile group in `refill_from`, take from the pile with the most cards (ties broken by lowest index) rather than the first non-empty pile.",
-          "default": false,
           "type": "boolean"
         },
         "refill_nearest": {
           "description": "When refilling an emptied pile from `refill_from`, take from the pile at index `i % m` within the source group (where `m` is the source group's size), falling back to the nearest non-empty pile (`+1`, `-1`, `+2`, `-2`, ...).",
-          "default": false,
           "type": "boolean"
         },
         "refill_on_empty": {
           "description": "Refill a pile in this group only when a move just emptied it, rather than also filling pre-existing empty piles when a refill source later receives a card.",
-          "default": false,
           "type": "boolean"
         },
         "refill_same_index": {
           "description": "When refilling an emptied pile from `refill_from`, take from the pile at the same index within the source group rather than the first non-empty pile.",
-          "default": false,
           "type": "boolean"
+        },
+        "refill_when_empty": {
+          "description": "Refill emptied piles only while every pile of the named group is empty (Elevens Too: rows are refilled only when the reserves are empty).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "replace_on_drop": {
           "description": "When a card is placed on a non-empty pile of this group, first move the destination pile's existing cards to this group's first pile.",
@@ -1105,17 +1177,29 @@
         },
         "require_valid_base": {
           "description": "Only allow building onto a non-empty pile if its bottom card satisfies the pile's `empty` rule.",
-          "default": false,
           "type": "boolean"
         },
         "requires_prev_non_empty": {
           "description": "Each pile after the first may only be started (while empty) once the previous pile in the group is non-empty.",
-          "default": false,
           "type": "boolean"
         },
         "requires_rank_on_prev": {
           "description": "Each pile after the first only accepts a card whose rank is already present on the previous pile in the group (when empty, it must match the previous pile's bottom card).",
-          "default": false,
+          "type": "boolean"
+        },
+        "requires_same_index_non_empty": {
+          "description": "Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "same_rank_group": {
+          "description": "Every non-empty pile in this group must have the same rank on its bottom card as the others (Tens' reserves).",
+          "type": "boolean"
+        },
+        "same_suit_group": {
+          "description": "Every non-empty pile in this group must have the same suit on its bottom card as the others (Suit Elevens' reserves).",
           "type": "boolean"
         },
         "suit": {
@@ -1131,28 +1215,7 @@
         },
         "supermove_complete_run": {
           "description": "With `moves: supermove`, also allow moving a complete suit-length built run regardless of empty cells and columns.",
-          "default": false,
           "type": "boolean"
-        },
-        "empty_open_after_bases": {
-          "description": "With an `empty` rule of one rank: once this many piles of the group start with a card of that rank, empty piles accept any card (Scorpion Towers).",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint16",
-          "minimum": 0.0
-        },
-        "move_from_frontier": {
-          "description": "Cards may leave only the first or last non-empty pile of this group.",
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Frontier"
-            },
-            {
-              "type": "null"
-            }
-          ]
         },
         "swap_bases": {
           "description": "When set, moving from one pile of this group onto another may swap the two piles instead of building.",
@@ -1165,9 +1228,12 @@
             }
           ]
         },
+        "unique_ranks": {
+          "description": "No two non-empty piles in this group may share the same rank on their bottom card (Elevens' reserves).",
+          "type": "boolean"
+        },
         "unique_suits": {
           "description": "No two non-empty piles in this group may share the same suit on their bottom card.",
-          "default": false,
           "type": "boolean"
         },
         "unrestricted_from": {
@@ -1340,13 +1406,6 @@
           ]
         },
         {
-          "description": "Any run of one suit whose ranks are consecutive, from the top (for piles that build more loosely than they move).",
-          "type": "string",
-          "enum": [
-            "suit_sequence"
-          ]
-        },
-        {
           "description": "Any number of face-up cards from the top, built or not (Yukon).",
           "type": "string",
           "enum": [
@@ -1387,6 +1446,20 @@
           "enum": [
             "same_color_run"
           ]
+        },
+        {
+          "description": "Any built same-suit sequence or any equal-rank run from the top.",
+          "type": "string",
+          "enum": [
+            "suit_run_or_same_rank"
+          ]
+        },
+        {
+          "description": "Any run of one suit whose ranks are consecutive, from the top (for piles that build more loosely than they move).",
+          "type": "string",
+          "enum": [
+            "suit_sequence"
+          ]
         }
       ]
     },
@@ -1396,7 +1469,6 @@
       "properties": {
         "copies": {
           "description": "Copies of each (suit, rank) card. Two-pack games use 2; one-suit Spider uses 8.",
-          "default": 1,
           "type": "integer",
           "format": "uint8",
           "minimum": 0.0
@@ -1409,21 +1481,6 @@
         },
         "ranks": {
           "description": "Ranks in use, in sequence order: building goes from each rank to the next one in this list. Default `[1..=13]` (ace low). Aces high is `[2, 3, …, 13, 1]`; a stripped pack leaves ranks out.",
-          "default": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13
-          ],
           "type": "array",
           "items": {
             "type": "integer",
@@ -1433,12 +1490,6 @@
         },
         "suits": {
           "description": "Suits in use. Default: all four.",
-          "default": [
-            "clubs",
-            "diamonds",
-            "hearts",
-            "spades"
-          ],
           "type": "array",
           "items": {
             "$ref": "#/definitions/Suit"
@@ -1788,6 +1839,13 @@
           ]
         },
         {
+          "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap at the last column of each row.",
+          "type": "string",
+          "enum": [
+            "grid_shuffle_end_gaps"
+          ]
+        },
+        {
           "description": "Move each pile's bottom card to its top (Crescent).",
           "type": "string",
           "enum": [
@@ -1834,14 +1892,12 @@
         },
         "times": {
           "description": "How many redeals are allowed.",
-          "default": 0,
           "type": "integer",
           "format": "uint32",
           "minimum": 0.0
         },
         "unlimited": {
           "description": "Any number of redeals (overrides `times`).",
-          "default": false,
           "type": "boolean"
         }
       },
@@ -1871,6 +1927,29 @@
                     "minimum": 0.0
                   }
                 },
+                "total": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).",
+          "type": "object",
+          "required": [
+            "pairs_sum_same_suit"
+          ],
+          "properties": {
+            "pairs_sum_same_suit": {
+              "type": "object",
+              "required": [
+                "total"
+              ],
+              "properties": {
                 "total": {
                   "type": "integer",
                   "format": "uint8",
@@ -2005,6 +2084,32 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "Remove two playable cards of the same rank when that rank is listed in `ranks`.",
+          "type": "object",
+          "required": [
+            "same_rank_in"
+          ],
+          "properties": {
+            "same_rank_in": {
+              "type": "object",
+              "required": [
+                "ranks"
+              ],
+              "properties": {
+                "ranks": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "uint8",
+                    "minimum": 0.0
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -2134,12 +2239,10 @@
       "properties": {
         "auto": {
           "description": "Deal by itself whenever the waste is empty (and the stock isn't).",
-          "default": false,
           "type": "boolean"
         },
         "count": {
           "description": "Cards per deal (or rounds per deal for multi-pile targets).",
-          "default": 1,
           "type": "integer",
           "format": "uint16",
           "minimum": 0.0
@@ -2155,12 +2258,10 @@
         },
         "deal_empty_first": {
           "description": "For a multi-pile target: if any target piles are empty, deal only to the empty piles; otherwise deal to every target pile.",
-          "default": false,
           "type": "boolean"
         },
         "deal_per_pile": {
           "description": "For a multi-pile target with `count > 1`: deal `count` cards to each pile in turn rather than `count` rounds of one card per pile.",
-          "default": false,
           "type": "boolean"
         },
         "divert_ranks": {
@@ -2174,7 +2275,6 @@
         },
         "face_up": {
           "description": "Keep the top card of the stock turned face up so it may be played or removed directly.",
-          "default": false,
           "type": "boolean"
         },
         "final_piles": {
@@ -2205,12 +2305,10 @@
         },
         "first_empty": {
           "description": "For a multi-pile target: deal `count` cards into the first empty pile instead of one to every pile (Accordion).",
-          "default": false,
           "type": "boolean"
         },
         "only_when_empty": {
           "description": "Deal only when the target pile is empty: each card must be played before the next is turned (Calculation, Sir Tommy).",
-          "default": false,
           "type": "boolean"
         },
         "piles": {
@@ -2239,29 +2337,31 @@
         },
         "redeal_deal_all_alternating": {
           "description": "On a multi-pile stock redeal, deal all gathered cards back out in rows alternating face-up and face-down (ending face-up), honoring `divert_ranks`.",
-          "default": false,
           "type": "boolean"
         },
         "redeal_reverse": {
           "description": "When gathering a multi-pile target back into the stock on redeal, gather piles in reverse order.",
-          "default": false,
           "type": "boolean"
         },
         "redeal_shuffle": {
           "description": "When gathering a multi-pile target back into the stock on redeal, shuffle the gathered cards before dealing them out again.",
-          "default": false,
           "type": "boolean"
         },
         "redeals": {
           "description": "Times the waste may be turned back into the stock.",
-          "default": 0,
           "type": "integer",
           "format": "uint32",
           "minimum": 0.0
         },
+        "require_group_empty": {
+          "description": "The stock may deal only while every pile of this named group is empty (The Lucky Number's reserves).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "require_no_empty": {
           "description": "The stock may not deal while any pile of the target group is empty (Spider).",
-          "default": false,
           "type": "boolean"
         },
         "require_no_empty_group": {
@@ -2273,7 +2373,6 @@
         },
         "skip_empty": {
           "description": "For a multi-pile target: deal only to non-empty piles (or to the first pile if all are empty).",
-          "default": false,
           "type": "boolean"
         },
         "to": {
@@ -2282,7 +2381,6 @@
         },
         "unlimited_redeals": {
           "description": "The waste may be turned back any number of times (overrides `redeals`).",
-          "default": false,
           "type": "boolean"
         }
       },
@@ -2296,25 +2394,6 @@
         "diamonds",
         "hearts",
         "spades"
-      ]
-    },
-    "Frontier": {
-      "description": "Which pile of a group is the only one whose cards may move.",
-      "oneOf": [
-        {
-          "description": "The last non-empty pile of the group.",
-          "type": "string",
-          "enum": [
-            "last"
-          ]
-        },
-        {
-          "description": "The first non-empty pile of the group.",
-          "type": "string",
-          "enum": [
-            "first"
-          ]
-        }
       ]
     },
     "SwapBases": {
@@ -2575,6 +2654,73 @@
                   "type": "string"
                 },
                 "length": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Every non-empty pile of `group` (or the single pile at `pile`) satisfies optional `length` and `build` sequence checks, and every group in `empty` is empty.",
+          "type": "object",
+          "required": [
+            "piles_built"
+          ],
+          "properties": {
+            "piles_built": {
+              "type": "object",
+              "required": [
+                "group"
+              ],
+              "properties": {
+                "bottom": {
+                  "description": "Every non-empty pile must start (at its bottom) with a card of this rank.",
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint8",
+                  "minimum": 0.0
+                },
+                "build": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/Build"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "empty": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "group": {
+                  "type": "string"
+                },
+                "length": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "minimum": 0.0
+                },
+                "non_empty": {
+                  "description": "Require at least one non-empty pile in `group`.",
+                  "type": "boolean"
+                },
+                "pile": {
+                  "description": "Check only this 0-based pile index within `group` (it must be non-empty if `length` or `non_empty` is set).",
                   "type": [
                     "integer",
                     "null"

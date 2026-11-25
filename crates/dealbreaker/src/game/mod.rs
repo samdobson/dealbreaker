@@ -201,6 +201,13 @@ pub(crate) struct Group {
     pub rank_sequence: Vec<u8>,
     /// No two non-empty piles in this group may share the same suit on their bottom card.
     pub unique_suits: bool,
+    pub unique_ranks: bool,
+    pub same_suit_group: bool,
+    pub same_rank_group: bool,
+    /// Move every pile's cards to the first pile of this group once all piles hold a card.
+    pub clear_when_full: Option<u16>,
+    /// Refill only while every pile of this group is empty.
+    pub refill_when_empty: Option<u16>,
     /// While stock is non-empty, forbid building onto or moving from single-card piles onto non-empty piles.
     pub no_build_single_while_stock: bool,
     /// When refilling from stock with `refill_count > 1`, deal the first card face down unless it is the last card.
@@ -341,6 +348,7 @@ impl Group {
         self.compact
             || self.compact_face_up
             || !self.refill_from.is_empty()
+            || self.clear_when_full.is_some()
             || self.flip_when_same_index_full.is_some()
             || self.flip_after_prev_empty
             || self.flip_when_any_empty.is_some()
@@ -398,6 +406,11 @@ impl Group {
             freeze_when_built: false,
             rank_sequence: Vec::new(),
             unique_suits: false,
+            unique_ranks: false,
+            same_suit_group: false,
+            same_rank_group: false,
+            clear_when_full: None,
+            refill_when_empty: None,
             no_build_single_while_stock: false,
             refill_first_face_down: false,
             flip_when_same_index_full: None,
@@ -434,6 +447,7 @@ pub(crate) struct Stock {
     pub divert_ranks: Vec<u8>,
     pub final_split_to: Option<u16>,
     pub require_no_empty_group: Option<u16>,
+    pub require_group_empty: Option<u16>,
 }
 
 impl Stock {
@@ -461,6 +475,7 @@ impl Stock {
     pub fn sensitive_to_empty_piles(&self) -> bool {
         self.require_no_empty
             || self.require_no_empty_group.is_some()
+            || self.require_group_empty.is_some()
             || self.skip_empty
             || self.first_empty
             || self.deal_empty_first

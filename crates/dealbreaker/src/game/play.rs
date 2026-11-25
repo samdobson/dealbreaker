@@ -1147,6 +1147,14 @@ impl Game {
             if g.refill_from.is_empty() {
                 continue;
             }
+            if let Some(gate) = g.refill_when_empty {
+                if self.groups[gate as usize]
+                    .piles()
+                    .any(|q| !s.piles[q as usize].is_empty())
+                {
+                    continue;
+                }
+            }
             for p in g.piles() {
                 if !s.piles[p as usize].is_empty()
                     || !self.available(s, p)
@@ -1203,6 +1211,16 @@ impl Game {
                         self.deal_from_stock(s, j, st.pile, target, n);
                         changed = true;
                     }
+                }
+            }
+            for g in self.groups.iter().filter(|g| g.clear_when_full.is_some()) {
+                if g.count > 0 && g.piles().all(|p| !s.piles[p as usize].is_empty()) {
+                    let to = self.groups[g.clear_when_full.unwrap() as usize].start;
+                    for p in g.piles() {
+                        let count = s.piles[p as usize].len() as u16;
+                        self.push(s, j, Op::Shift { from: p, to, count });
+                    }
+                    changed = true;
                 }
             }
             if self.rules.auto_flip {

@@ -3349,3 +3349,104 @@ fn routed_deal_steps() {
         0..40,
     );
 }
+
+#[test]
+fn elevens_style_reserves() {
+    // Pairs adding up to 4 leave the rows; fours and fives (one of each) go to reserves that clear
+    // themselves when full. Rows refill from the stock, only while the reserves are empty in the
+    // second variant.
+    let pack = || Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 3, 4, 5]);
+    let build = |name: &str, gated: bool, rank_rule: u8| {
+        let mut cell = GroupRules::new("cell", PileKind::Cell, 2)
+            .moves(MoveUnit::None)
+            .max_cards(1)
+            .empty(EmptyRule::Ranks(vec![4, 5]))
+            .accepts_from(&["tableau"]);
+        match rank_rule {
+            0 => cell.unique_ranks = true,
+            1 => cell.same_suit_group = true,
+            _ => cell.same_rank_group = true,
+        }
+        cell.clear_when_full = Some("foundation".into());
+        let mut tableau = GroupRules::new("tableau", PileKind::Tableau, 4)
+            .empty(EmptyRule::None)
+            .moves(MoveUnit::Top)
+            .refill_from(&["stock"]);
+        if gated {
+            tableau.refill_when_empty = Some("cell".into());
+        }
+        let mut r = Rules::new(
+            name,
+            pack(),
+            vec![
+                GroupRules::new("stock", PileKind::Stock, 1),
+                cell,
+                GroupRules::new("foundation", PileKind::Foundation, 1)
+                    .build(BuildBy::None, Dir::Up)
+                    .empty(EmptyRule::None),
+                tableau,
+            ],
+            vec![
+                DealStep::to("tableau").each(1),
+                DealStep::to("stock").rest().down(),
+            ],
+        );
+        let kind = if rank_rule == 1 {
+            RemovalKind::PairsSumSameSuit { total: 4 }
+        } else {
+            RemovalKind::PairsSum {
+                total: 4,
+                alone: vec![],
+            }
+        };
+        r.removal = vec![RemovalRules::new(kind, &["tableau"], "foundation")];
+        r
+    };
+    check(build("mini elevens unique", false, 0), 0..40);
+    check(build("mini elevens too", true, 0), 0..40);
+    check(build("mini suit elevens", false, 1), 0..40);
+    check(build("mini tens", true, 2), 0..40);
+}
+
+#[test]
+fn stock_requires_group_empty() {
+    let mut cell = GroupRules::new("cell", PileKind::Cell, 2)
+        .moves(MoveUnit::None)
+        .max_cards(1)
+        .empty(EmptyRule::Ranks(vec![4, 5]))
+        .accepts_from(&["tableau", "waste"]);
+    cell.unique_ranks = true;
+    cell.clear_when_full = Some("foundation".into());
+    let mut r = Rules::new(
+        "mini lucky number",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 3, 4, 5]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            cell,
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::None, Dir::Up)
+                .empty(EmptyRule::None),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::Top)
+                .refill_from(&["waste", "stock"]),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("waste");
+    st.require_group_empty = Some("cell".into());
+    r.stock = Some(st);
+    r.removal = vec![RemovalRules::new(
+        RemovalKind::PairsSum {
+            total: 4,
+            alone: vec![],
+        },
+        &["tableau", "waste"],
+        "foundation",
+    )];
+    check(r, 0..40);
+}

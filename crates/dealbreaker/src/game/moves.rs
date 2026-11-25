@@ -1758,7 +1758,10 @@ impl Game {
                 let g = &self.groups[rd.group as usize];
                 return g.piles().any(|p| s.piles[p as usize].len() > 1);
             }
-            if matches!(rd.how, RedealHow::DealRows | RedealHow::ShuffleRedeal) {
+            if matches!(
+                rd.how,
+                RedealHow::DealRows | RedealHow::DealStaircase | RedealHow::ShuffleRedeal
+            ) {
                 let g = &self.groups[rd.group as usize];
                 return g.piles().any(|p| !s.piles[p as usize].is_empty());
             }

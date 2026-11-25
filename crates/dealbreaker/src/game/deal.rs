@@ -33,6 +33,24 @@ impl Game {
     pub(super) fn try_deal(&self, seed: u64) -> Result<State, RulesError> {
         let mut deck = self.pack_cards();
         Rng::new(seed).shuffle(&mut deck);
+        for cr in self.rules.deck_first.iter().rev() {
+            if let Some(at) = deck
+                .iter()
+                .position(|c| !c.is_joker() && c.suit() == cr.suit && c.rank() == cr.rank)
+            {
+                let c = deck.remove(at);
+                deck.insert(0, c);
+            }
+        }
+        for cr in &self.rules.deck_last {
+            if let Some(at) = deck
+                .iter()
+                .position(|c| !c.is_joker() && c.suit() == cr.suit && c.rank() == cr.rank)
+            {
+                let c = deck.remove(at);
+                deck.push(c);
+            }
+        }
         let mut s = self.deal_from(deck)?;
         s.seed = seed;
         Ok(s)

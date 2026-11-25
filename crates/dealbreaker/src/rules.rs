@@ -94,6 +94,24 @@ pub struct Rules {
     /// move from this group to a foundation is legal, and its rank becomes the base rank.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub choose_base: Option<ChooseBase>,
+    /// Cards put on top of the shuffled pack before dealing, in the order they are dealt
+    /// (Royal Marriage: the queen of hearts first). Only for seeded deals.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deck_first: Vec<CardRef>,
+    /// Cards put at the bottom of the shuffled pack before dealing, in the order they are dealt
+    /// (Royal Marriage: the king of hearts last). Only for seeded deals.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deck_last: Vec<CardRef>,
+}
+
+/// A card named by suit and rank.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CardRef {
+    pub suit: Suit,
+    /// 1 = ace, 13 = king.
+    pub rank: u8,
 }
 
 /// Rules for choosing the foundation base rank on the opening move.
@@ -182,6 +200,8 @@ impl Rules {
             safe_autoplay: true,
             search: SearchHints::default(),
             choose_base: None,
+            deck_first: Vec::new(),
+            deck_last: Vec::new(),
         }
     }
 }
@@ -1436,6 +1456,10 @@ pub enum RedealHow {
     RotateBottom,
     /// Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.
     DealRows,
+    /// Gather as `deal_rows`, then deal row by row where each row starts one pile further right
+    /// than the last: the first row to every pile, the next to all but the first, and so on
+    /// (Usk).
+    DealStaircase,
     /// On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group
     /// starting at pile `k` and wrapping around.
     RedistributePile,
@@ -1725,6 +1749,9 @@ pub enum WinRule {
     Score { at_least: u32 },
     /// Every pile in `group` holds `max_cards` cards with a bottom card satisfying its `empty` rule.
     AllFull { group: String },
+    /// The first `red` piles of `group` hold only red cards and the rest only black ones (Fire and
+    /// Ice).
+    ColorSplit { group: String, red: u16 },
     /// Like [`WinRule::Rows`], but checks each row's ordered prefix using `build` instead of the
     /// group's build rule.
     RowsBuilt {

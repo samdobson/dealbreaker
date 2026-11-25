@@ -40,6 +40,20 @@
         "$ref": "#/definitions/DealStep"
       }
     },
+    "deck_first": {
+      "description": "Cards put on top of the shuffled pack before dealing, in the order they are dealt (Royal Marriage: the queen of hearts first). Only for seeded deals.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardRef"
+      }
+    },
+    "deck_last": {
+      "description": "Cards put at the bottom of the shuffled pack before dealing, in the order they are dealt (Royal Marriage: the king of hearts last). Only for seeded deals.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardRef"
+      }
+    },
     "groups": {
       "description": "The piles on the table, in groups of identical piles.",
       "type": "array",
@@ -240,6 +254,26 @@
           ]
         }
       ]
+    },
+    "CardRef": {
+      "description": "A card named by suit and rank.",
+      "type": "object",
+      "required": [
+        "rank",
+        "suit"
+      ],
+      "properties": {
+        "rank": {
+          "description": "1 = ace, 13 = king.",
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "suit": {
+          "$ref": "#/definitions/Suit"
+        }
+      },
+      "additionalProperties": false
     },
     "ChooseBase": {
       "description": "Rules for choosing the foundation base rank on the opening move.",
@@ -1884,6 +1918,13 @@
           ]
         },
         {
+          "description": "Gather as `deal_rows`, then deal row by row where each row starts one pile further right than the last: the first row to every pile, the next to all but the first, and so on (Usk).",
+          "type": "string",
+          "enum": [
+            "deal_staircase"
+          ]
+        },
+        {
           "description": "On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group starting at pile `k` and wrapping around.",
           "type": "string",
           "enum": [
@@ -2683,6 +2724,33 @@
               "properties": {
                 "group": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "The first `red` piles of `group` hold only red cards and the rest only black ones (Fire and Ice).",
+          "type": "object",
+          "required": [
+            "color_split"
+          ],
+          "properties": {
+            "color_split": {
+              "type": "object",
+              "required": [
+                "group",
+                "red"
+              ],
+              "properties": {
+                "group": {
+                  "type": "string"
+                },
+                "red": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
                 }
               }
             }

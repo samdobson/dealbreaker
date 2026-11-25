@@ -780,6 +780,41 @@ impl Game {
                     }
                 }
             }
+            RedealHow::DealStaircase => {
+                for p in g.piles() {
+                    let n = s.piles[p as usize].len();
+                    for _ in 0..n {
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: p,
+                                to: gp,
+                                count: 1,
+                            },
+                        );
+                    }
+                }
+                let mut skip = 0u16;
+                while !s.piles[gp as usize].is_empty() {
+                    let from = (g.start + skip).min(g.start + g.count - 1);
+                    for p in from..g.start + g.count {
+                        if s.piles[gp as usize].is_empty() {
+                            break;
+                        }
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: gp,
+                                to: p,
+                                count: 1,
+                            },
+                        );
+                    }
+                    skip += 1;
+                }
+            }
             RedealHow::RedistributePile => {
                 let count = g.count as usize;
                 let k = (s.redeals_used as usize) % count;
@@ -1414,6 +1449,19 @@ impl Game {
                 (0..g.count / cols).all(|row| self.row_prefix(s, *gi, row) >= *len as usize)
             }
             Win::Score(n) => self.score(s).is_some_and(|v| v >= *n),
+            Win::ColorSplit(gi, red) => {
+                let g = &self.groups[*gi as usize];
+                g.piles().enumerate().all(|(i, p)| {
+                    let want = if (i as u16) < *red {
+                        crate::card::Color::Red
+                    } else {
+                        crate::card::Color::Black
+                    };
+                    s.piles[p as usize]
+                        .iter()
+                        .all(|c| c.is_joker() || c.color() == want)
+                })
+            }
             Win::AllFull(gi) => self.groups[*gi as usize].piles().all(|p| {
                 let pile = &s.piles[p as usize];
                 pile.len() == self.rule(p).max_cards as usize

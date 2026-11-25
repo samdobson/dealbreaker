@@ -938,6 +938,13 @@ fn compile_win(
             Ok(Win::Score(*at_least))
         }
         WinRule::AllFull { group } => Ok(Win::AllFull(find_group(rules, group)?)),
+        WinRule::ColorSplit { group, red } => {
+            let gi = find_group(rules, group)?;
+            if *red > rules.groups[gi as usize].count {
+                return err("color_split: more red piles than the group has");
+            }
+            Ok(Win::ColorSplit(gi, *red))
+        }
         WinRule::PilesBuilt {
             group,
             length,

@@ -24,6 +24,8 @@ A complete description of one solitaire game.
 | `auto_flip` | `boolean` | — | Turn up a face-down card when it becomes the top of an uncovered pile. Default true. |
 | `choose_base` | [ChooseBase](#choosebase) \| `null` | — | Opening choice of the foundation base rank: before a base rank is set, only a single-card move from this group to a foundation is legal, and its rank becomes the base rank. |
 | `deal` | [DealStep](#dealstep)[] | — | The opening deal, step by step. Cards come off a shuffled pack. |
+| `deck_first` | [CardRef](#cardref)[] | — | Cards put on top of the shuffled pack before dealing, in the order they are dealt (Royal Marriage: the queen of hearts first). Only for seeded deals. |
+| `deck_last` | [CardRef](#cardref)[] | — | Cards put at the bottom of the shuffled pack before dealing, in the order they are dealt (Royal Marriage: the king of hearts last). Only for seeded deals. |
 | `groups` *(required)* | [GroupRules](#grouprules)[] | — | The piles on the table, in groups of identical piles. |
 | `name` *(required)* | `string` | — | Human-readable name, e.g. "FreeCell". |
 | `pack` | [Pack](#pack) | — |  |
@@ -307,6 +309,7 @@ How a redeal deals the gathered cards.
 - `"grid_shuffle_end_gaps"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap at the last column of each row.
 - `"rotate_bottom"` — Move each pile's bottom card to its top (Crescent).
 - `"deal_rows"` — Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.
+- `"deal_staircase"` — Gather as `deal_rows`, then deal row by row where each row starts one pile further right than the last: the first row to every pile, the next to all but the first, and so on (Usk).
 - `"redistribute_pile"` — On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group starting at pile `k` and wrapping around.
 - `"shuffle_redeal"` — Gather all cards of the group, shuffle them, and replay the group's opening deal steps.
 
@@ -455,6 +458,7 @@ When the game is won.
 - `{ "rows": ... }` (`object`) — Every row of a grid group holds a built sequence from its first column, `length` cards long (default: one less than the row), starting with the rank its first column takes (Montana).
 - `{ "score": ... }` (`object`) — The position scores at least this many points (see [`Rules::score`]).
 - `{ "all_full": ... }` (`object`) — Every pile in `group` holds `max_cards` cards with a bottom card satisfying its `empty` rule.
+- `{ "color_split": ... }` (`object`) — The first `red` piles of `group` hold only red cards and the rest only black ones (Fire and Ice).
 - `{ "rows_built": ... }` (`object`) — Like [`WinRule::Rows`], but checks each row's ordered prefix using `build` instead of the group's build rule.
 - `{ "piles_built": ... }` (`object`) — Every non-empty pile of `group` (or the single pile at `pile`) satisfies optional `length` and `build` sequence checks, and every group in `empty` is empty.
 
@@ -471,6 +475,15 @@ Heuristic weights and search tuning. They change how fast the solver finds a win
 | `fast_share` | `integer` | `50` | Percent of the budget the default strategy spends on its fast, pruned best-first phase before the sound depth-first search (default 50). |
 | `progress_weight` | `integer` | `4` | Cost of each card still to go home, or each step still missing from the win (default 4). |
 | `stock_weight` | `integer` | `1` | Cost of each card still in a stock that deals to the tableau (default 1). |
+
+### CardRef {#cardref}
+
+A card named by suit and rank.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `rank` *(required)* | `integer` | — | 1 = ace, 13 = king. |
+| `suit` *(required)* | [Suit](#suit) | — |  |
 
 ### ChooseBase {#choosebase}
 

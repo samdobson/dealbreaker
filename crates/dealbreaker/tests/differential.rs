@@ -2679,6 +2679,22 @@ fn redeal_deal_rows_redistribute_shuffle_and_alternating() {
     r1.redeal = Some(RedealRules::new("tableau", RedealHow::DealRows));
     check(r1, 0..40);
 
+    // 1b) RedealHow::DealStaircase: the same gathering, dealt with each row starting a pile later.
+    let mut r1b = Rules::new(
+        "mini-deal-staircase",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    r1b.redeal = Some(RedealRules::new("tableau", RedealHow::DealStaircase));
+    check(r1b, 0..40);
+
     // 2) RedealHow::RedistributePile.
     let mut r2 = Rules::new(
         "mini-redistribute-pile",
@@ -3608,5 +3624,60 @@ fn reserve_flips_only_once_dealt_out() {
         ],
     );
     r.stock = Some(StockRules::to("waste"));
+    check(r, 0..60);
+}
+
+#[test]
+fn deck_first_and_last_fix_the_ends_of_the_pack() {
+    let mut r = Rules::new(
+        "mini fixed ends",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1),
+            GroupRules::new("tableau", PileKind::Tableau, 2).moves(MoveUnit::Top),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r.deck_first = vec![CardRef {
+        suit: Suit::Hearts,
+        rank: 3,
+    }];
+    r.deck_last = vec![CardRef {
+        suit: Suit::Clubs,
+        rank: 4,
+    }];
+    let g = Game::new(r).unwrap();
+    for seed in 0..20 {
+        let s = g.deal(seed);
+        let first = s.piles[2][0];
+        let last = *s.piles[0].last().unwrap();
+        assert_eq!((first.suit(), first.rank()), (Suit::Hearts, 3));
+        assert_eq!((last.suit(), last.rank()), (Suit::Clubs, 4));
+    }
+}
+
+#[test]
+fn color_split_win() {
+    // Red cards in the first pile, black in the second; cards build down on any suit.
+    let r = {
+        let mut r = Rules::new(
+            "mini color split",
+            Pack::new(&[Suit::Hearts, Suit::Spades], &[1, 2, 3]),
+            vec![GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Any)],
+            vec![DealStep::to("tableau").rest()],
+        );
+        r.win = WinRule::ColorSplit {
+            group: "tableau".into(),
+            red: 1,
+        };
+        r
+    };
     check(r, 0..60);
 }

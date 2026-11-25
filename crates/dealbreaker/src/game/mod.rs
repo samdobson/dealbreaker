@@ -518,6 +518,8 @@ pub(crate) enum Win {
     Score(u32),
     /// Every pile in `group` holds `max_cards` cards with a valid base card.
     AllFull(u16),
+    /// Group, number of leading piles that must hold only red cards (the rest only black).
+    ColorSplit(u16, u16),
     /// Non-empty piles of `group` (or single `pile` index) satisfy optional `length` and `build`,
     /// with every group in `empty` empty.
     PilesBuilt {

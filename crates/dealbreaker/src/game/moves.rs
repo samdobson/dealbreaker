@@ -1026,6 +1026,121 @@ impl Game {
             0..0
         };
 
+        // When scanning many source piles without hooks, pre-filter destination piles once in
+        // O(npiles) so full single-card piles, dead gaps, and non-first empty symmetric piles
+        // are never visited in the inner loop. Each entry is `(to, accept_mask, from_mask)`.
+        let use_active = only.is_none() && no_hooks && self.movable_piles.len() >= 8;
+        let mut active_targets: Vec<(u16, u64, u64)> = Vec::new();
+        let mut union_accept_mask = 0u64;
+        if use_active {
+            active_targets.reserve((npiles as usize).min(32));
+            for to in 0..npiles {
+                let tgi = self.pile_group[to as usize] as usize;
+                let tg = &self.groups[tgi];
+                let tr = self.rule(to);
+                if tg.kind == PileKind::Stock
+                    && tr.empty == EmptyRule::None
+                    && tr.build.by == BuildBy::None
+                {
+                    continue;
+                }
+                let dst = &s.piles[to as usize];
+                let dst_empty = dst.is_empty();
+                if dst_empty {
+                    if self.is_group_symmetric(tgi, s) {
+                        if first_empty.0[tgi] != to {
+                            continue;
+                        }
+                    } else {
+                        let cid = self.pile_sym_class[to as usize];
+                        if cid != u16::MAX && first_empty.1[cid as usize] != to {
+                            continue;
+                        }
+                    }
+                    if !tr.complete_runs
+                        && tg.unrestricted_from == 0
+                        && tg.rank_sequence.is_empty()
+                        && tr.empty == EmptyRule::None
+                        && tg.final_from_same_index.is_none()
+                    {
+                        continue;
+                    }
+                } else {
+                    if tg.replace_on_drop.is_none()
+                        && tg.swap_bases.is_none()
+                        && dst.len() >= tr.max_cards as usize
+                    {
+                        continue;
+                    }
+                    if tg.accept_only_when_empty && tg.swap_bases.is_none() {
+                        continue;
+                    }
+                    if !tr.complete_runs
+                        && tg.unrestricted_from == 0
+                        && tg.rank_sequence.is_empty()
+                        && tr.build.by == BuildBy::None
+                        && tg.swap_bases.is_none()
+                        && tg.final_from_same_index.is_none()
+                    {
+                        continue;
+                    }
+                }
+                if !self.available(s, to) {
+                    continue;
+                }
+                let mut from_mask = if dst_empty {
+                    tg.empty_accepts_from
+                } else {
+                    tg.accepts_from
+                } | tg.unrestricted_from;
+                if tg.swap_bases.is_some() {
+                    from_mask |= 1u64 << tgi;
+                }
+                if let Some(ref_gi) = tg.final_from_same_index {
+                    from_mask |= 1u64 << ref_gi;
+                }
+                if tg.reach.is_some() {
+                    from_mask &= 1u64 << tgi;
+                }
+                if from_mask == 0 {
+                    continue;
+                }
+                let accept_mask = if self.jokers > 0
+                    || tr.complete_runs
+                    || tg.unrestricted_from != 0
+                    || !tg.rank_sequence.is_empty()
+                    || tg.swap_bases.is_some()
+                    || tg.final_from_same_index.is_some()
+                {
+                    u64::MAX
+                } else if dst_empty {
+                    let m = self.empty_set(to, s);
+                    if m == 0 {
+                        continue;
+                    }
+                    m
+                } else {
+                    let top = *dst.last().unwrap();
+                    if !top.is_face_up() {
+                        continue;
+                    }
+                    let m = tr.fits[top.face() as usize];
+                    if m == 0 {
+                        continue;
+                    }
+                    m
+                };
+                union_accept_mask |= accept_mask;
+                active_targets.push((to, accept_mask, from_mask));
+            }
+            if active_targets.is_empty() {
+                if !self.removal.is_empty() {
+                    self.gen_removals(s, only, out);
+                }
+                return;
+            }
+        }
+
         let mut emit_from = |from: u16| {
             if !self.available(s, from) {
                 return;
@@ -1037,30 +1152,51 @@ impl Game {
             let fg = self.pile_group[from as usize];
             let src = &s.piles[from as usize];
             let src_len = src.len();
+            if use_active
+                && unit == 1
+                && self.jokers == 0
+                && (union_accept_mask >> src[src_len - 1].face()) & 1 == 0
+            {
+                return;
+            }
             let from_rule = self.rule(from);
             let from_kind = self.groups[fg as usize].kind;
             let from_moves = from_rule.moves;
-            let targets: &[u16] = if no_hooks {
+            let targets: &[u16] = if no_hooks && !use_active {
                 &self.targets_for_group[fg as usize]
             } else {
                 &[]
             };
-            let target_count = if no_hooks {
+            let target_count = if use_active {
+                active_targets.len()
+            } else if no_hooks {
                 targets.len()
             } else {
                 npiles as usize
             };
+            #[allow(clippy::needless_range_loop)]
             for ti in 0..target_count {
-                let to = targets.get(ti).copied().unwrap_or(ti as u16);
+                let (to, pre_accept_mask) = if use_active {
+                    let (t, am, fm) = active_targets[ti];
+                    if fm & (1u64 << fg) == 0 {
+                        continue;
+                    }
+                    (t, Some(am))
+                } else {
+                    (targets.get(ti).copied().unwrap_or(ti as u16), None)
+                };
                 if to == from {
                     continue;
                 }
                 let tgi = self.pile_group[to as usize] as usize;
                 let tg = &self.groups[tgi];
+                if from_kind == PileKind::Foundation && tg.kind == PileKind::Foundation {
+                    continue;
+                }
                 let dst = &s.piles[to as usize];
                 let dst_empty = dst.is_empty();
                 let tg_sym = self.is_group_symmetric(tgi, s);
-                if dst_empty {
+                if !use_active && dst_empty {
                     if tg_sym {
                         if first_empty.0[tgi] != to {
                             continue;
@@ -1072,13 +1208,9 @@ impl Game {
                         }
                     }
                 }
-                if !no_hooks && from_kind == PileKind::Foundation && tg.kind == PileKind::Foundation
-                {
-                    continue;
-                }
                 let tr = self.rule(to);
                 let unrestricted = tg.unrestricted_from & (1 << fg) != 0;
-                if no_hooks {
+                if no_hooks && !use_active {
                     if tg.replace_on_drop.is_none()
                         && tg.swap_bases.is_none()
                         && dst.len() >= tr.max_cards as usize
@@ -1126,8 +1258,10 @@ impl Game {
                     // but either-way building can allow two; check them all.
                     (1, max_n)
                 };
-                // Fast bitmask pre-filter for non-empty, non-joker destinations.
-                let fit_mask = if no_hooks
+                // Fast bitmask pre-filter for non-joker destinations.
+                let fit_mask = if let Some(am) = pre_accept_mask {
+                    (am != u64::MAX).then_some(am)
+                } else if no_hooks
                     && self.jokers == 0
                     && !tr.complete_runs
                     && !dst_empty

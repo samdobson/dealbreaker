@@ -390,46 +390,45 @@ pub fn shorten(game: &Game, start: &State, moves: &[Move]) -> Vec<Move> {
         },
         Stop::none(),
     );
+    let mut buf = Vec::new();
     loop {
-        // Exact positions along the line.
+        // Exact positions along the line, indexed by 128-bit state hash for fast lookup and
+        // verified by exact encoding on hit.
         let mut s = start.clone();
-        let mut j = Vec::new();
-        let mut index: std::collections::HashMap<Box<[u8]>, usize> =
-            std::collections::HashMap::new();
-        index.insert(encode(&s), 0);
+        ctx.forget_all();
+        let mut encoded: Vec<Box<[u8]>> = Vec::with_capacity(line.len() + 1);
+        let mut index: std::collections::HashMap<u128, usize, BuildU128> =
+            std::collections::HashMap::with_capacity_and_hasher(line.len() + 1, BuildU128);
+        encoded.push(encode(&s));
+        index.insert(ctx.hash(&s), 0);
         for (i, &m) in line.iter().enumerate() {
-            game.apply(&mut s, m, &mut j);
-            index.insert(encode(&s), i + 1);
+            let mark = ctx.play(&mut s, m);
+            ctx.journal.truncate(mark);
+            encoded.push(encode(&s));
+            index.insert(ctx.hash(&s), i + 1);
         }
         let mut out = Vec::with_capacity(line.len());
         let mut s = start.clone();
-        let mut kids = Vec::new();
-        let mut buf = Vec::new();
+        ctx.forget_all();
         let mut i = 0;
         while i < line.len() {
             let mut best: Option<(usize, Move)> = None;
-            kids.clear();
-            game.gen_actions(&s, None, &mut kids);
-            if game.compress_talon {
-                ctx.talon_moves(&mut s, &mut kids);
-            } else if game.can_deal(&s) {
-                kids.push(Move::new(Action::Deal));
-            }
-            for &m in &kids {
-                let mark = j.len();
-                game.apply(&mut s, m, &mut j);
-                buf.clear();
-                encode_into(&s, &mut buf);
-                if let Some(&k) = index.get(buf.as_slice()) {
+            ctx.visit_children(&mut s, |c, st, m, _| {
+                let h = c.hash(st);
+                if let Some(&k) = index.get(&h) {
                     if k > i + 1 && best.is_none_or(|(b, _)| k > b) {
-                        best = Some((k, m));
+                        buf.clear();
+                        encode_into(st, &mut buf);
+                        if buf.as_slice() == encoded[k].as_ref() {
+                            best = Some((k, m));
+                        }
                     }
                 }
-                game.undo_to(&mut s, &mut j, mark);
-            }
+                false
+            });
             let (next, m) = best.unwrap_or((i + 1, line[i]));
-            game.apply(&mut s, m, &mut j);
-            j.clear();
+            let mark = ctx.play(&mut s, m);
+            ctx.journal.truncate(mark);
             out.push(m);
             i = next;
         }
@@ -518,6 +517,8 @@ struct Ctx<'g, 'c> {
     talon_buf: Vec<Move>,
     pile_hashes: Vec<u128>,
     pile_hash_valid: Vec<bool>,
+    dirty_piles: Vec<u16>,
+    all_dirty: bool,
     /// `prefix[p][i]`: running hash of pile p's bottom i cards, valid while those cards are
     /// unchanged. Piles only change at the top, so most of a pile is never rehashed.
     prefix: Vec<Vec<u128>>,
@@ -556,7 +557,7 @@ fn effective_search(g: &Game, ordered_foundations: &[u16]) -> crate::rules::Sear
             s.disorder_weight = 3;
             s.down_weight = 5;
             if g.total_cards > 60 {
-                s.stock_weight = 2;
+                s.stock_weight = 3;
             }
         }
     } else if g.force_lower_of_suit {
@@ -571,6 +572,9 @@ fn effective_search(g: &Game, ordered_foundations: &[u16]) -> crate::rules::Sear
         // Single-card builders (Baker's Dozen, Forty Thieves, Numerica, etc.): burying a
         // card needed sooner by a foundation is the main trap.
         s.blocker_weight = 4;
+    }
+    if g.total_cards > 60 {
+        s.fast_share = s.fast_share.max(90);
     }
     s
 }
@@ -603,6 +607,8 @@ impl<'g, 'c> Ctx<'g, 'c> {
             talon_buf: Vec::new(),
             pile_hashes: vec![0; g.num_piles()],
             pile_hash_valid: vec![false; g.num_piles()],
+            dirty_piles: Vec::new(),
+            all_dirty: true,
             prefix: vec![vec![PREFIX_SEED]; g.num_piles()],
             disturbed: vec![0; g.num_piles()],
             touched: Vec::new(),
@@ -662,11 +668,16 @@ impl<'g, 'c> Ctx<'g, 'c> {
 
     fn apply_disturbed(&mut self, s: &State) {
         for p in self.touched.drain(..) {
-            let p = p as usize;
-            let d = std::mem::take(&mut self.disturbed[p]) as usize;
-            let keep = s.piles[p].len().saturating_sub(d) + 1;
-            self.prefix[p].truncate(keep.max(1));
-            self.pile_hash_valid[p] = false;
+            let p_idx = p as usize;
+            let d = std::mem::take(&mut self.disturbed[p_idx]) as usize;
+            let keep = s.piles[p_idx].len().saturating_sub(d) + 1;
+            self.prefix[p_idx].truncate(keep.max(1));
+            if self.pile_hash_valid[p_idx] {
+                self.pile_hash_valid[p_idx] = false;
+                if !self.all_dirty {
+                    self.dirty_piles.push(p);
+                }
+            }
         }
     }
 
@@ -681,6 +692,8 @@ impl<'g, 'c> Ctx<'g, 'c> {
             v.truncate(1);
         }
         self.pile_hash_valid.fill(false);
+        self.dirty_piles.clear();
+        self.all_dirty = true;
     }
 
     #[inline]
@@ -1381,26 +1394,46 @@ impl<'g, 'c> Ctx<'g, 'c> {
 
     // ----- Hashing ---------------------------------------------------------------------------
 
-    fn hash(&mut self, s: &State) -> u128 {
-        let g = self.g;
-        for (i, p) in s.piles.iter().enumerate() {
-            if !self.pile_hash_valid[i] {
-                let ph = if g.pile_rules[i].sink && p.len() > 1 {
-                    // Only the top card and the count of a pile nothing leaves can matter.
-                    finish_prefix(prefix_step(PREFIX_SEED, p[p.len() - 1].to_byte()), p.len())
-                } else {
-                    let pre = &mut self.prefix[i];
-                    pre.truncate(p.len() + 1);
-                    while pre.len() <= p.len() {
-                        let h = prefix_step(*pre.last().unwrap(), p[pre.len() - 1].to_byte());
-                        pre.push(h);
-                    }
-                    finish_prefix(pre[p.len()], p.len())
-                };
-                self.pile_hashes[i] = ph;
-                self.pile_hash_valid[i] = true;
+    #[inline]
+    fn rehash_pile(&mut self, s: &State, i: usize) {
+        let p = &s.piles[i];
+        let ph = if self.g.pile_rules[i].sink && p.len() > 1 {
+            // Only the top card and the count of a pile nothing leaves can matter.
+            finish_prefix(prefix_step(PREFIX_SEED, p[p.len() - 1].to_byte()), p.len())
+        } else {
+            let pre = &mut self.prefix[i];
+            pre.truncate(p.len() + 1);
+            while pre.len() <= p.len() {
+                let h = prefix_step(*pre.last().unwrap(), p[pre.len() - 1].to_byte());
+                pre.push(h);
             }
+            finish_prefix(pre[p.len()], p.len())
+        };
+        self.pile_hashes[i] = ph;
+        self.pile_hash_valid[i] = true;
+    }
+
+    fn hash(&mut self, s: &State) -> u128 {
+        if self.all_dirty {
+            for i in 0..s.piles.len() {
+                if !self.pile_hash_valid[i] {
+                    self.rehash_pile(s, i);
+                }
+            }
+            self.all_dirty = false;
+            self.dirty_piles.clear();
+        } else if !self.dirty_piles.is_empty() {
+            let mut dirty = std::mem::take(&mut self.dirty_piles);
+            for &p in &dirty {
+                let i = p as usize;
+                if !self.pile_hash_valid[i] {
+                    self.rehash_pile(s, i);
+                }
+            }
+            dirty.clear();
+            self.dirty_piles = dirty;
         }
+        let g = self.g;
         let mut h = Hasher::new();
         for (gi, gr) in g.groups.iter().enumerate() {
             let r = gr.start as usize..(gr.start + gr.count) as usize;

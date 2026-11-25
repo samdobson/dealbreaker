@@ -5,6 +5,18 @@ use crate::rules::*;
 
 use super::{Action, Game, Move, PileRules, State};
 
+/// Is `over`'s suit the one after `under`'s in `cycle`?
+fn follows_in_cycle(
+    cycle: &[crate::card::Suit],
+    under: crate::card::Suit,
+    over: crate::card::Suit,
+) -> bool {
+    cycle
+        .iter()
+        .position(|&x| x == under)
+        .is_some_and(|i| cycle[(i + 1) % cycle.len()] == over)
+}
+
 impl Game {
     // ----- Card relations -------------------------------------------------------------------
 
@@ -29,6 +41,7 @@ impl Game {
             BuildBy::SameColor => under.color() == over.color(),
             BuildBy::OtherSuit => under.suit() != over.suit(),
             BuildBy::SuitOrRank => under.suit() == over.suit() || under.rank() == over.rank(),
+            BuildBy::SuitCycle => follows_in_cycle(&b.suit_cycle, under.suit(), over.suit()),
         };
         if !ok_suit || b.blocked_ranks.contains(&under.rank()) {
             return false;
@@ -935,6 +948,9 @@ impl Game {
                         BuildBy::OtherSuit => top.suit() != card.suit(),
                         BuildBy::SuitOrRank | BuildBy::SuitOrSameRank => {
                             top.suit() == card.suit() || top.rank() == card.rank()
+                        }
+                        BuildBy::SuitCycle => {
+                            follows_in_cycle(&tr.build.suit_cycle, top.suit(), card.suit())
                         }
                     }
                 }

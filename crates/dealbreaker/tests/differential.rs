@@ -3896,3 +3896,26 @@ fn same_rank_runs_of_a_set_length_go_to_one_foundation() {
         0..40,
     );
 }
+
+#[test]
+fn suit_cycle_builds() {
+    let cycle = [Suit::Spades, Suit::Hearts, Suit::Clubs];
+    check(
+        Rules::new(
+            "mini following",
+            Pack::new(&cycle, &[1, 2, 3]),
+            vec![
+                GroupRules::new("foundation", PileKind::Foundation, 3)
+                    .build_rule(Build::new(BuildBy::SuitCycle, Dir::Up).suit_cycle(&cycle))
+                    .empty(EmptyRule::Rank(1))
+                    .max_cards(3),
+                GroupRules::new("tableau", PileKind::Tableau, 3)
+                    .build_rule(Build::new(BuildBy::SuitCycle, Dir::Down).suit_cycle(&cycle))
+                    .moves(MoveUnit::Run)
+                    .empty(EmptyRule::Any),
+            ],
+            vec![DealStep::to("tableau").rest()],
+        ),
+        0..60,
+    );
+}

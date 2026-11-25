@@ -198,6 +198,13 @@
           "format": "uint8",
           "minimum": 0.0
         },
+        "suit_cycle": {
+          "description": "With `by: suit_cycle`: the suits in the order they follow each other.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Suit"
+          }
+        },
         "wrap": {
           "description": "The sequence wraps: king to ace and ace to king.",
           "type": "boolean"
@@ -262,6 +269,13 @@
           "type": "string",
           "enum": [
             "suit_or_same_rank"
+          ]
+        },
+        {
+          "description": "The suit that follows the one below in `Build::suit_cycle` (Following: spades, hearts, clubs, diamonds, and round again).",
+          "type": "string",
+          "enum": [
+            "suit_cycle"
           ]
         }
       ]

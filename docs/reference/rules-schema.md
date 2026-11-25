@@ -168,6 +168,7 @@ How cards are built on one another.
 | `dir` | [Dir](#dir) | `"down"` |  |
 | `gap_ranks` | `integer`[] | — | With a stripped pack: ranks that are not adjacent to the pack rank just below them (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds. |
 | `step` | `integer` | — | Ranks between consecutive cards (default 1). |
+| `suit_cycle` | [Suit](#suit)[] | — | With `by: suit_cycle`: the suits in the order they follow each other. |
 | `wrap` | `boolean` | — | The sequence wraps: king to ace and ace to king. |
 
 ### BuildBy {#buildby}
@@ -182,6 +183,7 @@ The suit or colour relation between a card and the card placed on it.
 - `"other_suit"` — Any suit but the same one.
 - `"suit_or_rank"` — The same suit or the same rank (Accordion; pair with `dir: any`).
 - `"suit_or_same_rank"` — Same rank of any suit, or same suit following `dir`.
+- `"suit_cycle"` — The suit that follows the one below in `Build::suit_cycle` (Following: spades, hearts, clubs, diamonds, and round again).
 
 ### Dir {#dir}
 

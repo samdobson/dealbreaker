@@ -1089,6 +1089,9 @@ pub struct Build {
     /// (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub gap_ranks: Vec<u8>,
+    /// With `by: suit_cycle`: the suits in the order they follow each other.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub suit_cycle: Vec<Suit>,
 }
 
 impl Build {
@@ -1116,6 +1119,11 @@ impl Build {
         self
     }
 
+    pub fn suit_cycle(mut self, suits: &[Suit]) -> Self {
+        self.suit_cycle = suits.to_vec();
+        self
+    }
+
     pub fn gap_ranks(mut self, ranks: &[u8]) -> Self {
         self.gap_ranks = ranks.to_vec();
         self
@@ -1131,6 +1139,7 @@ impl Default for Build {
             step: 1,
             blocked_ranks: Vec::new(),
             gap_ranks: Vec::new(),
+            suit_cycle: Vec::new(),
         }
     }
 }
@@ -1157,6 +1166,9 @@ pub enum BuildBy {
     SuitOrRank,
     /// Same rank of any suit, or same suit following `dir`.
     SuitOrSameRank,
+    /// The suit that follows the one below in `Build::suit_cycle` (Following: spades, hearts,
+    /// clubs, diamonds, and round again).
+    SuitCycle,
 }
 
 /// Rank direction from a card to the card placed on it.

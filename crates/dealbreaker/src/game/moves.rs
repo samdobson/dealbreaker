@@ -396,6 +396,22 @@ impl Game {
                 }
             }
             MoveUnit::AnyFaceUp => cards.iter().rev().take_while(|c| c.is_face_up()).count(),
+            MoveUnit::SuitSequence => {
+                let mut n = 1;
+                while n < cards.len() {
+                    let (under, over) = (cards[cards.len() - n - 1], cards[cards.len() - n]);
+                    if !under.is_face_up()
+                        || under.suit() != over.suit()
+                        || self.rank_idx[under.rank() as usize] == 255
+                        || self.rank_idx[under.rank() as usize]
+                            != self.rank_idx[over.rank() as usize].wrapping_add(1)
+                    {
+                        break;
+                    }
+                    n += 1;
+                }
+                n
+            }
             MoveUnit::SuitRunOrSameRank => {
                 let mut n_suit = 1;
                 while n_suit < cards.len() {

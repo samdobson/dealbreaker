@@ -46,6 +46,7 @@ export type MoveUnit =
   | "top"
   | "run"
   | "suit_run"
+  | "suit_sequence"
   | "alt_color_run"
   | "same_color_run"
   | "any_face_up"

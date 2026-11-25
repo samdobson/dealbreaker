@@ -193,6 +193,7 @@ Which cards may leave a pile together.
 - `"top"` — The top card only.
 - `"run"` — Any built sequence (by this group's build rule) from the top.
 - `"suit_run"` — Any built sequence from the top whose cards are all one suit (Spider).
+- `"suit_sequence"` — Any run of one suit whose ranks are consecutive, from the top (for piles that build more loosely than they move).
 - `"any_face_up"` — Any number of face-up cards from the top, built or not (Yukon).
 - `"supermove"` — A built sequence, as long as free cells and empty piles would allow moving it one card at a time (FreeCell's "supermove"): (empty cells + 1) × 2^(empty piles).
 - `"whole"` — Only the whole pile, all face up.

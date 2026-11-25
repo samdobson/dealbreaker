@@ -1115,6 +1115,9 @@ pub enum MoveUnit {
     SameColorRun,
     /// Any built same-suit sequence or any equal-rank run from the top.
     SuitRunOrSameRank,
+    /// Any run of one suit whose ranks are consecutive, from the top (for piles that build more
+    /// loosely than they move).
+    SuitSequence,
 }
 
 /// Overlapping piles: a pile is playable only once every pile covering it is empty.

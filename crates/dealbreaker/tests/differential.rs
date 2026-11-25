@@ -2990,3 +2990,27 @@ fn gap_ranks_break_adjacency_in_stripped_packs() {
     );
     check(r, 0..40);
 }
+
+#[test]
+fn suit_sequence_moves_only_consecutive_suit_runs() {
+    // Builds on any lower card of its suit, but moves only consecutive same-suit runs.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4, 5]);
+    let mut r = Rules::new(
+        "mini-suit-sequence",
+        pack,
+        vec![GroupRules::new("tableau", PileKind::Tableau, 4)
+            .build(BuildBy::Suit, Dir::DownAny)
+            .empty(EmptyRule::Any)
+            .moves(MoveUnit::SuitSequence)],
+        vec![DealStep::to("tableau").counts(&[3, 3, 2, 2])],
+    );
+    r.win = WinRule::PilesBuilt {
+        group: "tableau".into(),
+        length: Some(5),
+        build: Some(Build::new(BuildBy::Suit, Dir::Down)),
+        empty: Vec::new(),
+        non_empty: false,
+        pile: None,
+    };
+    check(r, 0..40);
+}

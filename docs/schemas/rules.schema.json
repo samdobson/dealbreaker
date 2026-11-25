@@ -1253,6 +1253,13 @@
           ]
         },
         {
+          "description": "Any run of one suit whose ranks are consecutive, from the top (for piles that build more loosely than they move).",
+          "type": "string",
+          "enum": [
+            "suit_sequence"
+          ]
+        },
+        {
           "description": "Any number of face-up cards from the top, built or not (Yukon).",
           "type": "string",
           "enum": [

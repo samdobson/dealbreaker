@@ -446,7 +446,7 @@ fn search(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> So
     let mut ctx = Ctx::new(game, opts, stop);
     match opts.strategy {
         Strategy::DepthFirst => ctx.dfs(start, opts.max_states),
-        Strategy::BestFirst => ctx.best_first(start, opts.max_states, false),
+        Strategy::BestFirst => ctx.best_first(start, opts.max_states, false, u64::MAX),
         Strategy::Auto => {
             // Fast phases prune moves that are rarely useful, to find a win fast. They can miss
             // wins, so only the final sound search can report unsolvable.
@@ -461,7 +461,12 @@ fn search(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> So
             };
             ctx.fast = true;
             ctx.eager_autoplay = true;
-            let r1 = ctx.best_first(start, p1_budget, false);
+            let stall_limit = if fast_budget >= 8_000 {
+                (p1_budget / 3).max(4_000)
+            } else {
+                u64::MAX
+            };
+            let r1 = ctx.best_first(start, p1_budget, false, stall_limit);
             if r1.outcome.is_solved() {
                 return r1;
             }
@@ -475,7 +480,8 @@ fn search(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> So
             // Phase 2: adaptive beam search explores multiple lines in parallel by depth,
             // escaping greedy local minima that trap best-first in a single basin.
             if r1.outcome == Outcome::GaveUp && fast_budget >= 4_000 {
-                let p2_budget = (fast_budget / 4).min(fast_budget.saturating_sub(spent));
+                let rem = fast_budget.saturating_sub(spent);
+                let p2_budget = (rem / 2).min(rem);
                 if p2_budget > 0 {
                     let mut ctx_beam = Ctx::new(game, opts, stop);
                     ctx_beam.fast = true;
@@ -504,7 +510,7 @@ fn search(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> So
                 ctx2.fast = true;
                 let p3_budget = fast_budget.saturating_sub(spent);
                 if p3_budget > 0 {
-                    let r2 = ctx2.best_first(start, p3_budget, true);
+                    let r2 = ctx2.best_first(start, p3_budget, true, u64::MAX);
                     spent += r2.states;
                     if r2.outcome.is_solved() {
                         return SolveResult {
@@ -1790,7 +1796,13 @@ impl<'g, 'c> Ctx<'g, 'c> {
 
     // ----- Best-first ------------------------------------------------------------------------
 
-    fn best_first(&mut self, start: &State, budget: u64, weighted: bool) -> SolveResult {
+    fn best_first(
+        &mut self,
+        start: &State,
+        budget: u64,
+        weighted: bool,
+        stall_limit: u64,
+    ) -> SolveResult {
         if self.stop.is_stopped_now() {
             return SolveResult {
                 outcome: Outcome::GaveUp,
@@ -1828,6 +1840,8 @@ impl<'g, 'c> Ctx<'g, 'c> {
         });
         heap.push(Reverse((0, 0)));
         let mut states = 1u64;
+        let mut best_h = u32::MAX;
+        let mut last_improve = 1u64;
         let mut s = start.clone();
         while let Some(Reverse((_, idx))) = heap.pop() {
             if self.stop.should_stop(states) {
@@ -1855,6 +1869,10 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     return true;
                 }
                 let h = ctx.heuristic_with_need(st, need);
+                if h < best_h {
+                    best_h = h;
+                    last_improve = states;
+                }
                 let enc_start = enc_arena.len() as u32;
                 encode_into(st, &mut enc_arena);
                 let enc_len = (enc_arena.len() as u32 - enc_start) as u16;
@@ -1877,7 +1895,10 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     ((score as u64) << 20) + (0xfffff - (d as u64).min(0xfffff))
                 };
                 heap.push(Reverse((pri, n)));
-                if states >= budget || ctx.stop.should_stop(states) {
+                if states >= budget
+                    || states.saturating_sub(last_improve) >= stall_limit
+                    || ctx.stop.should_stop(states)
+                {
                     hit_budget = true;
                     return true;
                 }
@@ -1999,8 +2020,11 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     let c_start = next_arena.len() as u32;
                     encode_into(st, &mut next_arena);
                     let c_len = (next_arena.len() as u32 - c_start) as u16;
-                    // Primary key: heuristic h; tie-break with low bits of hash for diversity.
-                    let pri = ((h as u64) << 32) | ((hash as u32) as u64);
+                    // Primary key: heuristic h, then smaller talon skip, then low bits of hash
+                    // for diversity across flat plateaus.
+                    let pri = ((h.min(0x00ff_ffff) as u64) << 40)
+                        | ((mv.talon.min(255) as u64) << 32)
+                        | ((hash as u32) as u64);
                     candidates.push(Candidate {
                         pri,
                         h,

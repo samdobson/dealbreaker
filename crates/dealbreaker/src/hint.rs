@@ -125,6 +125,7 @@ fn hint_inner(
                 | crate::rules::RedealHow::ShuffleRedeal
                 | crate::rules::RedealHow::GridShuffle
                 | crate::rules::RedealHow::GridShuffleRandomGaps
+                | crate::rules::RedealHow::GridShuffleEndGaps
         )
     }) || game
         .rules()

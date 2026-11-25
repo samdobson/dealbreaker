@@ -10,10 +10,21 @@ impl Game {
 
     /// Can `over` be placed on `under` under build rule `b`?
     pub(crate) fn fits(&self, b: &Build, under: Card, over: Card) -> bool {
+        if b.by == BuildBy::SuitOrSameRank {
+            if b.blocked_ranks.contains(&under.rank()) {
+                return false;
+            }
+            if under.rank() == over.rank() {
+                return true;
+            }
+            if under.suit() != over.suit() {
+                return false;
+            }
+        }
         let ok_suit = match b.by {
             BuildBy::None => return false,
             BuildBy::Any => true,
-            BuildBy::Suit => under.suit() == over.suit(),
+            BuildBy::Suit | BuildBy::SuitOrSameRank => under.suit() == over.suit(),
             BuildBy::Alternate => under.color() != over.color(),
             BuildBy::SameColor => under.color() == over.color(),
             BuildBy::OtherSuit => under.suit() != over.suit(),
@@ -40,6 +51,7 @@ impl Game {
             Dir::UpAny => o > u,
             Dir::Down => up(o, u),
             Dir::DownAny => o < u,
+            Dir::DownOrSame => u == o || up(o, u),
             Dir::Either => up(u, o) || up(o, u),
             Dir::Same => u == o,
             Dir::Any => true,
@@ -87,7 +99,8 @@ impl Game {
                 .is_none_or(|b| card.rank() == self.rank_from(b, *o)),
             EmptyRule::AfterLeft { .. }
             | EmptyRule::AfterNeighbor { .. }
-            | EmptyRule::AfterPile { .. } => self.empty_set(pile, s) >> card.face() & 1 != 0,
+            | EmptyRule::AfterPile { .. }
+            | EmptyRule::SameBase => self.empty_set(pile, s) >> card.face() & 1 != 0,
         }
     }
 
@@ -198,6 +211,13 @@ impl Game {
                     }
                     _ => 0,
                 }
+            }
+            EmptyRule::SameBase => {
+                let base = g
+                    .piles()
+                    .find_map(|q| s.piles[q as usize].first().filter(|c| !c.is_joker()))
+                    .map(|c| c.rank());
+                base.map_or(real, |b| real & self.rank_faces[b as usize])
             }
         }
     }
@@ -368,6 +388,31 @@ impl Game {
                 }
             }
             MoveUnit::AnyFaceUp => cards.iter().rev().take_while(|c| c.is_face_up()).count(),
+            MoveUnit::SuitRunOrSameRank => {
+                let mut n_suit = 1;
+                while n_suit < cards.len() {
+                    let (under, over) =
+                        (cards[cards.len() - n_suit - 1], cards[cards.len() - n_suit]);
+                    if !under.is_face_up()
+                        || under.suit() != over.suit()
+                        || under.rank() == over.rank()
+                        || g.fits[under.face() as usize] >> over.face() & 1 == 0
+                    {
+                        break;
+                    }
+                    n_suit += 1;
+                }
+                let mut n_same = 1;
+                while n_same < cards.len() {
+                    let (under, over) =
+                        (cards[cards.len() - n_same - 1], cards[cards.len() - n_same]);
+                    if !under.is_face_up() || under.rank() != over.rank() {
+                        break;
+                    }
+                    n_same += 1;
+                }
+                n_suit.max(n_same)
+            }
             MoveUnit::Run
             | MoveUnit::Supermove
             | MoveUnit::SuitRun
@@ -741,7 +786,7 @@ impl Game {
                         BuildBy::Alternate => top.color() != card.color(),
                         BuildBy::SameColor => top.color() == card.color(),
                         BuildBy::OtherSuit => top.suit() != card.suit(),
-                        BuildBy::SuitOrRank => {
+                        BuildBy::SuitOrRank | BuildBy::SuitOrSameRank => {
                             top.suit() == card.suit() || top.rank() == card.rank()
                         }
                     }
@@ -1550,6 +1595,7 @@ fn is_run_unit(moves: MoveUnit) -> bool {
             | MoveUnit::SuitRun
             | MoveUnit::AltColorRun
             | MoveUnit::SameColorRun
+            | MoveUnit::SuitRunOrSameRank
             | MoveUnit::Supermove
             | MoveUnit::TopOrWhole
     )

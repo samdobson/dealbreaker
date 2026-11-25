@@ -193,6 +193,8 @@ pub(crate) struct Group {
     pub no_build_single_while_stock: bool,
     /// When refilling from stock with `refill_count > 1`, deal the first card face down unless it is the last card.
     pub refill_first_face_down: bool,
+    /// Auto-flip pile `i` when pile `i` of this group reaches `max_cards`.
+    pub flip_when_same_index_full: Option<u16>,
 }
 
 #[derive(Clone, Debug)]
@@ -297,6 +299,7 @@ impl Group {
             || self.requires_prev_non_empty
             || self.final_from_same_index.is_some()
             || self.moves_when_same_index_empty.is_some()
+            || self.flip_when_same_index_full.is_some()
             || self.refill_same_index
             || self.refill_nearest
     }
@@ -310,7 +313,10 @@ impl Group {
 
     /// True if this group participates in automatic post-move compaction or refilling.
     pub(crate) fn needs_settle(&self) -> bool {
-        self.compact || self.compact_face_up || !self.refill_from.is_empty()
+        self.compact
+            || self.compact_face_up
+            || !self.refill_from.is_empty()
+            || self.flip_when_same_index_full.is_some()
     }
 
     /// Internal single-pile scratch group (used for redeal gathering).
@@ -361,6 +367,7 @@ impl Group {
             unique_suits: false,
             no_build_single_while_stock: false,
             refill_first_face_down: false,
+            flip_when_same_index_full: None,
         }
     }
 }

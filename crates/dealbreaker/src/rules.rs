@@ -552,6 +552,10 @@ pub struct GroupRules {
     /// face down unless it is the last card in the stock, and the remaining cards face up.
     #[serde(default, skip_serializing_if = "is_false")]
     pub refill_first_face_down: bool,
+    /// Auto-flip the top card of pile `i` in this group once pile `i` of the named group reaches
+    /// its `max_cards` capacity (overrides `no_flip`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flip_when_same_index_full: Option<String>,
 }
 
 /// When two piles in the same group may swap their contents on a move from one to the other.
@@ -704,6 +708,7 @@ impl GroupRules {
             unique_suits: false,
             no_build_single_while_stock: false,
             refill_first_face_down: false,
+            flip_when_same_index_full: None,
         }
     }
 
@@ -1001,6 +1006,8 @@ pub enum BuildBy {
     OtherSuit,
     /// The same suit or the same rank (Accordion; pair with `dir: any`).
     SuitOrRank,
+    /// Same rank of any suit, or same suit following `dir`.
+    SuitOrSameRank,
 }
 
 /// Rank direction from a card to the card placed on it.
@@ -1022,6 +1029,8 @@ pub enum Dir {
     UpAny,
     /// Any strictly lower rank in the pack's rank sequence (no wrap).
     DownAny,
+    /// Same rank or one step down.
+    DownOrSame,
 }
 
 /// What an empty pile accepts.
@@ -1053,6 +1062,9 @@ pub enum EmptyRule {
     /// A card whose rank is `offset` places after the top card of the pile at the same index in
     /// `group`, wrapping around the pack's rank sequence.
     AfterPile { group: String, offset: i8 },
+    /// Any card if every pile in this group is empty; otherwise only a card matching the bottom
+    /// card's rank of the first non-empty pile in this group.
+    SameBase,
 }
 
 /// Which cards may leave a pile together.
@@ -1082,6 +1094,8 @@ pub enum MoveUnit {
     AltColorRun,
     /// Any built sequence from the top whose cards are all one colour.
     SameColorRun,
+    /// Any built same-suit sequence or any equal-rank run from the top.
+    SuitRunOrSameRank,
 }
 
 /// Overlapping piles: a pile is playable only once every pile covering it is empty.
@@ -1281,6 +1295,9 @@ pub enum RedealHow {
     /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
     /// them back leaving the gaps at random positions among the non-sequence slots.
     GridShuffleRandomGaps,
+    /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
+    /// them back leaving one gap at the last column of each row.
+    GridShuffleEndGaps,
     /// Move each pile's bottom card to its top (Crescent).
     RotateBottom,
     /// Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.

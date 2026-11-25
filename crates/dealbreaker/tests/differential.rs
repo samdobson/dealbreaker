@@ -2843,3 +2843,104 @@ fn piles_built_down_any_and_pairs_sum_same_rank() {
     };
     check(r3, 0..40);
 }
+
+#[test]
+fn same_base_down_or_same_locked_flip_and_suit_or_same_rank() {
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+
+    // 1) EmptyRule::SameBase on wrapping suit foundations.
+    let mut f1 = GroupRules::new("foundation", PileKind::Foundation, 2)
+        .build(BuildBy::Suit, Dir::Up)
+        .empty(EmptyRule::SameBase)
+        .max_cards(3);
+    f1.build.as_mut().unwrap().wrap = true;
+    let r1 = Rules::new(
+        "mini-same-base",
+        pack.clone(),
+        vec![
+            f1,
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Suit, Dir::Either)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    check(r1, 0..40);
+
+    // 2) Dir::DownOrSame + MoveUnit::TopOrWhole.
+    let r2 = Rules::new(
+        "mini-down-or-same",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::DownOrSame)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::TopOrWhole),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    check(r2, 0..40);
+
+    // 3) GroupRules::flip_when_same_index_full (reserve 0 flips when foundation 0 hits 3 cards).
+    let mut res3 = GroupRules::new("reserve", PileKind::Reserve, 1);
+    res3.no_flip = true;
+    res3.flip_when_same_index_full = Some("foundation".into());
+    let r3 = Rules::new(
+        "mini-locked-flip",
+        pack.clone(),
+        vec![
+            res3,
+            GroupRules::new("foundation", PileKind::Foundation, 2).max_cards(3),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Run),
+        ],
+        vec![
+            DealStep::to("reserve").each(1).down(),
+            DealStep::to("tableau").counts(&[3, 2]),
+        ],
+    );
+    check(r3, 0..40);
+
+    // 4) RedealHow::GridShuffleEndGaps.
+    let mut r4 = Rules::new(
+        "mini-grid-end-gaps",
+        pack.clone(),
+        vec![GroupRules::new("tableau", PileKind::Tableau, 8)
+            .build(BuildBy::Suit, Dir::Up)
+            .empty(EmptyRule::AfterLeft { first: 1 })
+            .moves(MoveUnit::Top)
+            .max_cards(1)
+            .layout(Layout::Grid { columns: 4 })],
+        vec![DealStep::to("tableau").piles(&[0, 1, 2, 4, 5, 6]).each(1)],
+    );
+    r4.redeal = Some(RedealRules::new("tableau", RedealHow::GridShuffleEndGaps));
+    r4.win = WinRule::Rows {
+        group: "tableau".into(),
+        length: Some(3),
+    };
+    check(r4, 0..40);
+
+    // 5) BuildBy::SuitOrSameRank + MoveUnit::SuitRunOrSameRank + WinRule::PilesBuilt.
+    let mut r5 = Rules::new(
+        "mini-suit-or-same-rank",
+        pack,
+        vec![GroupRules::new("tableau", PileKind::Tableau, 3)
+            .build(BuildBy::SuitOrSameRank, Dir::Down)
+            .empty(EmptyRule::Any)
+            .moves(MoveUnit::SuitRunOrSameRank)],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    r5.win = WinRule::PilesBuilt {
+        group: "tableau".into(),
+        length: Some(3),
+        build: Some(Build::new(BuildBy::Suit, Dir::Down)),
+        empty: Vec::new(),
+        non_empty: true,
+        pile: None,
+    };
+    check(r5, 0..40);
+}

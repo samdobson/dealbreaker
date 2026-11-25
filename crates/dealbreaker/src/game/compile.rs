@@ -234,6 +234,7 @@ fn compile_pile_rules(
             empty,
             EmptyRule::Rank(_) | EmptyRule::DealtBase | EmptyRule::DealtBaseOffset(_)
         );
+    let is_same_base = matches!(empty, EmptyRule::SameBase);
     Ok(PileRules {
         build,
         empty,
@@ -252,7 +253,8 @@ fn compile_pile_rules(
             && !g.lock_build_dir
             && !g.lock_pile_dir
             && g.rank_sequence.is_empty()
-            && g.max_same_rank.is_none(),
+            && g.max_same_rank.is_none()
+            && !is_same_base,
         admits,
         empty_suit,
         fits: [0; FACES],
@@ -389,6 +391,19 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
                 Some(ref_gi)
             }
         };
+        let flip_when_same_index_full = match &g.flip_when_same_index_full {
+            None => None,
+            Some(name) => {
+                let ref_gi = find_group(rules, name)?;
+                if rules.groups[ref_gi as usize].count < g.count {
+                    return err(format!(
+                        "{:?}: flip_when_same_index_full group {:?} has fewer piles",
+                        g.name, name
+                    ));
+                }
+                Some(ref_gi)
+            }
+        };
         let has_after_pile = (start as usize..start as usize + g.count as usize)
             .any(|p| pile_rules[p].after_pile.is_some());
         let mut grp = Group {
@@ -440,6 +455,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             unique_suits: g.unique_suits,
             no_build_single_while_stock: g.no_build_single_while_stock,
             refill_first_face_down: g.refill_first_face_down,
+            flip_when_same_index_full,
         };
         grp.symmetric = g.layout.is_none()
             && g.piles.is_empty()
@@ -477,7 +493,7 @@ fn compile_redeal(
     groups[gi as usize].symmetric = false;
     if matches!(
         rd.how,
-        RedealHow::GridShuffle | RedealHow::GridShuffleRandomGaps
+        RedealHow::GridShuffle | RedealHow::GridShuffleRandomGaps | RedealHow::GridShuffleEndGaps
     ) && groups[gi as usize].columns.is_none()
     {
         return err("grid_shuffle redeals need a grid layout");
@@ -709,6 +725,9 @@ fn mark_positional_sources(groups: &mut [Group], pile_rules: &[PileRules]) -> Ve
         }
         if let Some(r) = groups[i].moves_when_same_index_empty {
             mark(groups, r as usize, true);
+        }
+        if let Some(r) = groups[i].flip_when_same_index_full {
+            mark(groups, r as usize, false);
         }
         for p in groups[i].piles() {
             if let Some((r, _)) = pile_rules[p as usize].after_pile {
@@ -1052,7 +1071,10 @@ impl Game {
             let real = pr.admits & REAL_FACES;
             let start_mask = match &pr.empty {
                 EmptyRule::None => 0,
-                EmptyRule::Any | EmptyRule::DealtBase | EmptyRule::DealtBaseOffset(_) => {
+                EmptyRule::Any
+                | EmptyRule::DealtBase
+                | EmptyRule::DealtBaseOffset(_)
+                | EmptyRule::SameBase => {
                     return real;
                 }
                 EmptyRule::Rank(r) => real & self.rank_faces[*r as usize],
@@ -1096,6 +1118,15 @@ impl Game {
             .collect();
         for (i, &p) in found_piles.iter().enumerate() {
             if !self.pile_rules[p].autoplay {
+                continue;
+            }
+            let gi = self.pile_group[p];
+            if self
+                .groups
+                .iter()
+                .any(|gr| gr.flip_when_same_index_full == Some(gi))
+            {
+                self.pile_rules[p].autoplay = false;
                 continue;
             }
             let rp = found_reach[i];

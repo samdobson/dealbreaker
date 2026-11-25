@@ -640,6 +640,24 @@ impl Game {
                     );
                 }
             }
+        } else if rd.how == RedealHow::GridShuffleEndGaps {
+            for (row, &k) in prefix.iter().enumerate() {
+                for col in k..cols.saturating_sub(1) {
+                    if s.piles[gp as usize].is_empty() {
+                        break;
+                    }
+                    let p = g.start + row as u16 * cols + col;
+                    self.push(
+                        s,
+                        j,
+                        Op::Shift {
+                            from: gp,
+                            to: p,
+                            count: 1,
+                        },
+                    );
+                }
+            }
         } else {
             let mut slots: Vec<u16> = Vec::new();
             for (row, &k) in prefix.iter().enumerate() {
@@ -772,7 +790,9 @@ impl Game {
             RedealHow::ShuffleRedeal => {
                 self.redeal_shuffle_redeal(s, j, g, gp);
             }
-            RedealHow::GridShuffle | RedealHow::GridShuffleRandomGaps => {
+            RedealHow::GridShuffle
+            | RedealHow::GridShuffleRandomGaps
+            | RedealHow::GridShuffleEndGaps => {
                 self.redeal_grid_shuffle(s, j, rd, g, gp);
             }
         }
@@ -867,8 +887,15 @@ impl Game {
     #[inline]
     fn should_auto_flip(&self, s: &State, p: u16, check_available: bool) -> bool {
         let g = self.group_of(p);
-        s.piles[p as usize].last().is_some_and(|c| !c.is_face_up())
-            && !g.no_flip
+        if !s.piles[p as usize].last().is_some_and(|c| !c.is_face_up()) {
+            return false;
+        }
+        if let Some(tg) = g.flip_when_same_index_full {
+            let idx = p - g.start;
+            let tp = self.groups[tg as usize].start + idx;
+            return s.piles[tp as usize].len() >= self.rule(tp).max_cards as usize;
+        }
+        !g.no_flip
             && (g.kind != PileKind::Stock || self.stock.as_ref().is_some_and(|st| st.face_up))
             && (!g.flip_only_last || s.piles[p as usize].len() == 1)
             && (!check_available || self.available(s, p))

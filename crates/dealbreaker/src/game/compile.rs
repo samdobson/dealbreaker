@@ -938,6 +938,12 @@ fn compile_win(
             Ok(Win::Score(*at_least))
         }
         WinRule::AllFull { group } => Ok(Win::AllFull(find_group(rules, group)?)),
+        WinRule::EachRowScore { at_least } => {
+            if rules.score.is_none() {
+                return err("each_row_score needs a score rule");
+            }
+            Ok(Win::EachRowScore(*at_least))
+        }
         WinRule::ColorSplit { group, red } => {
             let gi = find_group(rules, group)?;
             if *red > rules.groups[gi as usize].count {

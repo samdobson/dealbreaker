@@ -2731,6 +2731,29 @@
           "additionalProperties": false
         },
         {
+          "description": "The grid of the score rules is full and every row scores at least this many points, each on its own (Maverick: every row a straight or better).",
+          "type": "object",
+          "required": [
+            "each_row_score"
+          ],
+          "properties": {
+            "each_row_score": {
+              "type": "object",
+              "required": [
+                "at_least"
+              ],
+              "properties": {
+                "at_least": {
+                  "type": "integer",
+                  "format": "uint32",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
           "description": "The first `red` piles of `group` hold only red cards and the rest only black ones (Fire and Ice).",
           "type": "object",
           "required": [

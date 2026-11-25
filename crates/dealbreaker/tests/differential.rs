@@ -3681,3 +3681,22 @@ fn color_split_win() {
     };
     check(r, 0..60);
 }
+
+#[test]
+fn each_row_score_win() {
+    // Swap cards around a 2x2 grid until both rows are pairs.
+    let mut r = presets::poker_squares();
+    r.name = "mini each row".into();
+    r.pack = small(1..=2, &[Suit::Spades, Suit::Hearts], 1);
+    r.groups.retain(|g| g.name == "tableau");
+    r.groups[0].count = 4;
+    r.groups[0].layout = Some(Layout::Grid { columns: 2 });
+    r.groups[0].moves = Some(MoveUnit::Top);
+    r.groups[0].accepts_from = None;
+    r.groups[0].swap_bases = Some(SwapBases::BothSingle);
+    r.groups[0].empty = Some(EmptyRule::Any);
+    r.stock = None;
+    r.deal = vec![DealStep::to("tableau").each(1)];
+    r.win = WinRule::EachRowScore { at_least: 2 };
+    check(r, 0..40);
+}

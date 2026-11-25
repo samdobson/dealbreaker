@@ -458,6 +458,7 @@ When the game is won.
 - `{ "rows": ... }` (`object`) — Every row of a grid group holds a built sequence from its first column, `length` cards long (default: one less than the row), starting with the rank its first column takes (Montana).
 - `{ "score": ... }` (`object`) — The position scores at least this many points (see [`Rules::score`]).
 - `{ "all_full": ... }` (`object`) — Every pile in `group` holds `max_cards` cards with a bottom card satisfying its `empty` rule.
+- `{ "each_row_score": ... }` (`object`) — The grid of the score rules is full and every row scores at least this many points, each on its own (Maverick: every row a straight or better).
 - `{ "color_split": ... }` (`object`) — The first `red` piles of `group` hold only red cards and the rest only black ones (Fire and Ice).
 - `{ "rows_built": ... }` (`object`) — Like [`WinRule::Rows`], but checks each row's ordered prefix using `build` instead of the group's build rule.
 - `{ "piles_built": ... }` (`object`) — Every non-empty pile of `group` (or the single pile at `pile`) satisfies optional `length` and `build` sequence checks, and every group in `empty` is empty.

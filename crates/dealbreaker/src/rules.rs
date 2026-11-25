@@ -1749,6 +1749,9 @@ pub enum WinRule {
     Score { at_least: u32 },
     /// Every pile in `group` holds `max_cards` cards with a bottom card satisfying its `empty` rule.
     AllFull { group: String },
+    /// The grid of the score rules is full and every row scores at least this many points, each
+    /// on its own (Maverick: every row a straight or better).
+    EachRowScore { at_least: u32 },
     /// The first `red` piles of `group` hold only red cards and the rest only black ones (Fire and
     /// Ice).
     ColorSplit { group: String, red: u16 },

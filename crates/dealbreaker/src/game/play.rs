@@ -1449,6 +1449,10 @@ impl Game {
                 (0..g.count / cols).all(|row| self.row_prefix(s, *gi, row) >= *len as usize)
             }
             Win::Score(n) => self.score(s).is_some_and(|v| v >= *n),
+            Win::EachRowScore(n) => self
+                .score
+                .as_ref()
+                .is_some_and(|sc| sc.every_row_scores(s, *n)),
             Win::ColorSplit(gi, red) => {
                 let g = &self.groups[*gi as usize];
                 g.piles().enumerate().all(|(i, p)| {

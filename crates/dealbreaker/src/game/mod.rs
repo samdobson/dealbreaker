@@ -520,6 +520,8 @@ pub(crate) enum Win {
     AllFull(u16),
     /// Group, number of leading piles that must hold only red cards (the rest only black).
     ColorSplit(u16, u16),
+    /// Every row of the score grid scores at least this many points.
+    EachRowScore(u32),
     /// Non-empty piles of `group` (or single `pile` index) satisfy optional `length` and `build`,
     /// with every group in `empty` empty.
     PilesBuilt {

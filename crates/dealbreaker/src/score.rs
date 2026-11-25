@@ -42,7 +42,7 @@ pub(crate) enum Pool {
 pub(crate) enum StarterBound {
     /// No starter, ever.
     None,
-    /// The top card of a pile nothing enters or leaves.
+    /// The bottom card of a pile nothing enters or leaves.
     Fixed(u16),
     /// The waste card after the grid is filled from the waste ([`Pool::NextFromStock`]).
     NextInSequence,
@@ -63,7 +63,7 @@ pub(crate) enum HandScoring {
     },
     Cribbage {
         points: CribbagePoints,
-        /// The pile whose top card is the starter.
+        /// The pile whose bottom card is the starter (a waste holds just the one).
         starter: Option<u16>,
         starter_bound: StarterBound,
         /// Best fifteens, pairs and runs reachable from each rank multiset (see [`rank_key`]).
@@ -453,6 +453,18 @@ impl Score {
             .all(|&p| !s.piles[p as usize].is_empty())
     }
 
+    /// Does every row of the grid score at least `n` points as a hand of its own?
+    pub(crate) fn every_row_scores(&self, s: &State, n: u32) -> bool {
+        match &self.hands {
+            HandScoring::Poker {
+                points, monotone, ..
+            } => self.lines[..self.rows as usize]
+                .iter()
+                .all(|l| poker_points(&self.line_counts(s, l), points, *monotone) >= n),
+            HandScoring::Cribbage { .. } => false,
+        }
+    }
+
     /// Points for a position.
     pub fn score(&self, s: &State) -> u32 {
         match &self.hands {
@@ -466,7 +478,7 @@ impl Score {
             } => {
                 let starter = starter
                     .filter(|_| self.grid_full(s))
-                    .and_then(|p| s.piles[p as usize].last())
+                    .and_then(|p| s.piles[p as usize].first())
                     .map(|c| c.up());
                 let mut total = 0u32;
                 let mut cards = Vec::new();
@@ -562,7 +574,7 @@ impl Score {
                     StarterBound::None => Counts::default(),
                     StarterBound::Fixed(p) => {
                         let mut c = Counts::default();
-                        if let Some(&card) = s.piles[*p as usize].last() {
+                        if let Some(&card) = s.piles[*p as usize].first() {
                             c.add(card.up());
                         }
                         c

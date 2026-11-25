@@ -1214,7 +1214,13 @@ impl Game {
                 }
             }
             for g in self.groups.iter().filter(|g| g.clear_when_full.is_some()) {
-                if g.count > 0 && g.piles().all(|p| !s.piles[p as usize].is_empty()) {
+                let full = g.count > 0 && g.piles().all(|p| !s.piles[p as usize].is_empty());
+                let same_rank = !g.clear_same_rank || {
+                    let r0 = s.piles[g.start as usize].first().map(|c| c.rank());
+                    g.piles()
+                        .all(|p| s.piles[p as usize].first().map(|c| c.rank()) == r0)
+                };
+                if full && same_rank {
                     let to = self.groups[g.clear_when_full.unwrap() as usize].start;
                     for p in g.piles() {
                         let count = s.piles[p as usize].len() as u16;

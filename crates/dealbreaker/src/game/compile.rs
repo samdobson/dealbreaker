@@ -512,6 +512,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
                 .as_ref()
                 .map(|n| find_group(rules, n))
                 .transpose()?,
+            clear_same_rank: g.clear_same_rank,
             refill_when_empty: g
                 .refill_when_empty
                 .as_ref()

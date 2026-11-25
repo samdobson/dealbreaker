@@ -848,6 +848,10 @@
             }
           ]
         },
+        "clear_same_rank": {
+          "description": "With `clear_when_full`: clear only when every pile's bottom card has the same rank (Foursome's four reserves).",
+          "type": "boolean"
+        },
         "clear_when_full": {
           "description": "As soon as every pile of this group holds a card, move all their cards to the first pile of the named group (Elevens' reserves going to the discard).",
           "type": [

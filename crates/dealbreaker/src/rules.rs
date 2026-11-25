@@ -580,6 +580,10 @@ pub struct GroupRules {
     /// of the named group (Elevens' reserves going to the discard).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clear_when_full: Option<String>,
+    /// With `clear_when_full`: clear only when every pile's bottom card has the same rank
+    /// (Foursome's four reserves).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub clear_same_rank: bool,
     /// Refill emptied piles only while every pile of the named group is empty (Elevens Too:
     /// rows are refilled only when the reserves are empty).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -776,6 +780,7 @@ impl GroupRules {
             same_suit_group: false,
             same_rank_group: false,
             clear_when_full: None,
+            clear_same_rank: false,
             refill_when_empty: None,
             no_build_single_while_stock: false,
             refill_first_face_down: false,

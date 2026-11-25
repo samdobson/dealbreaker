@@ -3476,3 +3476,32 @@ fn mirror_build_pairs_ranks_from_both_ends() {
     r.win = WinRule::Empty(vec!["stock".into(), "waste".into()]);
     check(r, 0..60);
 }
+
+#[test]
+fn reserves_clear_when_they_share_a_rank() {
+    // Two reserves clear to the discard once both hold the same rank; the rows build any suit down.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let mut cell = GroupRules::new("cell", PileKind::Cell, 2)
+        .moves(MoveUnit::None)
+        .max_cards(1)
+        .empty(EmptyRule::Any)
+        .accepts_from(&["tableau"]);
+    cell.clear_when_full = Some("foundation".into());
+    cell.clear_same_rank = true;
+    let r = Rules::new(
+        "mini foursome",
+        pack,
+        vec![
+            cell,
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::None, Dir::Up)
+                .empty(EmptyRule::None),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any),
+        ],
+        vec![DealStep::to("tableau").rest()],
+    );
+    check(r, 0..60);
+}

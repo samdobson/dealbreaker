@@ -75,6 +75,7 @@ One group of identical piles.
 | `accept_when_stock_empty` | `boolean` | — | Accept cards only when the stock pile is empty. |
 | `accepts_from` | `array` \| `null` | — | Only cards coming from these groups are accepted (default: any group). |
 | `build` | [Build](#build) \| `null` | — | What may be placed on a pile's top card. Default: foundations build up in suit; every other kind accepts nothing on a non-empty pile. |
+| `clear_same_rank` | `boolean` | — | With `clear_when_full`: clear only when every pile's bottom card has the same rank (Foursome's four reserves). |
 | `clear_when_full` | `string` \| `null` | — | As soon as every pile of this group holds a card, move all their cards to the first pile of the named group (Elevens' reserves going to the discard). |
 | `color` | [Color](#color) \| `null` | — | Piles accept only cards of this colour. |
 | `compact` | `boolean` | — | Keep the group packed: whenever a pile empties, the piles after it slide forward. |

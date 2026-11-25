@@ -206,6 +206,7 @@ pub(crate) struct Group {
     pub same_rank_group: bool,
     /// Move every pile's cards to the first pile of this group once all piles hold a card.
     pub clear_when_full: Option<u16>,
+    pub clear_same_rank: bool,
     /// Refill only while every pile of this group is empty.
     pub refill_when_empty: Option<u16>,
     /// While stock is non-empty, forbid building onto or moving from single-card piles onto non-empty piles.
@@ -410,6 +411,7 @@ impl Group {
             same_suit_group: false,
             same_rank_group: false,
             clear_when_full: None,
+            clear_same_rank: false,
             refill_when_empty: None,
             no_build_single_while_stock: false,
             refill_first_face_down: false,

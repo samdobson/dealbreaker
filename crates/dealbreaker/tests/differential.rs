@@ -3787,3 +3787,35 @@ fn separate_decks_deal_one_pack_then_the_next() {
         assert_eq!(a, vec![1, 2, 3]);
     }
 }
+
+#[test]
+fn same_line_removal_and_compaction_after_the_stock_is_used() {
+    // A 2x3 grid; same-rank cards in the same row or column pair off. Gaps refill from the stock and
+    // close up only once it is empty.
+    let mut tableau = GroupRules::new("tableau", PileKind::Tableau, 6)
+        .empty(EmptyRule::None)
+        .moves(MoveUnit::None)
+        .refill_from(&["stock"]);
+    tableau.compact = true;
+    tableau.compact_when_stock_empty = true;
+    tableau.layout = Some(Layout::Grid { columns: 3 });
+    let mut r = Rules::new(
+        "mini quatorze",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::None, Dir::Up)
+                .empty(EmptyRule::None),
+            tableau,
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut rem = RemovalRules::new(RemovalKind::SameRank, &["tableau"], "foundation");
+    rem.adjacent = Some(Adjacency::SameLine);
+    r.removal = vec![rem];
+    check(r, 0..60);
+}

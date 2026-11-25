@@ -1513,6 +1513,7 @@ impl Game {
                     match adj {
                         Adjacency::Eight => dr.max(dc) == 1,
                         Adjacency::Four => dr + dc == 1,
+                        Adjacency::SameLine => dr == 0 || dc == 0,
                     }
                 })
             };

@@ -618,6 +618,10 @@ pub struct GroupRules {
     /// (Last Chance's reserve).
     #[serde(default, skip_serializing_if = "is_false")]
     pub flip_when_dealt_out: bool,
+    /// With `compact`: close gaps only once the stock is empty; until then they are refilled
+    /// from it (Quatorze).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub compact_when_stock_empty: bool,
     /// Refill emptied piles only while every pile of the named group is empty (Elevens Too:
     /// rows are refilled only when the reserves are empty).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -815,6 +819,7 @@ impl GroupRules {
             same_rank_group: false,
             clear_when_full: None,
             clear_same_rank: false,
+            compact_when_stock_empty: false,
             flip_when_dealt_out: false,
             auto_foundation_rank: None,
             refill_when_empty: None,
@@ -1681,6 +1686,8 @@ pub enum Adjacency {
     Eight,
     /// Horizontally or vertically next to each other.
     Four,
+    /// Anywhere in the same row or the same column (Quatorze).
+    SameLine,
 }
 
 /// Jokers are wild in removals: a joker pairs with any card (another joker too) and stands for

@@ -1001,6 +1001,13 @@ impl Game {
     fn settle_compact(&self, s: &mut State, j: &mut Vec<Op>) -> bool {
         let mut changed = false;
         for g in self.groups.iter().filter(|g| g.compact) {
+            if g.compact_when_stock_empty
+                && self
+                    .stock_pile
+                    .is_some_and(|sp| !s.piles[sp as usize].is_empty())
+            {
+                continue;
+            }
             let mut write = g.start;
             for p in g.piles() {
                 let n = s.piles[p as usize].len() as u16;

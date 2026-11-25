@@ -84,6 +84,7 @@ One group of identical piles.
 | `color` | [Color](#color) \| `null` | — | Piles accept only cards of this colour. |
 | `compact` | `boolean` | — | Keep the group packed: whenever a pile empties, the piles after it slide forward. |
 | `compact_face_up` | `boolean` | — | When a pile in this group becomes empty, shift the movable face-up run from the next pile into it, leaving any face-down cards behind. |
+| `compact_when_stock_empty` | `boolean` | — | With `compact`: close gaps only once the stock is empty; until then they are refilled from it (Quatorze). |
 | `complete_runs` | `boolean` | — | Foundation only accepts a whole suit sequence at once, moved together (Spider). |
 | `count` | `integer` | — |  |
 | `empty` | [EmptyRule](#emptyrule) \| `null` | — | What an empty pile accepts. Default: foundations take the pack's first rank; tableaux and cells take any card; reserves, stock and waste take none. |
@@ -379,6 +380,7 @@ Which grid positions count as neighbours.
 
 - `"eight"` — Horizontally, vertically or diagonally next to each other (Monte Carlo).
 - `"four"` — Horizontally or vertically next to each other.
+- `"same_line"` — Anywhere in the same row or the same column (Quatorze).
 
 ### ScoreRules {#scorerules}
 

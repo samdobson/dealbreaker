@@ -146,6 +146,13 @@
           "enum": [
             "four"
           ]
+        },
+        {
+          "description": "Anywhere in the same row or the same column (Quatorze).",
+          "type": "string",
+          "enum": [
+            "same_line"
+          ]
         }
       ]
     },
@@ -923,6 +930,10 @@
         },
         "compact_face_up": {
           "description": "When a pile in this group becomes empty, shift the movable face-up run from the next pile into it, leaving any face-down cards behind.",
+          "type": "boolean"
+        },
+        "compact_when_stock_empty": {
+          "description": "With `compact`: close gaps only once the stock is empty; until then they are refilled from it (Quatorze).",
           "type": "boolean"
         },
         "complete_runs": {

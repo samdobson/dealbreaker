@@ -515,6 +515,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
                 .map(|n| find_group(rules, n))
                 .transpose()?,
             clear_same_rank: g.clear_same_rank,
+            compact_when_stock_empty: g.compact_when_stock_empty,
             flip_when_dealt_out: g.flip_when_dealt_out,
             auto_foundation_rank: g.auto_foundation_rank,
             refill_when_empty: g

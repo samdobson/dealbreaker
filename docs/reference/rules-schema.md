@@ -310,6 +310,7 @@ How a redeal deals the gathered cards.
 
 - `{ "regroup": ... }` (`object`) — Keep the cards in order and deal them back `per_pile` at a time to each pile in turn, starting from the first pile's top cards (Cruel). Fewer piles may end up in use. If there are more cards than `per_pile` for every pile, the surplus is shared out: each pile gets an equal part and the first few one more.
 - `{ "shuffle": ... }` (`object`) — Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie), sharing out any surplus as for [`RedealHow::Regroup`].
+- `{ "shuffle_top_up": ... }` (`object`) — As `shuffle`, but every card is dealt face down except the top card of a pile that gets at least two (Fascination Fan: the dealing goes round in three passes, the last face up).
 - `"grid_shuffle"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap straight after each sequence (Montana).
 - `{ "compact": ... }` (`object`) — Close the gaps: slide the cards forward in reading order, then fill the empty places at the end from `refill_from`'s top card, turned face up (Monte Carlo).
 - `"grid_shuffle_random_gaps"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving the gaps at random positions among the non-sequence slots.

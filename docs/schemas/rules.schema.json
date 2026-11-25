@@ -1931,6 +1931,29 @@
           "additionalProperties": false
         },
         {
+          "description": "As `shuffle`, but every card is dealt face down except the top card of a pile that gets at least two (Fascination Fan: the dealing goes round in three passes, the last face up).",
+          "type": "object",
+          "required": [
+            "shuffle_top_up"
+          ],
+          "properties": {
+            "shuffle_top_up": {
+              "type": "object",
+              "required": [
+                "per_pile"
+              ],
+              "properties": {
+                "per_pile": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
           "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap straight after each sequence (Montana).",
           "type": "string",
           "enum": [

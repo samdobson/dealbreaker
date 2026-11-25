@@ -1,5 +1,7 @@
 # Benchmarks
 
+Dealbreaker is 3× faster than fc-solve, 44× faster than SolverLab, 93× faster than Solvitaire and 207× faster than cfreecell.
+
 All benchmarks were run single-threaded on an Apple-silicon laptop using release builds.
 
 ## Open-Source FreeCell Solvers (Microsoft Deals #1–#100)

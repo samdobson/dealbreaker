@@ -2695,6 +2695,24 @@ fn redeal_deal_rows_redistribute_shuffle_and_alternating() {
     r1b.redeal = Some(RedealRules::new("tableau", RedealHow::DealStaircase));
     check(r1b, 0..40);
 
+    // 1c) RedealHow::ShuffleTopUp.
+    let mut r1c = Rules::new(
+        "mini-shuffle-top-up",
+        pack.clone(),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Alternate, Dir::Down)
+                .empty(EmptyRule::Any)
+                .moves(MoveUnit::Top),
+        ],
+        vec![DealStep::to("tableau").each(2)],
+    );
+    let mut rd1c = RedealRules::new("tableau", RedealHow::ShuffleTopUp { per_pile: 2 });
+    rd1c.times = 2;
+    r1c.redeal = Some(rd1c);
+    check(r1c, 0..40);
+
     // 2) RedealHow::RedistributePile.
     let mut r2 = Rules::new(
         "mini-redistribute-pile",

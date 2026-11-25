@@ -1473,6 +1473,9 @@ pub enum RedealHow {
     /// Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie),
     /// sharing out any surplus as for [`RedealHow::Regroup`].
     Shuffle { per_pile: u16 },
+    /// As `shuffle`, but every card is dealt face down except the top card of a pile that gets at
+    /// least two (Fascination Fan: the dealing goes round in three passes, the last face up).
+    ShuffleTopUp { per_pile: u16 },
     /// Grid games: leave each row's built sequence in place, shuffle every other card, and
     /// deal them back leaving one gap straight after each sequence (Montana).
     GridShuffle,

@@ -571,7 +571,10 @@ fn compile_redeal(
     {
         return err("grid_shuffle redeals need a grid layout");
     }
-    if let RedealHow::Regroup { per_pile: 0 } | RedealHow::Shuffle { per_pile: 0 } = rd.how {
+    if let RedealHow::Regroup { per_pile: 0 }
+    | RedealHow::Shuffle { per_pile: 0 }
+    | RedealHow::ShuffleTopUp { per_pile: 0 } = rd.how
+    {
         return err("redeal per_pile must be at least 1");
     }
     // A redeal gathers cards on a hidden scratch pile.

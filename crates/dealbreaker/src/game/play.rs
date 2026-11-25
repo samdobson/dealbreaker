@@ -453,7 +453,7 @@ impl Game {
         g: &super::Group,
         gp: u16,
         per_pile: u16,
-        shuffle: bool,
+        (shuffle, top_up): (bool, bool),
     ) {
         // Last pile first, so the first pile's cards end on top of the gathered stack.
         for p in g.piles().rev() {
@@ -488,15 +488,42 @@ impl Game {
             if n == 0 {
                 break;
             }
-            self.push(
-                s,
-                j,
-                Op::Shift {
-                    from: gp,
-                    to: p,
-                    count: n,
-                },
-            );
+            if !top_up {
+                self.push(
+                    s,
+                    j,
+                    Op::Shift {
+                        from: gp,
+                        to: p,
+                        count: n,
+                    },
+                );
+            } else {
+                // Face down, but the top card of a pile of two or more face up.
+                let down = if n >= 2 { n - 1 } else { n };
+                self.push(
+                    s,
+                    j,
+                    Op::Turn {
+                        from: gp,
+                        to: p,
+                        count: down,
+                        up: false,
+                    },
+                );
+                if n > down {
+                    self.push(
+                        s,
+                        j,
+                        Op::Turn {
+                            from: gp,
+                            to: p,
+                            count: n - down,
+                            up: true,
+                        },
+                    );
+                }
+            }
         }
     }
 
@@ -759,10 +786,13 @@ impl Game {
                 }
             }
             RedealHow::Regroup { per_pile } => {
-                self.redeal_regroup_or_shuffle(s, j, g, gp, per_pile, false);
+                self.redeal_regroup_or_shuffle(s, j, g, gp, per_pile, (false, false));
             }
             RedealHow::Shuffle { per_pile } => {
-                self.redeal_regroup_or_shuffle(s, j, g, gp, per_pile, true);
+                self.redeal_regroup_or_shuffle(s, j, g, gp, per_pile, (true, false));
+            }
+            RedealHow::ShuffleTopUp { per_pile } => {
+                self.redeal_regroup_or_shuffle(s, j, g, gp, per_pile, (true, true));
             }
             RedealHow::Compact { .. } => {
                 self.redeal_compact(s, j, g, rd.refill);

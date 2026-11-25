@@ -158,3 +158,23 @@ def test_cancel_token_and_render_and_format_step():
     assert not tok.is_cancelled
     solved = fc.solve(fc.deal_microsoft(1), max_states=200_000, cancel=tok)
     assert solved["outcome"] == "solved"
+
+
+def test_keyboard_interrupt_stops_search():
+    import signal
+    import threading
+    import time
+
+    fc = Solver.from_preset("freecell")
+    deal = fc.deal_microsoft(11982)
+
+    timer = threading.Timer(0.1, signal.raise_signal, args=(signal.SIGINT,))
+    timer.start()
+    t0 = time.monotonic()
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            fc.solve(deal, max_states=50_000_000)
+    finally:
+        timer.cancel()
+    elapsed = time.monotonic() - t0
+    assert elapsed < 3.0

@@ -2,43 +2,17 @@
 
 # Python Reference
 
-> Auto-generated from [`crates/dealbreaker-py/python/dealbreaker/__init__.py`](https://github.com/samdobson/dealbreaker/blob/main/crates/dealbreaker-py/python/dealbreaker/__init__.py).
+> Auto-generated from [`crates/dealbreaker-py/python/dealbreaker/__init__.py`](https://github.com/samdobson/dealbreaker/blob/main/crates/dealbreaker-py/python/dealbreaker/__init__.py) and [`_dealbreaker.pyi`](https://github.com/samdobson/dealbreaker/blob/main/crates/dealbreaker-py/python/dealbreaker/_dealbreaker.pyi).
 
 ```sh
 pip install dealbreaker
 ```
-
-## `class PresetInfo`
-
-Metadata for a built-in game preset.
-
-## `class PileRef`
-
-Reference to a single pile by group name and 0-based index.
-
-## `class StateData`
-
-Serializable game position.
-
-## `class SolveResult`
-
-Result returned by :meth:`Solver.solve`.
-
-## `class MaxResult`
-
-Result returned by :meth:`Solver.best`.
-
-## `class HintResult`
-
-Result returned by :meth:`Solver.hint`.
 
 ## Module Functions
 
 ### `presets() -> list[PresetInfo]`
 
 Return all built-in game presets as `[{"id": ..., "name": ...}, ...]`.
-
-## Module Functions
 
 ### `format_step(step: Step | Mapping[str, Any] | str) -> str`
 
@@ -49,7 +23,8 @@ Format a step dict or JSON string as human-readable text (e.g. `"tableau 4 -> ce
 Compiled solitaire game rules. Create once and reuse across many deals.
 
 Long-running searches (`solve`, `best`, `hint`) release the Python GIL so
-multiple threads can search concurrently.
+multiple threads can search concurrently, and respond to `Ctrl-C`
+(`KeyboardInterrupt`) in interactive sessions and notebooks.
 
 ### `__init__(rules: Mapping[str, Any] | str) -> None`
 
@@ -108,3 +83,118 @@ Return points for `state`, or `None` for non-scored games.
 ### `render(state: StateData | Mapping[str, Any] | str) -> str`
 
 Render `state` as a human-readable ASCII board.
+
+## `class CancelToken`
+
+Cooperative cancellation token shared with `solve`, `best`, or `hint`.
+
+Safe to pass to a search running on one thread and trigger via `cancel()` from another.
+
+### `__init__() -> None`
+
+### `cancel() -> None`
+
+Signal cancellation to any search using this token.
+
+### `reset() -> None`
+
+Reset the token so it can be reused for another search.
+
+### `@property is_cancelled -> bool`
+
+Whether cancellation has been triggered.
+
+## Data Types
+
+### `Step`
+
+Type alias: `MoveStep | DealStep | RedealStep | RemoveStep`
+
+### `PresetInfo`
+
+Metadata for a built-in game preset.
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `id` | `str` | yes |
+| `name` | `str` | yes |
+
+### `PileRef`
+
+Reference to a single pile by group name and 0-based index.
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `group` | `str` | yes |
+| `index` | `int` | yes |
+
+### `MoveStep`
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `type` | `Literal['move']` | yes |
+| `from` | `PileRef` | yes |
+| `to` | `PileRef` | yes |
+| `count` | `int` | yes |
+
+### `DealStep`
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `type` | `Literal['deal']` | yes |
+
+### `RedealStep`
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `type` | `Literal['redeal']` | yes |
+
+### `RemoveStep`
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `type` | `Literal['remove']` | yes |
+| `piles` | `list[PileRef]` | yes |
+
+### `StateData`
+
+Serializable game position.
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `redeals_used` | `int` | no |
+| `base_rank` | `int` | no |
+| `rng_state` | `int` | no |
+| `piles` | `dict[str, list[list[str]]]` | yes |
+
+### `SolveResult`
+
+Result returned by `Solver.solve`.
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `steps` | `list[Step]` | no |
+| `outcome` | `Literal['solved', 'unsolvable', 'gave-up']` | yes |
+| `states` | `int` | yes |
+
+### `MaxResult`
+
+Result returned by `Solver.best`.
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `score` | `int` | yes |
+| `proven` | `bool` | yes |
+| `states` | `int` | yes |
+| `steps` | `list[Step]` | yes |
+
+### `HintResult`
+
+Result returned by `Solver.hint`.
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `score` | `float` | no |
+| `step` | `Step` | yes |
+| `wins` | `int` | yes |
+| `samples` | `int` | yes |

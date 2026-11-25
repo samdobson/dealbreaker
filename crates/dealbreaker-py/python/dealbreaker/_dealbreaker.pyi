@@ -1,0 +1,69 @@
+"""Type stubs for the native ``dealbreaker._dealbreaker`` extension module."""
+
+from __future__ import annotations
+
+def presets_json() -> str: ...
+def format_step_json(step_json: str) -> str: ...
+
+class CancelToken:
+    """Cooperative cancellation token shared with ``solve``, ``best``, or ``hint``.
+
+    Safe to pass to a search running on one thread and trigger via ``cancel()`` from another.
+    """
+
+    def __init__(self) -> None: ...
+    def cancel(self) -> None:
+        """Signal cancellation to any search using this token."""
+        ...
+    def reset(self) -> None:
+        """Reset the token so it can be reused for another search."""
+        ...
+    @property
+    def is_cancelled(self) -> bool:
+        """Whether cancellation has been triggered."""
+        ...
+
+class _Solver:
+    def __init__(self, rules_json: str) -> None: ...
+    @staticmethod
+    def from_preset(id: str) -> _Solver: ...
+    def rules_json(self) -> str: ...
+    def deal_json(self, seed: int) -> str: ...
+    def deal_microsoft_json(self, n: int) -> str: ...
+    def deal_ordered_json(self, cards: list[str]) -> str: ...
+    def validate_json(self, state_json: str) -> None: ...
+    def solve_json(
+        self,
+        state_json: str,
+        max_states: int = ...,
+        strategy: str = ...,
+        timeout_ms: int | None = ...,
+        autoplay: bool = ...,
+        shorten: bool = ...,
+        cancel: CancelToken | None = ...,
+    ) -> str: ...
+    def best_json(
+        self,
+        state_json: str,
+        max_states: int = ...,
+        strategy: str = ...,
+        timeout_ms: int | None = ...,
+        cancel: CancelToken | None = ...,
+    ) -> str: ...
+    def hint_json(
+        self,
+        state_json: str,
+        samples: int = ...,
+        seed: int = ...,
+        max_states: int = ...,
+        strategy: str = ...,
+        timeout_ms: int | None = ...,
+        autoplay: bool = ...,
+        shorten: bool = ...,
+        cancel: CancelToken | None = ...,
+    ) -> str: ...
+    def legal_steps_json(self, state_json: str) -> str: ...
+    def play_step_json(self, state_json: str, step_json: str) -> str: ...
+    def is_won_json(self, state_json: str) -> bool: ...
+    def score_json(self, state_json: str) -> int | None: ...
+    def render_json(self, state_json: str) -> str: ...

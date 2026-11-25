@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Literal, Mapping, Sequence, TypedDict
+from typing import Any, Literal, Mapping, Sequence, TypedDict, cast
 
 from ._dealbreaker import CancelToken, _Solver, format_step_json, presets_json
 
@@ -107,7 +107,7 @@ def _as_json(value: Mapping[str, Any] | str) -> str:
 
 def presets() -> list[PresetInfo]:
     """Return all built-in game presets as ``[{"id": ..., "name": ...}, ...]``."""
-    return json.loads(presets_json())
+    return cast(list[PresetInfo], json.loads(presets_json()))
 
 
 def format_step(step: Step | Mapping[str, Any] | str) -> str:
@@ -118,8 +118,9 @@ def format_step(step: Step | Mapping[str, Any] | str) -> str:
 class Solver:
     """Compiled solitaire game rules. Create once and reuse across many deals.
 
-    Long-running searches (`solve`, `best`, `hint`) release the Python GIL so
-    multiple threads can search concurrently.
+    Long-running searches (``solve``, ``best``, ``hint``) release the Python GIL so
+    multiple threads can search concurrently, and respond to ``Ctrl-C``
+    (``KeyboardInterrupt``) in interactive sessions and notebooks.
     """
 
     def __init__(self, rules: Mapping[str, Any] | str) -> None:
@@ -134,19 +135,19 @@ class Solver:
 
     def rules(self) -> dict[str, Any]:
         """Return this game's rules as a dictionary."""
-        return json.loads(self._inner.rules_json())
+        return cast(dict[str, Any], json.loads(self._inner.rules_json()))
 
     def deal(self, seed: int = 1) -> StateData:
         """Deal a seeded position."""
-        return json.loads(self._inner.deal_json(seed))
+        return cast(StateData, json.loads(self._inner.deal_json(seed)))
 
     def deal_microsoft(self, n: int) -> StateData:
         """Deal Microsoft FreeCell deal ``n`` (for FreeCell-layout games)."""
-        return json.loads(self._inner.deal_microsoft_json(n))
+        return cast(StateData, json.loads(self._inner.deal_microsoft_json(n)))
 
     def deal_ordered(self, cards: Sequence[str]) -> StateData:
         """Deal from an explicit list of card strings (e.g. ``["AS", "2S", ...]``)."""
-        return json.loads(self._inner.deal_ordered_json(list(cards)))
+        return cast(StateData, json.loads(self._inner.deal_ordered_json(list(cards))))
 
     def validate(self, state: StateData | Mapping[str, Any] | str) -> None:
         """Validate a position against this game's pack and pile capacities."""
@@ -164,16 +165,19 @@ class Solver:
         cancel: CancelToken | None = None,
     ) -> SolveResult:
         """Search for a winning line or prove unsolvability. Releases the GIL."""
-        return json.loads(
-            self._inner.solve_json(
-                _as_json(state),
-                max_states=max_states,
-                strategy=strategy,
-                timeout_ms=timeout_ms,
-                autoplay=autoplay,
-                shorten=shorten,
-                cancel=cancel,
-            )
+        return cast(
+            SolveResult,
+            json.loads(
+                self._inner.solve_json(
+                    _as_json(state),
+                    max_states=max_states,
+                    strategy=strategy,
+                    timeout_ms=timeout_ms,
+                    autoplay=autoplay,
+                    shorten=shorten,
+                    cancel=cancel,
+                )
+            ),
         )
 
     def best(
@@ -186,14 +190,17 @@ class Solver:
         cancel: CancelToken | None = None,
     ) -> MaxResult:
         """Find the highest-scoring line in a points game. Releases the GIL."""
-        return json.loads(
-            self._inner.best_json(
-                _as_json(state),
-                max_states=max_states,
-                strategy=strategy,
-                timeout_ms=timeout_ms,
-                cancel=cancel,
-            )
+        return cast(
+            MaxResult,
+            json.loads(
+                self._inner.best_json(
+                    _as_json(state),
+                    max_states=max_states,
+                    strategy=strategy,
+                    timeout_ms=timeout_ms,
+                    cancel=cancel,
+                )
+            ),
         )
 
     def hint(
@@ -210,23 +217,26 @@ class Solver:
         cancel: CancelToken | None = None,
     ) -> HintResult | None:
         """Suggest a next step without peeking at face-down cards. Releases the GIL."""
-        return json.loads(
-            self._inner.hint_json(
-                _as_json(state),
-                samples=samples,
-                seed=seed,
-                max_states=max_states,
-                strategy=strategy,
-                timeout_ms=timeout_ms,
-                autoplay=autoplay,
-                shorten=shorten,
-                cancel=cancel,
-            )
+        return cast(
+            HintResult | None,
+            json.loads(
+                self._inner.hint_json(
+                    _as_json(state),
+                    samples=samples,
+                    seed=seed,
+                    max_states=max_states,
+                    strategy=strategy,
+                    timeout_ms=timeout_ms,
+                    autoplay=autoplay,
+                    shorten=shorten,
+                    cancel=cancel,
+                )
+            ),
         )
 
     def legal_steps(self, state: StateData | Mapping[str, Any] | str) -> list[Step]:
         """Return every legal single step in ``state``."""
-        return json.loads(self._inner.legal_steps_json(_as_json(state)))
+        return cast(list[Step], json.loads(self._inner.legal_steps_json(_as_json(state))))
 
     def play_step(
         self,
@@ -234,7 +244,7 @@ class Solver:
         step: Step | Mapping[str, Any] | str,
     ) -> StateData:
         """Play one step and return the resulting position (raises ValueError if illegal)."""
-        return json.loads(self._inner.play_step_json(_as_json(state), _as_json(step)))
+        return cast(StateData, json.loads(self._inner.play_step_json(_as_json(state), _as_json(step))))
 
     def is_won(self, state: StateData | Mapping[str, Any] | str) -> bool:
         """Return whether ``state`` is a won position."""

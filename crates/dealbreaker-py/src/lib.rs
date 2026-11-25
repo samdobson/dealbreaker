@@ -1,21 +1,95 @@
 //! PyO3 native extension module for Dealbreaker.
 //!
-//! All long-running search methods (`solve`, `best`, `hint`) release the Python GIL via
-//! `Python::detach`, allowing concurrent searches across Python threads.
+//! All long-running search methods (`solve`, `best`, `hint`) release the Python GIL so
+//! multiple threads can search concurrently, and periodically check Python signals so
+//! `Ctrl-C` (`KeyboardInterrupt`) interrupts long searches.
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Condvar, Mutex,
 };
+use std::time::Duration;
 
 use dealbreaker::{
-    hint, hint_with_cancel, maximize, maximize_with_cancel, microsoft_deal, presets, solve,
-    solve_with_cancel, Card, Game, HintOptions, Outcome, Rules, SolveOptions, State, Step,
-    Strategy,
+    hint_with_cancel, maximize_with_cancel, microsoft_deal, presets, solve_with_cancel, Card, Game,
+    HintOptions, Outcome, Rules, SolveOptions, State, Step, Strategy,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use serde::Serialize;
+
+const SIGNAL_POLL_INTERVAL: Duration = Duration::from_millis(25);
+
+/// Run a potentially long-running search off the GIL while remaining responsive to both
+/// `Ctrl-C` (`KeyboardInterrupt`) and an optional [`CancelToken`].
+fn run_interruptible<T, F>(
+    py: Python<'_>,
+    user_cancel: Option<Arc<AtomicBool>>,
+    f: F,
+) -> PyResult<T>
+where
+    T: Send,
+    F: FnOnce(&AtomicBool) -> T + Send,
+{
+    py.check_signals()?;
+
+    let cancel = AtomicBool::new(
+        user_cancel
+            .as_ref()
+            .is_some_and(|u| u.load(Ordering::Relaxed)),
+    );
+    let done = (Mutex::new(false), Condvar::new());
+
+    std::thread::scope(|scope| {
+        let handle = scope.spawn(|| {
+            let res = f(&cancel);
+            let (lock, cvar) = &done;
+            *lock.lock().unwrap() = true;
+            cvar.notify_one();
+            res
+        });
+
+        let mut interrupted: Option<PyErr> = None;
+        loop {
+            let finished = py.detach(|| {
+                let (lock, cvar) = &done;
+                let guard = lock.lock().unwrap();
+                if *guard {
+                    return true;
+                }
+                let (guard, _) = cvar.wait_timeout(guard, SIGNAL_POLL_INTERVAL).unwrap();
+                *guard
+            });
+
+            if finished {
+                break;
+            }
+
+            if let Some(ref u) = user_cancel {
+                if u.load(Ordering::Relaxed) {
+                    cancel.store(true, Ordering::Relaxed);
+                }
+            }
+
+            if let Err(err) = py.check_signals() {
+                cancel.store(true, Ordering::Relaxed);
+                interrupted = Some(err);
+                break;
+            }
+        }
+
+        // Release the GIL while waiting for the worker thread to finish winding down.
+        let result = py.detach(|| handle.join());
+
+        if let Some(err) = interrupted {
+            return Err(err);
+        }
+        match result {
+            Ok(val) => Ok(val),
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
+    })
+}
 
 fn py_err(e: impl std::fmt::Display) -> PyErr {
     PyValueError::new_err(e.to_string())
@@ -184,11 +258,8 @@ impl NativeSolver {
         let opts = build_solve_opts(max_states, strategy, timeout_ms, autoplay, shorten)?;
         let flag = cancel.map(|c| Arc::clone(&c.borrow().flag));
         let game = &self.game;
-        let out = py.detach(|| {
-            let r = match &flag {
-                Some(f) => solve_with_cancel(game, &s, &opts, f),
-                None => solve(game, &s, &opts),
-            };
+        run_interruptible(py, flag, |stop| {
+            let r = solve_with_cancel(game, &s, &opts, stop);
             let steps = match &r.outcome {
                 Outcome::Solved(m) => Some(game.steps(&s, m)),
                 _ => None,
@@ -198,8 +269,7 @@ impl NativeSolver {
                 states: r.states,
                 steps,
             })
-        });
-        Ok(out)
+        })
     }
 
     #[pyo3(signature = (state_json, max_states=2_000_000, strategy="auto", timeout_ms=None, cancel=None))]
@@ -216,19 +286,15 @@ impl NativeSolver {
         let opts = build_solve_opts(max_states, strategy, timeout_ms, true, true)?;
         let flag = cancel.map(|c| Arc::clone(&c.borrow().flag));
         let game = &self.game;
-        let out = py.detach(|| {
-            let r = match &flag {
-                Some(f) => maximize_with_cancel(game, &s, &opts, f),
-                None => maximize(game, &s, &opts),
-            };
+        run_interruptible(py, flag, |stop| {
+            let r = maximize_with_cancel(game, &s, &opts, stop);
             to_json(&serde_json::json!({
                 "score": r.score,
                 "proven": r.proven,
                 "states": r.states,
                 "steps": game.steps(&s, &r.moves),
             }))
-        });
-        Ok(out)
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -254,14 +320,10 @@ impl NativeSolver {
             .solve(solve_opts);
         let flag = cancel.map(|c| Arc::clone(&c.borrow().flag));
         let game = &self.game;
-        let out = py.detach(|| {
-            let h = match &flag {
-                Some(f) => hint_with_cancel(game, &s, &opts, f),
-                None => hint(game, &s, &opts),
-            };
+        run_interruptible(py, flag, |stop| {
+            let h = hint_with_cancel(game, &s, &opts, stop);
             to_json(&h)
-        });
-        Ok(out)
+        })
     }
 
     fn legal_steps_json(&self, state_json: &str) -> PyResult<String> {

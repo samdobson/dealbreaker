@@ -452,12 +452,15 @@ fn search(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> So
             // wins, so only the final sound search can report unsolvable.
             let share = ctx.search.fast_share.min(100) as u64;
             let fast_budget = opts.max_states / 100 * share;
-            let p1_budget = if fast_budget >= 2_000 {
+            let p1_budget = if fast_budget >= 4_000 {
+                fast_budget * 2 / 5
+            } else if fast_budget >= 2_000 {
                 fast_budget * 3 / 5
             } else {
                 fast_budget
             };
             ctx.fast = true;
+            ctx.eager_autoplay = true;
             let r1 = ctx.best_first(start, p1_budget, false);
             if r1.outcome.is_solved() {
                 return r1;
@@ -469,14 +472,39 @@ fn search(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_>) -> So
                     states: spent,
                 };
             }
-            // If Phase 1 gave up (hit budget in a greedy basin), try weighted A* (2*h + depth)
-            // with the rest of the fast budget to escape deep local minima.
-            if r1.outcome == Outcome::GaveUp && fast_budget > p1_budget {
+            // Phase 2: adaptive beam search explores multiple lines in parallel by depth,
+            // escaping greedy local minima that trap best-first in a single basin.
+            if r1.outcome == Outcome::GaveUp && fast_budget >= 4_000 {
+                let p2_budget = (fast_budget / 4).min(fast_budget.saturating_sub(spent));
+                if p2_budget > 0 {
+                    let mut ctx_beam = Ctx::new(game, opts, stop);
+                    ctx_beam.fast = true;
+                    ctx_beam.eager_autoplay = true;
+                    let max_width = (p2_budget / 150).clamp(32, 160) as usize;
+                    let rb = ctx_beam.beam_search(start, p2_budget, max_width);
+                    spent += rb.states;
+                    if rb.outcome.is_solved() {
+                        return SolveResult {
+                            outcome: rb.outcome,
+                            states: spent,
+                        };
+                    }
+                    if stop.is_stopped_now() {
+                        return SolveResult {
+                            outcome: Outcome::GaveUp,
+                            states: spent,
+                        };
+                    }
+                }
+            }
+            // Phase 3: weighted A* (2*h + depth) with standard dependents-checked autoplay,
+            // catching deals that need to hold a card off a foundation or escape deep minima.
+            if r1.outcome == Outcome::GaveUp && fast_budget > spent {
                 let mut ctx2 = Ctx::new(game, opts, stop);
                 ctx2.fast = true;
-                let p2_budget = fast_budget.saturating_sub(spent);
-                if p2_budget > 0 {
-                    let r2 = ctx2.best_first(start, p2_budget, true);
+                let p3_budget = fast_budget.saturating_sub(spent);
+                if p3_budget > 0 {
+                    let r2 = ctx2.best_first(start, p3_budget, true);
                     spent += r2.states;
                     if r2.outcome.is_solved() {
                         return SolveResult {
@@ -535,6 +563,8 @@ struct Ctx<'g, 'c> {
     search: crate::rules::SearchHints,
     /// Heuristic pruning (unsound): see `Strategy::Auto`.
     fast: bool,
+    /// Eagerly autoplay any non-competing foundation play without waiting for dependents (unsound).
+    eager_autoplay: bool,
 }
 
 /// Derive search weights from the compiled game when the rules leave `search` at its default.
@@ -621,6 +651,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
             suit_complete_runs,
             search,
             fast: false,
+            eager_autoplay: false,
         }
     }
 
@@ -1020,12 +1051,13 @@ impl<'g, 'c> Ctx<'g, 'c> {
                         && !tg.competing_foundation
                         && (tg.autoplay
                             || tg.build.dir == crate::rules::Dir::Same
-                            || (tg.build.by == BuildBy::Suit
-                                && matches!(
-                                    tg.build.dir,
-                                    crate::rules::Dir::Up | crate::rules::Dir::Down
-                                )
-                                && !tgr.requires_prev_non_empty
+                            || (matches!(
+                                tg.build.by,
+                                BuildBy::Suit | BuildBy::Alternate | BuildBy::Any
+                            ) && matches!(
+                                tg.build.dir,
+                                crate::rules::Dir::Up | crate::rules::Dir::Down
+                            ) && !tgr.requires_prev_non_empty
                                 && !tgr.requires_rank_on_prev
                                 && !tgr.match_longest_rank));
                     if !self.autoplay || count != 1 || (!tg.autoplay && !fast_found) {
@@ -1036,7 +1068,11 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     {
                         continue;
                     }
-                    if fast_found && tg.build.dir == crate::rules::Dir::Same {
+                    if fast_found
+                        && (tg.build.dir == crate::rules::Dir::Same
+                            || (self.eager_autoplay
+                                && matches!(g.win, crate::game::Win::AllOnFoundations)))
+                    {
                         return Some(m);
                     }
                     let card = *s.piles[from as usize].last().unwrap();
@@ -1230,18 +1266,17 @@ impl<'g, 'c> Ctx<'g, 'c> {
                             if cards.is_empty() {
                                 continue;
                             }
-                            let mut good = 1usize;
+                            if !cards[0].is_face_up() || !g.empty_accepts(p, cards[0], s) {
+                                bad += 1;
+                            }
                             for w in cards.windows(2) {
-                                if w[0].is_face_up()
+                                if !(w[0].is_face_up()
                                     && w[1].is_face_up()
-                                    && fits[w[0].face() as usize] >> w[1].face() & 1 != 0
+                                    && fits[w[0].face() as usize] >> w[1].face() & 1 != 0)
                                 {
-                                    good += 1;
-                                } else {
-                                    break;
+                                    bad += 1;
                                 }
                             }
-                            bad += (cards.len() - good) as u32;
                         }
                         h += pw * bad;
                     }
@@ -1283,7 +1318,6 @@ impl<'g, 'c> Ctx<'g, 'c> {
                 h += wt.down_weight * pile.len().saturating_sub(1) as u32;
             }
             if gr.kind == PileKind::Waste
-                && g.compress_talon
                 && g.stock
                     .as_ref()
                     .is_some_and(|st| st.redeals != u32::MAX && s.redeals_used >= st.redeals)
@@ -1359,7 +1393,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
         // Penalize consuming finite redeals so best-first doesn't burn passes early.
         if let Some(st) = &g.stock {
             if st.redeals != u32::MAX && s.redeals_used > 0 {
-                h += pw * s.redeals_used;
+                h += pw * 3 * s.redeals_used;
             }
         } else if let Some(rd) = &g.redeal {
             if rd.times != u32::MAX && s.redeals_used > 0 {
@@ -1871,6 +1905,172 @@ impl<'g, 'c> Ctx<'g, 'c> {
         }
         SolveResult {
             outcome: Outcome::Unsolvable,
+            states,
+        }
+    }
+
+    // ----- Beam search -----------------------------------------------------------------------
+
+    /// Adaptive-width breadth-first beam search ordered by heuristic, breaking ties with the
+    /// state hash so flat plateaus explore diverse lines in parallel. Automatically narrows the
+    /// beam on high-branching / deep games so it can reach goal depth within `budget`. Unsound
+    /// (never returns `Unsolvable`).
+    fn beam_search(&mut self, start: &State, budget: u64, max_width: usize) -> SolveResult {
+        if self.stop.is_stopped_now() || max_width == 0 {
+            return SolveResult {
+                outcome: Outcome::GaveUp,
+                states: 0,
+            };
+        }
+        let g = self.g;
+        let root_h = self.hash(start);
+        self.seen.insert(root_h);
+        if g.is_won(start) {
+            return SolveResult {
+                outcome: Outcome::Solved(Vec::new()),
+                states: 1,
+            };
+        }
+        struct TreeNode {
+            parent: u32,
+            mv: Move,
+        }
+        struct BeamEntry {
+            node_idx: u32,
+            enc_start: u32,
+            enc_len: u16,
+        }
+        struct Candidate {
+            pri: u64,
+            h: u32,
+            parent: u32,
+            mv: Move,
+            enc_start: u32,
+            enc_len: u16,
+        }
+        let mut tree: Vec<TreeNode> = vec![TreeNode {
+            parent: u32::MAX,
+            mv: Move::new(Action::Deal),
+        }];
+        let mut cur_arena: Vec<u8> = Vec::new();
+        let mut next_arena: Vec<u8> = Vec::new();
+        let root_start = cur_arena.len() as u32;
+        encode_into(start, &mut cur_arena);
+        let root_len = (cur_arena.len() as u32 - root_start) as u16;
+        let mut frontier: Vec<BeamEntry> = vec![BeamEntry {
+            node_idx: 0,
+            enc_start: root_start,
+            enc_len: root_len,
+        }];
+        let mut candidates: Vec<Candidate> = Vec::new();
+        let mut states = 1u64;
+        let mut s = start.clone();
+        let pw = self.search.progress_weight.max(1);
+
+        while !frontier.is_empty() {
+            candidates.clear();
+            next_arena.clear();
+            let mut won: Option<(u32, Move)> = None;
+            let mut hit_budget = false;
+
+            for entry in &frontier {
+                if self.stop.should_stop(states) {
+                    return SolveResult {
+                        outcome: Outcome::GaveUp,
+                        states,
+                    };
+                }
+                let es = entry.enc_start as usize;
+                let el = entry.enc_len as usize;
+                decode_into(&cur_arena[es..es + el], &mut s);
+                self.forget_all();
+                let parent_idx = entry.node_idx;
+                self.visit_children(&mut s, |ctx, st, mv, need| {
+                    let hash = ctx.hash(st);
+                    if !ctx.seen.insert(hash) {
+                        return false;
+                    }
+                    states += 1;
+                    if ctx.g.is_won(st) {
+                        won = Some((parent_idx, mv));
+                        return true;
+                    }
+                    let h = ctx.heuristic_with_need(st, need);
+                    let c_start = next_arena.len() as u32;
+                    encode_into(st, &mut next_arena);
+                    let c_len = (next_arena.len() as u32 - c_start) as u16;
+                    // Primary key: heuristic h; tie-break with low bits of hash for diversity.
+                    let pri = ((h as u64) << 32) | ((hash as u32) as u64);
+                    candidates.push(Candidate {
+                        pri,
+                        h,
+                        parent: parent_idx,
+                        mv,
+                        enc_start: c_start,
+                        enc_len: c_len,
+                    });
+                    if states >= budget || ctx.stop.should_stop(states) {
+                        hit_budget = true;
+                        return true;
+                    }
+                    false
+                });
+                if won.is_some() || hit_budget {
+                    break;
+                }
+            }
+
+            if let Some((parent_idx, mv)) = won {
+                let mut line = vec![mv];
+                let mut at = parent_idx;
+                while at != 0 {
+                    line.push(tree[at as usize].mv);
+                    at = tree[at as usize].parent;
+                }
+                line.reverse();
+                return SolveResult {
+                    outcome: Outcome::Solved(line),
+                    states,
+                };
+            }
+            if hit_budget || candidates.is_empty() {
+                return SolveResult {
+                    outcome: Outcome::GaveUp,
+                    states,
+                };
+            }
+
+            // Adapt width to remaining budget, estimated remaining steps, and observed branching.
+            let min_h = candidates.iter().map(|c| c.h).min().unwrap_or(0);
+            let est_steps = ((min_h / pw) as u64).clamp(8, g.total_cards.max(16) as u64);
+            let avg_branch = (candidates.len() / frontier.len().max(1)).max(2) as u64;
+            let rem_budget = budget.saturating_sub(states);
+            let width = (rem_budget / (est_steps * avg_branch)).clamp(6, max_width as u64) as usize;
+
+            if candidates.len() > width {
+                candidates.select_nth_unstable_by_key(width, |c| c.pri);
+                candidates.truncate(width);
+            }
+            frontier.clear();
+            cur_arena.clear();
+            for c in &candidates {
+                let node_idx = tree.len() as u32;
+                tree.push(TreeNode {
+                    parent: c.parent,
+                    mv: c.mv,
+                });
+                let dst_start = cur_arena.len() as u32;
+                let src = c.enc_start as usize..(c.enc_start as usize + c.enc_len as usize);
+                cur_arena.extend_from_slice(&next_arena[src]);
+                frontier.push(BeamEntry {
+                    node_idx,
+                    enc_start: dst_start,
+                    enc_len: c.enc_len,
+                });
+            }
+        }
+        SolveResult {
+            outcome: Outcome::GaveUp,
             states,
         }
     }

@@ -1523,6 +1523,8 @@ pub enum RemovalKind {
     LowerOfSuit,
     /// Remove two playable cards of the same rank (Nestor, Simple Pairs).
     SameRank,
+    /// Remove two playable cards of the same suit.
+    SameSuit,
     /// Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).
     RankSet { ranks: Vec<u8> },
     /// Remove two playable cards in the same group whose pile indices differ by one of
@@ -1551,6 +1553,12 @@ pub enum WinRule {
     Empty(Vec<String>),
     /// A group holds at least this many cards (Aces Up: 48 discarded).
     Count { group: String, cards: u16 },
+    /// A group holds at least this many cards and every group in `empty` is empty.
+    CountAndEmpty {
+        group: String,
+        cards: u16,
+        empty: Vec<String>,
+    },
     /// A group holds at least `cards` cards and every pile of `spread` holds at most one card.
     CountAndSpread {
         group: String,

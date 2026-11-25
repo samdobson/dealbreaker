@@ -3014,3 +3014,39 @@ fn suit_sequence_moves_only_consecutive_suit_runs() {
     };
     check(r, 0..40);
 }
+
+#[test]
+fn same_suit_removal_with_count_and_empty_win() {
+    // 2 suits x 4 ranks: remove same-suit pairs; win when all discarded and the stock is empty.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r = Rules::new(
+        "mini-same-suit",
+        pack,
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .moves(MoveUnit::None)
+                .max_accept(0)
+                .max_cards(8),
+            GroupRules::new("tableau", PileKind::Tableau, 4)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::None),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r.stock = Some(StockRules::to("tableau"));
+    r.removal = vec![RemovalRules::new(
+        RemovalKind::SameSuit,
+        &["tableau"],
+        "foundation",
+    )];
+    r.win = WinRule::CountAndEmpty {
+        group: "foundation".into(),
+        cards: 8,
+        empty: vec!["stock".into()],
+    };
+    check(r, 0..40);
+}

@@ -329,6 +329,7 @@ Jokers are wild in removals: a joker pairs with any card (another joker too) and
 - `{ "pairs_sum": ... }` (`object`) — Remove two playable cards whose ranks add up to `total` (Pyramid: 13), or one card whose rank is listed in `alone` (Pyramid: kings).
 - `"lower_of_suit"` — Remove a playable card when another playable card is of the same suit and higher in the pack's rank order (Aces Up).
 - `"same_rank"` — Remove two playable cards of the same rank (Nestor, Simple Pairs).
+- `"same_suit"` — Remove two playable cards of the same suit.
 - `{ "rank_set": ... }` (`object`) — Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).
 - `{ "reach_suit_or_rank": ... }` (`object`) — Remove two playable cards in the same group whose pile indices differ by one of `distances`, when they match in suit or rank.
 - `{ "between_match": ... }` (`object`) — Remove `1..=max_len` consecutive non-empty piles in a group when the piles immediately before and after the run match in suit or rank.
@@ -417,6 +418,7 @@ When the game is won.
 - `"all_on_foundations"` — Every card is on a foundation.
 - `{ "empty": ... }` (`string`[]) — These groups are empty (Pyramid, Golf, TriPeaks: the tableau).
 - `{ "count": ... }` (`object`) — A group holds at least this many cards (Aces Up: 48 discarded).
+- `{ "count_and_empty": ... }` (`object`) — A group holds at least this many cards and every group in `empty` is empty.
 - `{ "count_and_spread": ... }` (`object`) — A group holds at least `cards` cards and every pile of `spread` holds at most one card.
 - `{ "at_most_piles": ... }` (`object`) — At most this many piles of a group hold cards (Accordion: 1).
 - `{ "rows": ... }` (`object`) — Every row of a grid group holds a built sequence from its first column, `length` cards long (default: one less than the row), starting with the rank its first column takes (Montana).

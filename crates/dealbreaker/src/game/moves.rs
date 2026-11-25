@@ -1455,6 +1455,15 @@ impl Game {
                         }
                     }
                 }
+                RemovalKind::SameSuit => {
+                    for (i, &(p, c)) in tops.iter().enumerate() {
+                        for &(q, d) in &tops[i + 1..] {
+                            if c.suit() == d.suit() || c.is_joker() || d.is_joker() {
+                                emit(&[p, q]);
+                            }
+                        }
+                    }
+                }
                 RemovalKind::LowerOfSuit => {
                     for &(p, c) in tops.iter().filter(|(_, c)| !c.is_joker()) {
                         let ci = self.rank_idx[c.rank() as usize];

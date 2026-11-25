@@ -807,6 +807,18 @@ fn compile_win(
                 .collect::<Result<_, _>>()?,
         )),
         WinRule::Count { group, cards } => Ok(Win::Count(find_group(rules, group)?, *cards)),
+        WinRule::CountAndEmpty {
+            group,
+            cards,
+            empty,
+        } => Ok(Win::CountAndEmpty(
+            find_group(rules, group)?,
+            *cards,
+            empty
+                .iter()
+                .map(|n| find_group(rules, n))
+                .collect::<Result<_, _>>()?,
+        )),
         WinRule::CountAndSpread {
             group,
             cards,

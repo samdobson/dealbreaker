@@ -211,6 +211,7 @@ export type Adjacency = "eight" | "four";
 export type RemovalKind =
   | "lower_of_suit"
   | "same_rank"
+  | "same_suit"
   | { pairs_sum: { total: number; alone?: number[] } }
   | { rank_set: { ranks: number[] } }
   | { reach_suit_or_rank: { distances: number[] } }
@@ -266,6 +267,7 @@ export type WinRule =
   | "all_on_foundations"
   | { empty: string[] }
   | { count: { group: string; cards: number } }
+  | { count_and_empty: { group: string; cards: number; empty: string[] } }
   | { count_and_spread: { group: string; cards: number; spread: string } }
   | { at_most_piles: { group: string; piles: number } }
   | { rows: { group: string; length?: number } }

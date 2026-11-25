@@ -1225,8 +1225,16 @@ impl<'g, 'c> Ctx<'g, 'c> {
                         h += pw * s.piles[st.pile as usize].len() as u32;
                     }
                 }
-                if let crate::game::Win::Count(gi, n) | crate::game::Win::CountAndSpread(gi, n, _) =
-                    g.win
+                if let crate::game::Win::CountAndEmpty(_, _, gs) = &g.win {
+                    for &gi in gs {
+                        for p in g.groups[gi as usize].piles() {
+                            h += pw * s.piles[p as usize].len() as u32;
+                        }
+                    }
+                }
+                if let crate::game::Win::Count(gi, n)
+                | crate::game::Win::CountAndEmpty(gi, n, _)
+                | crate::game::Win::CountAndSpread(gi, n, _) = g.win
                 {
                     let have: usize = g.groups[gi as usize]
                         .piles()

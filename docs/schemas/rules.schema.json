@@ -1809,6 +1809,13 @@
           ]
         },
         {
+          "description": "Remove two playable cards of the same suit.",
+          "type": "string",
+          "enum": [
+            "same_suit"
+          ]
+        },
+        {
           "description": "Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).",
           "type": "object",
           "required": [
@@ -2267,6 +2274,40 @@
                   "type": "integer",
                   "format": "uint16",
                   "minimum": 0.0
+                },
+                "group": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "A group holds at least this many cards and every group in `empty` is empty.",
+          "type": "object",
+          "required": [
+            "count_and_empty"
+          ],
+          "properties": {
+            "count_and_empty": {
+              "type": "object",
+              "required": [
+                "cards",
+                "empty",
+                "group"
+              ],
+              "properties": {
+                "cards": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                },
+                "empty": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 "group": {
                   "type": "string"

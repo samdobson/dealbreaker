@@ -1340,6 +1340,18 @@ impl Game {
                     .sum::<usize>()
                     >= *n as usize
             }
+            Win::CountAndEmpty(g, n, empty) => {
+                self.groups[*g as usize]
+                    .piles()
+                    .map(|p| s.piles[p as usize].len())
+                    .sum::<usize>()
+                    >= *n as usize
+                    && empty.iter().all(|&e| {
+                        self.groups[e as usize]
+                            .piles()
+                            .all(|p| s.piles[p as usize].is_empty())
+                    })
+            }
             Win::CountAndSpread(g, n, spread) => {
                 let f_cards: usize = self.groups[*g as usize]
                     .piles()

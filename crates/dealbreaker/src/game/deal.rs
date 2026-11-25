@@ -198,11 +198,20 @@ impl Game {
                     put(&mut s, piles[i % piles.len()], c);
                 }
             } else if let (Some(ranks), true) = (&step.ranks, step.one_each) {
+                let mut prev: Option<Card> = None;
                 for (i, &r) in ranks.iter().enumerate() {
-                    let at = deck.iter().position(|c| c.rank() == r).ok_or_else(|| {
-                        RulesError(format!("deal: no card of rank {r} left to take"))
-                    })?;
+                    let at = deck
+                        .iter()
+                        .position(|c| {
+                            c.rank() == r
+                                && !(step.alternate_colors
+                                    && prev.is_some_and(|p| p.color() == c.color()))
+                        })
+                        .ok_or_else(|| {
+                            RulesError(format!("deal: no card of rank {r} left to take"))
+                        })?;
                     let c = deck.remove(at).unwrap();
+                    prev = Some(c);
                     put(&mut s, piles[i % piles.len()], c);
                 }
             } else if let Some(ranks) = &step.ranks {
@@ -293,9 +302,31 @@ impl Game {
                         }
                     }
                 }
-                while let Some(c) = deck.pop_front() {
+                if let DealRoute::Split { rank, to } = route {
+                    let tg = self
+                        .groups
+                        .iter()
+                        .find(|g| &g.name == to)
+                        .ok_or_else(|| RulesError(format!("deal: no group named {to:?}")))?;
+                    let (mut started, mut others) = (0u16, 0u16);
+                    while others < step.limit.unwrap_or(u16::MAX) {
+                        let Some(c) = deck.pop_front() else { break };
+                        if c.rank() == *rank {
+                            if started >= tg.count {
+                                return err("deal: more split cards than piles");
+                            }
+                            put(&mut s, tg.start + started, c);
+                            started += 1;
+                        } else {
+                            put(&mut s, piles[0], c);
+                            others += 1;
+                        }
+                    }
+                }
+                let by_card = !matches!(route, DealRoute::Chain { .. } | DealRoute::Split { .. });
+                while let Some(c) = by_card.then(|| deck.pop_front()).flatten() {
                     let at = match route {
-                        DealRoute::Chain { .. } => unreachable!(),
+                        DealRoute::Chain { .. } | DealRoute::Split { .. } => unreachable!(),
                         DealRoute::Rank { first_rank } => {
                             (c.rank() as i32 - *first_rank as i32).max(0) as usize
                         }

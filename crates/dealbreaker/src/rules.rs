@@ -622,6 +622,10 @@ pub struct GroupRules {
     /// from it (Quatorze).
     #[serde(default, skip_serializing_if = "is_false")]
     pub compact_when_stock_empty: bool,
+    /// With `complete_runs`: how many cards make a complete run (default: the number of ranks).
+    /// Simplex: four of a kind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run_len: Option<u8>,
     /// Refill emptied piles only while every pile of the named group is empty (Elevens Too:
     /// rows are refilled only when the reserves are empty).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -819,6 +823,7 @@ impl GroupRules {
             same_rank_group: false,
             clear_when_full: None,
             clear_same_rank: false,
+            run_len: None,
             compact_when_stock_empty: false,
             flip_when_dealt_out: false,
             auto_foundation_rank: None,
@@ -1527,6 +1532,10 @@ pub struct DealStep {
     /// After dealing, move each pile's kings to its bottom, keeping their order (Baker's Dozen).
     #[serde(default, skip_serializing_if = "is_false")]
     pub kings_to_bottom: bool,
+    /// With `one_each`: each card taken must be of the colour opposite to the one before
+    /// (Colours: a 2 and a 4 of one colour, a 3 and a 5 of the other).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub alternate_colors: bool,
     /// With `ranks`: take only the first card of each listed rank, in the listed order
     /// (Calculation's A, 2, 3, 4).
     #[serde(default, skip_serializing_if = "is_false")]
@@ -1581,6 +1590,10 @@ pub enum DealRoute {
     /// selected pile with the index of the latest such start (Xerxes: the nines start the
     /// foundations and the cards after each one go on the matching row).
     Chain { rank: u8, to: String },
+    /// Each card of `rank` starts the next pile of group `to`; every other card goes on the first
+    /// selected pile, until `limit` of them are down (Frog: aces to the foundations, thirteen
+    /// other cards to the reserve).
+    Split { rank: u8, to: String },
 }
 
 impl DealStep {

@@ -450,6 +450,33 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "Each card of `rank` starts the next pile of group `to`; every other card goes on the first selected pile, until `limit` of them are down (Frog: aces to the foundations, thirteen other cards to the reserve).",
+          "type": "object",
+          "required": [
+            "split"
+          ],
+          "properties": {
+            "split": {
+              "type": "object",
+              "required": [
+                "rank",
+                "to"
+              ],
+              "properties": {
+                "rank": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                },
+                "to": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -460,6 +487,10 @@
         "to"
       ],
       "properties": {
+        "alternate_colors": {
+          "description": "With `one_each`: each card taken must be of the colour opposite to the one before (Colours: a 2 and a 4 of one colour, a 3 and a 5 of the other).",
+          "type": "boolean"
+        },
         "auto_foundation": {
           "description": "During this step, place any dealt card directly on the first foundation that accepts it.",
           "type": "boolean"
@@ -1266,6 +1297,15 @@
             "string",
             "null"
           ]
+        },
+        "run_len": {
+          "description": "With `complete_runs`: how many cards make a complete run (default: the number of ranks). Simplex: four of a kind.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
         },
         "same_rank_group": {
           "description": "Every non-empty pile in this group must have the same rank on its bottom card as the others (Tens' reserves).",

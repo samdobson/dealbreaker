@@ -3819,3 +3819,80 @@ fn same_line_removal_and_compaction_after_the_stock_is_used() {
     r.removal = vec![rem];
     check(r, 0..60);
 }
+
+#[test]
+fn split_route_and_alternating_colour_deal() {
+    let mut split = DealStep::to("cell").rest();
+    split.limit = Some(3);
+    split.route = Some(DealRoute::Split {
+        rank: 1,
+        to: "foundation".into(),
+    });
+    check(
+        Rules::new(
+            "mini frog deal",
+            Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]),
+            vec![
+                GroupRules::new("foundation", PileKind::Foundation, 2)
+                    .build(BuildBy::Any, Dir::Up)
+                    .empty(EmptyRule::Rank(1))
+                    .max_cards(4),
+                GroupRules::new("cell", PileKind::Reserve, 1).moves(MoveUnit::Top),
+                GroupRules::new("tableau", PileKind::Tableau, 2)
+                    .build(BuildBy::Any, Dir::Down)
+                    .moves(MoveUnit::Top)
+                    .empty(EmptyRule::Any),
+            ],
+            vec![split, DealStep::to("tableau").rest()],
+        ),
+        0..40,
+    );
+
+    let mut alt = DealStep::to("foundation").ranks(&[1, 2]);
+    alt.one_each = true;
+    alt.alternate_colors = true;
+    check(
+        Rules::new(
+            "mini colours deal",
+            Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3]),
+            vec![
+                GroupRules::new("foundation", PileKind::Foundation, 2)
+                    .build_rule(Build::new(BuildBy::Any, Dir::Up).wrap())
+                    .empty(EmptyRule::None)
+                    .max_cards(3),
+                GroupRules::new("tableau", PileKind::Tableau, 2)
+                    .build(BuildBy::Any, Dir::Down)
+                    .moves(MoveUnit::Top)
+                    .empty(EmptyRule::Any),
+            ],
+            vec![alt, DealStep::to("tableau").rest()],
+        ),
+        0..40,
+    );
+}
+
+#[test]
+fn same_rank_runs_of_a_set_length_go_to_one_foundation() {
+    let mut f = GroupRules::new("foundation", PileKind::Foundation, 1)
+        .build(BuildBy::Any, Dir::Same)
+        .empty(EmptyRule::Any)
+        .max_cards(8)
+        .max_accept(2);
+    f.complete_runs = true;
+    f.run_len = Some(2);
+    check(
+        Rules::new(
+            "mini simplex",
+            Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]),
+            vec![
+                f,
+                GroupRules::new("tableau", PileKind::Tableau, 4)
+                    .build(BuildBy::Any, Dir::Same)
+                    .moves(MoveUnit::Run)
+                    .empty(EmptyRule::Any),
+            ],
+            vec![DealStep::to("tableau").rest()],
+        ),
+        0..40,
+    );
+}

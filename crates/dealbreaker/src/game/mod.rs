@@ -207,6 +207,7 @@ pub(crate) struct Group {
     /// Move every pile's cards to the first pile of this group once all piles hold a card.
     pub clear_when_full: Option<u16>,
     pub clear_same_rank: bool,
+    pub run_len: Option<u8>,
     pub compact_when_stock_empty: bool,
     pub flip_when_dealt_out: bool,
     pub auto_foundation_rank: Option<u8>,
@@ -417,6 +418,7 @@ impl Group {
             same_rank_group: false,
             clear_when_full: None,
             clear_same_rank: false,
+            run_len: None,
             compact_when_stock_empty: false,
             flip_when_dealt_out: false,
             auto_foundation_rank: None,

@@ -694,8 +694,16 @@ impl Game {
     }
 
     /// Is the top `n` cards of `cards` a complete sequence matching `by`, ready for a complete-run foundation?
-    fn is_complete_run(&self, cards: &[Card], n: usize, by: BuildBy, wrap: bool) -> bool {
-        if n != self.nranks as usize || cards.len() < n {
+    fn is_complete_run(
+        &self,
+        cards: &[Card],
+        n: usize,
+        want: usize,
+        by: BuildBy,
+        wrap: bool,
+        same: bool,
+    ) -> bool {
+        if n != want || cards.len() < n {
             return false;
         }
         let run = &cards[cards.len() - n..];
@@ -715,7 +723,18 @@ impl Game {
             run.windows(2)
                 .all(|w| w[0].is_face_up() && self.fits(b, w[0], w[1]))
         };
-        run[0].is_face_up() && run[n - 1].is_face_up() && (all(&b) || all(&b_up))
+        let b_same = Build {
+            by,
+            dir: Dir::Same,
+            ..Build::default()
+        };
+        run[0].is_face_up()
+            && run[n - 1].is_face_up()
+            && if same {
+                all(&b_same)
+            } else {
+                all(&b) || all(&b_up)
+            }
     }
 
     // ----- Moves ----------------------------------------------------------------------------
@@ -880,7 +899,16 @@ impl Game {
         }
         let card = src[src.len() - n];
         if tr.complete_runs {
-            return dst.is_empty() && self.is_complete_run(src, n, tr.build.by, tr.build.wrap);
+            let want = tg.run_len.map_or(self.nranks as usize, |l| l as usize);
+            return (dst.is_empty() || tg.run_len.is_some())
+                && self.is_complete_run(
+                    src,
+                    n,
+                    want,
+                    tr.build.by,
+                    tr.build.wrap,
+                    tr.build.dir == Dir::Same,
+                );
         }
         let ok = if unrestricted {
             true
@@ -1363,7 +1391,7 @@ impl Game {
                     }
                 }
                 let (lo, hi) = if tr.complete_runs {
-                    let n = self.nranks as usize;
+                    let n = tg.run_len.map_or(self.nranks as usize, |l| l as usize);
                     if n > unit {
                         continue;
                     }

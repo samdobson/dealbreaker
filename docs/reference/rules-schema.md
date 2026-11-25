@@ -135,6 +135,7 @@ One group of identical piles.
 | `requires_prev_non_empty` | `boolean` | — | Each pile after the first may only be started (while empty) once the previous pile in the group is non-empty. |
 | `requires_rank_on_prev` | `boolean` | — | Each pile after the first only accepts a card whose rank is already present on the previous pile in the group (when empty, it must match the previous pile's bottom card). |
 | `requires_same_index_non_empty` | `string` \| `null` | — | Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count). |
+| `run_len` | `integer` \| `null` | — | With `complete_runs`: how many cards make a complete run (default: the number of ranks). Simplex: four of a kind. |
 | `same_rank_group` | `boolean` | — | Every non-empty pile in this group must have the same rank on its bottom card as the others (Tens' reserves). |
 | `same_suit_group` | `boolean` | — | Every non-empty pile in this group must have the same suit on its bottom card as the others (Suit Elevens' reserves). |
 | `suit` | [Suit](#suit) \| `null` | — | Piles accept only cards of this suit. |
@@ -325,6 +326,7 @@ Cards come off the shuffled pack in order. With `count` or `counts`, they are de
 
 | Field | Type | Default | Description |
 |---|---|---|---|
+| `alternate_colors` | `boolean` | — | With `one_each`: each card taken must be of the colour opposite to the one before (Colours: a 2 and a 4 of one colour, a 3 and a 5 of the other). |
 | `auto_foundation` | `boolean` | — | During this step, place any dealt card directly on the first foundation that accepts it. |
 | `collect` | `array` \| `null` | — | After this step, take every card of these ranks off the table and put them on this step's group (Montana: deal all 52, then remove the aces to leave gaps). |
 | `count` | `integer` \| `null` | — | Cards to each selected pile. |
@@ -509,6 +511,7 @@ How a `rest` deal step picks each card's pile.
 - `{ "rank": ... }` (`object`) — Pile `i` of the selection takes the cards of rank `first_rank + i` (ranks are 1 = ace).
 - `"suit"` — Pile `i` of the selection takes the cards of the pack's `i`th suit.
 - `{ "chain": ... }` (`object`) — Each card of `rank` starts the next pile of group `to`; every other card goes on the selected pile with the index of the latest such start (Xerxes: the nines start the foundations and the cards after each one go on the matching row).
+- `{ "split": ... }` (`object`) — Each card of `rank` starts the next pile of group `to`; every other card goes on the first selected pile, until `limit` of them are down (Frog: aces to the foundations, thirteen other cards to the reserve).
 
 ### Frontier {#frontier}
 

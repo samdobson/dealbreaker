@@ -1386,6 +1386,7 @@ impl Game {
                 empty,
                 non_empty,
                 pile,
+                bottom,
             } => {
                 if !empty.iter().all(|&g| {
                     self.groups[g as usize]
@@ -1397,6 +1398,11 @@ impl Game {
                 let check_pile = |cards: &[Card]| -> bool {
                     if let Some(l) = length {
                         if cards.len() != *l as usize {
+                            return false;
+                        }
+                    }
+                    if let Some(b) = bottom {
+                        if cards.first().is_some_and(|c| c.rank() != *b) {
                             return false;
                         }
                     }

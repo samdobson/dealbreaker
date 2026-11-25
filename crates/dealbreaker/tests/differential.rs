@@ -2766,6 +2766,7 @@ fn piles_built_down_any_and_pairs_sum_same_rank() {
         empty: Vec::new(),
         non_empty: true,
         pile: Some(2),
+        bottom: None,
     };
     check(r1, 0..40);
 
@@ -2794,6 +2795,7 @@ fn piles_built_down_any_and_pairs_sum_same_rank() {
         empty: vec!["stock".into()],
         non_empty: true,
         pile: None,
+        bottom: None,
     };
     check(r2, 0..40);
 
@@ -2941,6 +2943,7 @@ fn same_base_down_or_same_locked_flip_and_suit_or_same_rank() {
         empty: Vec::new(),
         non_empty: true,
         pile: None,
+        bottom: None,
     };
     check(r5, 0..40);
 }
@@ -2968,6 +2971,7 @@ fn freeze_when_built_closes_complete_piles() {
         empty: Vec::new(),
         non_empty: false,
         pile: None,
+        bottom: None,
     };
     check(r, 0..40);
 }
@@ -3011,6 +3015,7 @@ fn suit_sequence_moves_only_consecutive_suit_runs() {
         empty: Vec::new(),
         non_empty: false,
         pile: None,
+        bottom: None,
     };
     check(r, 0..40);
 }
@@ -3136,5 +3141,30 @@ fn flip_gates_open_reserve_piles_in_order() {
             DealStep::to("tableau").each(1),
         ],
     );
+    check(r, 0..60);
+}
+
+#[test]
+fn piles_built_win_checks_the_bottom_rank() {
+    // Two suits of 4 ranks built down by suit; a finished pile must start on the 4.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]);
+    let mut r = Rules::new(
+        "mini-piles-bottom",
+        pack,
+        vec![GroupRules::new("tableau", PileKind::Tableau, 4)
+            .build(BuildBy::Suit, Dir::Down)
+            .empty(EmptyRule::Any)
+            .moves(MoveUnit::Run)],
+        vec![DealStep::to("tableau").counts(&[3, 3, 1, 1])],
+    );
+    r.win = WinRule::PilesBuilt {
+        group: "tableau".into(),
+        length: Some(4),
+        build: Some(Build::new(BuildBy::Suit, Dir::Down)),
+        empty: Vec::new(),
+        non_empty: false,
+        pile: None,
+        bottom: Some(4),
+    };
     check(r, 0..60);
 }

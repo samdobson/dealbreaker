@@ -490,6 +490,7 @@ pub(crate) enum Win {
         empty: Vec<u16>,
         non_empty: bool,
         pile: Option<u16>,
+        bottom: Option<u8>,
     },
 }
 

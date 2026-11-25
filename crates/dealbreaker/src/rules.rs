@@ -1627,6 +1627,9 @@ pub enum WinRule {
         /// `non_empty` is set).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pile: Option<u16>,
+        /// Every non-empty pile must start (at its bottom) with a card of this rank.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        bottom: Option<u8>,
     },
 }
 

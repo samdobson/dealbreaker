@@ -897,6 +897,7 @@ fn compile_win(
             empty,
             non_empty,
             pile,
+            bottom,
         } => {
             let gi = find_group(rules, group)?;
             if let Some(pi) = pile {
@@ -917,6 +918,7 @@ fn compile_win(
                 empty: empty_gs,
                 non_empty: *non_empty,
                 pile: *pile,
+                bottom: *bottom,
             })
         }
     }

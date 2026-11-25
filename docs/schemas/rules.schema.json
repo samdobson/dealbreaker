@@ -837,6 +837,15 @@
             "type": "string"
           }
         },
+        "auto_foundation_rank": {
+          "description": "Whenever the top card of a pile of this group is face up and of this rank (1 = ace), play it to the first foundation that takes it, whatever that foundation's other conditions (Strategy +: aces leave the talon by themselves).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
         "build": {
           "description": "What may be placed on a pile's top card. Default: foundations build up in suit; every other kind accepts nothing on a non-empty pile.",
           "anyOf": [
@@ -969,6 +978,10 @@
             "string",
             "null"
           ]
+        },
+        "flip_when_dealt_out": {
+          "description": "A face-down top card is turned up only once the stock and the waste are both empty (Last Chance's reserve).",
+          "type": "boolean"
         },
         "flip_when_same_index_full": {
           "description": "Auto-flip the top card of pile `i` in this group once pile `i` of the named group reaches its `max_cards` capacity (overrides `no_flip`).",
@@ -2404,6 +2417,15 @@
             "string",
             "null"
           ]
+        },
+        "skip_built_from": {
+          "description": "A deal passes over every target pile that is a whole built run from this rank (1 = ace) down to its last card, face up (Churchill: finished king piles). Nothing deals when every pile is passed over.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
         },
         "skip_empty": {
           "description": "For a multi-pile target: deal only to non-empty piles (or to the first pile if all are empty).",

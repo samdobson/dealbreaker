@@ -3528,3 +3528,85 @@ fn pairs_sum_other_suit_removal() {
     )];
     check(r, 0..40);
 }
+
+#[test]
+fn stock_skips_built_king_piles() {
+    let mut r = Rules::new(
+        "mini skip built kings",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Suit, Dir::Up)
+                .moves(MoveUnit::None),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Run)
+                .empty(EmptyRule::Rank(4)),
+        ],
+        vec![
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    let mut st = StockRules::to("tableau");
+    st.skip_built_from = Some(4);
+    r.stock = Some(st);
+    check(r, 0..60);
+}
+
+#[test]
+fn open_stock_drops_aces_by_itself() {
+    let mut stock = GroupRules::new("stock", PileKind::Stock, 1).moves(MoveUnit::Top);
+    stock.auto_foundation_rank = Some(1);
+    let r = Rules::new(
+        "mini auto aces",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            stock,
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Suit, Dir::Up)
+                .moves(MoveUnit::None)
+                .pile(PileOverride::on(&[0]).suit(Suit::Clubs))
+                .pile(PileOverride::on(&[1]).suit(Suit::Hearts)),
+            GroupRules::new("tableau", PileKind::Tableau, 3)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any)
+                .accepts_from(&["stock", "tableau"]),
+        ],
+        vec![DealStep::to("stock").rest()],
+    );
+    check(r, 0..40);
+}
+
+#[test]
+fn reserve_flips_only_once_dealt_out() {
+    let mut reserve = GroupRules::new("reserve", PileKind::Reserve, 1).moves(MoveUnit::Top);
+    reserve.flip_when_dealt_out = true;
+    let mut r = Rules::new(
+        "mini last chance",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3, 4]),
+        vec![
+            GroupRules::new("stock", PileKind::Stock, 1),
+            GroupRules::new("waste", PileKind::Waste, 1),
+            reserve,
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Suit, Dir::Up)
+                .moves(MoveUnit::None)
+                .pile(PileOverride::on(&[0]).suit(Suit::Clubs))
+                .pile(PileOverride::on(&[1]).suit(Suit::Hearts)),
+            GroupRules::new("tableau", PileKind::Tableau, 2)
+                .build(BuildBy::Any, Dir::Down)
+                .moves(MoveUnit::Top)
+                .empty(EmptyRule::Any),
+        ],
+        vec![
+            DealStep::to("reserve").each(1).down(),
+            DealStep::to("tableau").each(1),
+            DealStep::to("stock").rest().down(),
+        ],
+    );
+    r.stock = Some(StockRules::to("waste"));
+    check(r, 0..60);
+}

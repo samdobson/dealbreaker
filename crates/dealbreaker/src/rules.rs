@@ -584,6 +584,15 @@ pub struct GroupRules {
     /// (Foursome's four reserves).
     #[serde(default, skip_serializing_if = "is_false")]
     pub clear_same_rank: bool,
+    /// Whenever the top card of a pile of this group is face up and of this rank (1 = ace), play
+    /// it to the first foundation that takes it, whatever that foundation's other conditions
+    /// (Strategy +: aces leave the talon by themselves).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_foundation_rank: Option<u8>,
+    /// A face-down top card is turned up only once the stock and the waste are both empty
+    /// (Last Chance's reserve).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub flip_when_dealt_out: bool,
     /// Refill emptied piles only while every pile of the named group is empty (Elevens Too:
     /// rows are refilled only when the reserves are empty).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -781,6 +790,8 @@ impl GroupRules {
             same_rank_group: false,
             clear_when_full: None,
             clear_same_rank: false,
+            flip_when_dealt_out: false,
+            auto_foundation_rank: None,
             refill_when_empty: None,
             no_build_single_while_stock: false,
             refill_first_face_down: false,
@@ -1323,6 +1334,11 @@ pub struct StockRules {
     /// reserves).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub require_group_empty: Option<String>,
+    /// A deal passes over every target pile that is a whole built run from this rank (1 = ace)
+    /// down to its last card, face up (Churchill: finished king piles). Nothing deals when
+    /// every pile is passed over.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skip_built_from: Option<u8>,
 }
 
 impl StockRules {
@@ -1353,6 +1369,7 @@ impl StockRules {
             final_split_to: None,
             require_no_empty_group: None,
             require_group_empty: None,
+            skip_built_from: None,
         }
     }
 }

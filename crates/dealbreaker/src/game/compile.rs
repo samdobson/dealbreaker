@@ -295,6 +295,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
         sr.require_no_empty
             || sr.require_no_empty_group.is_some()
             || sr.require_group_empty.is_some()
+            || sr.skip_built_from.is_some()
             || sr.skip_empty
             || sr.first_empty
             || sr.deal_empty_first
@@ -513,6 +514,8 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
                 .map(|n| find_group(rules, n))
                 .transpose()?,
             clear_same_rank: g.clear_same_rank,
+            flip_when_dealt_out: g.flip_when_dealt_out,
+            auto_foundation_rank: g.auto_foundation_rank,
             refill_when_empty: g
                 .refill_when_empty
                 .as_ref()
@@ -765,6 +768,7 @@ fn compile_stock(
                 final_split_to,
                 require_no_empty_group,
                 require_group_empty,
+                skip_built_from: sr.skip_built_from,
             };
             if s.redeals > 0 && s.target_kind == PileKind::Foundation {
                 return err("redeals can't gather from a foundation group");

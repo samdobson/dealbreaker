@@ -207,6 +207,8 @@ pub(crate) struct Group {
     /// Move every pile's cards to the first pile of this group once all piles hold a card.
     pub clear_when_full: Option<u16>,
     pub clear_same_rank: bool,
+    pub flip_when_dealt_out: bool,
+    pub auto_foundation_rank: Option<u8>,
     /// Refill only while every pile of this group is empty.
     pub refill_when_empty: Option<u16>,
     /// While stock is non-empty, forbid building onto or moving from single-card piles onto non-empty piles.
@@ -350,9 +352,11 @@ impl Group {
             || self.compact_face_up
             || !self.refill_from.is_empty()
             || self.clear_when_full.is_some()
+            || self.auto_foundation_rank.is_some()
             || self.flip_when_same_index_full.is_some()
             || self.flip_after_prev_empty
             || self.flip_when_any_empty.is_some()
+            || self.flip_when_dealt_out
     }
 
     /// Internal single-pile scratch group (used for redeal gathering).
@@ -412,6 +416,8 @@ impl Group {
             same_rank_group: false,
             clear_when_full: None,
             clear_same_rank: false,
+            flip_when_dealt_out: false,
+            auto_foundation_rank: None,
             refill_when_empty: None,
             no_build_single_while_stock: false,
             refill_first_face_down: false,
@@ -450,6 +456,7 @@ pub(crate) struct Stock {
     pub final_split_to: Option<u16>,
     pub require_no_empty_group: Option<u16>,
     pub require_group_empty: Option<u16>,
+    pub skip_built_from: Option<u8>,
 }
 
 impl Stock {
@@ -478,6 +485,7 @@ impl Stock {
         self.require_no_empty
             || self.require_no_empty_group.is_some()
             || self.require_group_empty.is_some()
+            || self.skip_built_from.is_some()
             || self.skip_empty
             || self.first_empty
             || self.deal_empty_first

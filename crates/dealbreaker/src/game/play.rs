@@ -306,6 +306,22 @@ impl Game {
                     self.deal_from_stock(s, j, st.pile, p, n);
                 }
             }
+            _ if st.skip_built_from.is_some() => {
+                let from = st.skip_built_from.unwrap();
+                let targets: Vec<u16> = round_targets
+                    .iter()
+                    .copied()
+                    .filter(|&p| !self.is_built_from(p, &s.piles[p as usize], from))
+                    .collect();
+                for _ in 0..count {
+                    for &p in &targets {
+                        if s.piles[st.pile as usize].is_empty() {
+                            break;
+                        }
+                        self.deal_from_stock(s, j, st.pile, p, 1);
+                    }
+                }
+            }
             _ if st.skip_empty => {
                 let mut targets: Vec<u16> = round_targets
                     .iter()
@@ -906,6 +922,14 @@ impl Game {
         if g.flip_after_prev_empty && p > g.start && !s.piles[p as usize - 1].is_empty() {
             return false;
         }
+        if g.flip_when_dealt_out
+            && (self
+                .stock_pile
+                .is_some_and(|sp| !s.piles[sp as usize].is_empty())
+                || self.waste.is_some_and(|w| !s.piles[w as usize].is_empty()))
+        {
+            return false;
+        }
         if let Some(ng) = g.flip_when_any_empty {
             if !self.groups[ng as usize]
                 .piles()
@@ -1209,6 +1233,33 @@ impl Game {
                             .deal_count(s.redeals_used)
                             .min(s.piles[st.pile as usize].len() as u16);
                         self.deal_from_stock(s, j, st.pile, target, n);
+                        changed = true;
+                    }
+                }
+            }
+            for g in self
+                .groups
+                .iter()
+                .filter(|g| g.auto_foundation_rank.is_some())
+            {
+                let rank = g.auto_foundation_rank.unwrap();
+                for p in g.piles() {
+                    while let Some(&c) = s.piles[p as usize].last() {
+                        if !(c.is_face_up() && c.rank() == rank) {
+                            break;
+                        }
+                        let Some(f) = self.find_foundation(s, c) else {
+                            break;
+                        };
+                        self.push(
+                            s,
+                            j,
+                            Op::Shift {
+                                from: p,
+                                to: f,
+                                count: 1,
+                            },
+                        );
                         changed = true;
                     }
                 }

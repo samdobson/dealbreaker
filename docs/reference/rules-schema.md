@@ -74,6 +74,7 @@ One group of identical piles.
 | `accept_when_same_index_empty` | `string` \| `null` | — | Pile `i` of this group accepts cards only while pile `i` of the named group is empty, except cards coming from that very pile (the groups must have the same pile count). |
 | `accept_when_stock_empty` | `boolean` | — | Accept cards only when the stock pile is empty. |
 | `accepts_from` | `array` \| `null` | — | Only cards coming from these groups are accepted (default: any group). |
+| `auto_foundation_rank` | `integer` \| `null` | — | Whenever the top card of a pile of this group is face up and of this rank (1 = ace), play it to the first foundation that takes it, whatever that foundation's other conditions (Strategy +: aces leave the talon by themselves). |
 | `build` | [Build](#build) \| `null` | — | What may be placed on a pile's top card. Default: foundations build up in suit; every other kind accepts nothing on a non-empty pile. |
 | `clear_same_rank` | `boolean` | — | With `clear_when_full`: clear only when every pile's bottom card has the same rank (Foursome's four reserves). |
 | `clear_when_full` | `string` \| `null` | — | As soon as every pile of this group holds a card, move all their cards to the first pile of the named group (Elevens' reserves going to the discard). |
@@ -92,6 +93,7 @@ One group of identical piles.
 | `flip_after_prev_empty` | `boolean` | — | A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies). |
 | `flip_only_last` | `boolean` | — | Only automatically turn a pile's face-down top card face up when it is the sole card left in the pile. |
 | `flip_when_any_empty` | `string` \| `null` | — | A face-down top card turns up only while some pile of the named group is empty. |
+| `flip_when_dealt_out` | `boolean` | — | A face-down top card is turned up only once the stock and the waste are both empty (Last Chance's reserve). |
 | `flip_when_same_index_full` | `string` \| `null` | — | Auto-flip the top card of pile `i` in this group once pile `i` of the named group reaches its `max_cards` capacity (overrides `no_flip`). |
 | `freeze_when_built` | `boolean` | — | A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it. |
 | `kind` *(required)* | [PileKind](#pilekind) | — |  |
@@ -277,6 +279,7 @@ How the stock deals.
 | `require_group_empty` | `string` \| `null` | — | The stock may deal only while every pile of this named group is empty (The Lucky Number's reserves). |
 | `require_no_empty` | `boolean` | — | The stock may not deal while any pile of the target group is empty (Spider). |
 | `require_no_empty_group` | `string` \| `null` | — | The stock may not deal while any pile of this named group is empty. |
+| `skip_built_from` | `integer` \| `null` | — | A deal passes over every target pile that is a whole built run from this rank (1 = ace) down to its last card, face up (Churchill: finished king piles). Nothing deals when every pile is passed over. |
 | `skip_empty` | `boolean` | — | For a multi-pile target: deal only to non-empty piles (or to the first pile if all are empty). |
 | `to` *(required)* | `string` | — | Group the stock deals to. If it is a waste or foundation, `count` cards go onto its first pile. Otherwise (tableau, reserve, cell), `count` rounds of one card go to each pile in turn while cards remain. |
 | `unlimited_redeals` | `boolean` | — | The waste may be turned back any number of times (overrides `redeals`). |

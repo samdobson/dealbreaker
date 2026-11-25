@@ -662,6 +662,17 @@ impl Game {
         (cells + 1) << empties.min(16)
     }
 
+    /// Is pile `p` a whole run built under its own rule that starts at rank `from`?
+    pub(crate) fn is_built_from(&self, p: u16, cards: &[Card], from: u8) -> bool {
+        let fits = &self.rule(p).fits;
+        cards
+            .first()
+            .is_some_and(|c| c.is_face_up() && c.rank() == from)
+            && cards
+                .windows(2)
+                .all(|w| w[1].is_face_up() && fits[w[0].face() as usize] >> w[1].face() & 1 != 0)
+    }
+
     /// Is the top `n` cards of `cards` a complete sequence matching `by`, ready for a complete-run foundation?
     fn is_complete_run(&self, cards: &[Card], n: usize, by: BuildBy, wrap: bool) -> bool {
         if n != self.nranks as usize || cards.len() < n {
@@ -1785,6 +1796,15 @@ impl Game {
                 if self.groups[req_gi as usize]
                     .piles()
                     .any(|p| s.piles[p as usize].is_empty())
+                {
+                    return false;
+                }
+            }
+            if let Some(from) = st.skip_built_from {
+                if st
+                    .targets
+                    .iter()
+                    .all(|&p| self.is_built_from(p, &s.piles[p as usize], from))
                 {
                     return false;
                 }

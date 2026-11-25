@@ -1504,6 +1504,18 @@ impl Game {
                         }
                     }
                 }
+                RemovalKind::PairsSumOtherSuit { total } => {
+                    for (i, &(p, c)) in tops.iter().enumerate() {
+                        for &(q, d) in &tops[i + 1..] {
+                            let other = c.is_joker() || d.is_joker() || c.suit() != d.suit();
+                            if other
+                                && (c.is_joker() || d.is_joker() || c.rank() + d.rank() == *total)
+                            {
+                                emit(&[p, q]);
+                            }
+                        }
+                    }
+                }
                 RemovalKind::PairsSumSameSuit { total } => {
                     for (i, &(p, c)) in tops.iter().enumerate() {
                         for &(q, d) in &tops[i + 1..] {

@@ -3505,3 +3505,26 @@ fn reserves_clear_when_they_share_a_rank() {
     );
     check(r, 0..60);
 }
+
+#[test]
+fn pairs_sum_other_suit_removal() {
+    let mut r = Rules::new(
+        "mini other suit pairs",
+        Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 3]),
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 1)
+                .build(BuildBy::None, Dir::Up)
+                .empty(EmptyRule::None),
+            GroupRules::new("tableau", PileKind::Tableau, 4)
+                .empty(EmptyRule::None)
+                .moves(MoveUnit::None),
+        ],
+        vec![DealStep::to("tableau").each(1)],
+    );
+    r.removal = vec![RemovalRules::new(
+        RemovalKind::PairsSumOtherSuit { total: 4 },
+        &["tableau"],
+        "foundation",
+    )];
+    check(r, 0..40);
+}

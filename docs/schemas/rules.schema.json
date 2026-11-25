@@ -1972,6 +1972,29 @@
           "additionalProperties": false
         },
         {
+          "description": "Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).",
+          "type": "object",
+          "required": [
+            "pairs_sum_other_suit"
+          ],
+          "properties": {
+            "pairs_sum_other_suit": {
+              "type": "object",
+              "required": [
+                "total"
+              ],
+              "properties": {
+                "total": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
           "description": "Remove a playable card when another playable card is of the same suit and higher in the pack's rank order (Aces Up).",
           "type": "string",
           "enum": [

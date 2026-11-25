@@ -353,6 +353,7 @@ Jokers are wild in removals: a joker pairs with any card (another joker too) and
 
 - `{ "pairs_sum": ... }` (`object`) — Remove two playable cards whose ranks add up to `total` (Pyramid: 13), or one card whose rank is listed in `alone` (Pyramid: kings).
 - `{ "pairs_sum_same_suit": ... }` (`object`) — Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
+- `{ "pairs_sum_other_suit": ... }` (`object`) — Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).
 - `"lower_of_suit"` — Remove a playable card when another playable card is of the same suit and higher in the pack's rank order (Aces Up).
 - `"same_rank"` — Remove two playable cards of the same rank (Nestor, Simple Pairs).
 - `"same_suit"` — Remove two playable cards of the same suit.

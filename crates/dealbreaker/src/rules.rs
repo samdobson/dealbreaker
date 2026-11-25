@@ -1644,6 +1644,9 @@ pub enum RemovalKind {
     },
     /// Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
     PairsSumSameSuit { total: u8 },
+    /// Remove two playable cards of different suits whose ranks add up to `total` (Exit's
+    /// queen and king).
+    PairsSumOtherSuit { total: u8 },
     /// Remove a playable card when another playable card is of the same suit and higher in the
     /// pack's rank order (Aces Up).
     LowerOfSuit,

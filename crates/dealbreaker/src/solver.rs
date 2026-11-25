@@ -1017,6 +1017,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
                         && g.score.is_none()
                         && g.redeal.is_none()
                         && !tg.complete_runs
+                        && !tg.competing_foundation
                         && (tg.autoplay
                             || tg.build.dir == crate::rules::Dir::Same
                             || (tg.build.by == BuildBy::Suit
@@ -1146,9 +1147,30 @@ impl<'g, 'c> Ctx<'g, 'c> {
                 }
                 if let crate::game::Win::Rows(gi, len, _) = g.win {
                     let gr = &g.groups[gi as usize];
-                    let rows = gr.count / gr.columns.unwrap_or(gr.count);
+                    let cols = gr.columns.unwrap_or(gr.count);
+                    let rows = gr.count / cols;
+                    let win_fits = g
+                        .row_win_fits
+                        .as_ref()
+                        .unwrap_or(&g.pile_rules[gr.start as usize].fits);
                     for row in 0..rows {
-                        h += pw * (len as u32).saturating_sub(g.row_prefix(s, gi, row) as u32);
+                        let pref = g.row_prefix(s, gi, row);
+                        h += pw * (len as u32).saturating_sub(pref as u32);
+                        let base = gr.start as usize + row as usize * cols as usize;
+                        for col in pref.max(1)..cols as usize {
+                            let right = match s.piles[base + col].last() {
+                                Some(&c) if c.is_face_up() && !c.is_joker() => c,
+                                _ => continue,
+                            };
+                            let ok = s.piles[base + col - 1].last().is_some_and(|&left| {
+                                left.is_face_up()
+                                    && !left.is_joker()
+                                    && (win_fits[left.face() as usize] >> right.face()) & 1 != 0
+                            });
+                            if !ok {
+                                h += wt.disorder_weight;
+                            }
+                        }
                     }
                 }
                 if let crate::game::Win::AtMostPiles(gi, n) = g.win {

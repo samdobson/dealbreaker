@@ -246,6 +246,7 @@ fn compile_pile_rules(
         non_empty_max_accept: non_empty_max_accept.unwrap_or(max_accept),
         complete_runs: g.complete_runs,
         autoplay,
+        competing_foundation: false,
         sink: moves == MoveUnit::None
             && g.kind != PileKind::Stock
             && !g.requires_rank_on_prev
@@ -514,6 +515,7 @@ fn compile_redeal(
         non_empty_max_accept: 0,
         complete_runs: false,
         autoplay: false,
+        competing_foundation: false,
         sink: false,
         admits: 0,
         empty_suit: None,
@@ -1117,9 +1119,6 @@ impl Game {
             .map(|&p| foundation_reachable(p))
             .collect();
         for (i, &p) in found_piles.iter().enumerate() {
-            if !self.pile_rules[p].autoplay {
-                continue;
-            }
             let gi = self.pile_group[p];
             if self
                 .groups
@@ -1127,7 +1126,6 @@ impl Game {
                 .any(|gr| gr.flip_when_same_index_full == Some(gi))
             {
                 self.pile_rules[p].autoplay = false;
-                continue;
             }
             let rp = found_reach[i];
             let conflicts = found_piles.iter().enumerate().any(|(j, &q)| {
@@ -1136,6 +1134,7 @@ impl Game {
                     && !self.pile_rules[p].same_foundation_policy(&self.pile_rules[q])
             });
             if conflicts {
+                self.pile_rules[p].competing_foundation = true;
                 self.pile_rules[p].autoplay = false;
             }
         }

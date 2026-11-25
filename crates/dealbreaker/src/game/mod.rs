@@ -222,6 +222,8 @@ pub(crate) struct PileRules {
     pub complete_runs: bool,
     /// Foundations the solver may play to automatically when safe.
     pub autoplay: bool,
+    /// True if another foundation with a different policy can accept some of the same faces.
+    pub competing_foundation: bool,
     /// Cards never leave, so only the top card and the count matter to the future.
     pub sink: bool,
     /// Faces this pile accepts at all (suit and colour limits), as a bit set.
@@ -256,6 +258,7 @@ impl PileRules {
             wild,
             after_pile,
             autoplay: _,
+            competing_foundation: _,
             sink: _,
             fits: _,
         } = self;

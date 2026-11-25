@@ -223,6 +223,7 @@ fn compile_pile_rules(
         && !g.requires_rank_on_prev
         && !g.requires_prev_non_empty
         && g.requires_same_index_non_empty.is_none()
+        && g.accept_when_same_index_empty.is_none()
         && !g.match_longest_rank
         && !g.lock_build_dir
         && !g.lock_pile_dir
@@ -414,6 +415,19 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
                 Some(ref_gi)
             }
         };
+        let accept_when_same_index_empty = match &g.accept_when_same_index_empty {
+            None => None,
+            Some(name) => {
+                let ref_gi = find_group(rules, name)?;
+                if rules.groups[ref_gi as usize].count != g.count {
+                    return err(format!(
+                        "{:?}: accept_when_same_index_empty group {:?} must have the same pile count",
+                        g.name, name
+                    ));
+                }
+                Some(ref_gi)
+            }
+        };
         let flip_when_any_empty = match &g.flip_when_any_empty {
             None => None,
             Some(name) => Some(find_group(rules, name)?),
@@ -468,6 +482,8 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             moves_when_any_empty,
             moves_when_same_index_empty,
             requires_same_index_non_empty,
+            accept_when_same_index_empty,
+            move_from_frontier: g.move_from_frontier,
             flip_only_last: g.flip_only_last,
             final_from_same_index,
             lock_build_dir: g.lock_build_dir,
@@ -760,6 +776,10 @@ fn mark_positional_sources(groups: &mut [Group], pile_rules: &[PileRules]) -> Ve
             mark(groups, r as usize, true);
         }
         if let Some(r) = groups[i].requires_same_index_non_empty {
+            mark(groups, r as usize, true);
+            mark(groups, i, true);
+        }
+        if let Some(r) = groups[i].accept_when_same_index_empty {
             mark(groups, r as usize, true);
             mark(groups, i, true);
         }
@@ -1218,6 +1238,7 @@ impl Game {
                     && !gr.requires_rank_on_prev
                     && !gr.requires_prev_non_empty
                     && gr.requires_same_index_non_empty.is_none()
+                    && gr.accept_when_same_index_empty.is_none()
                     && !gr.match_longest_rank
                     && gr.max_same_rank.is_none()
                     && (pr.admits & all_real_in_pack) == all_real_in_pack

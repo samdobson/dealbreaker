@@ -89,6 +89,7 @@ One group of identical piles.
 | `layout` | [Layout](#layout) \| `null` | — | For piles that overlap (Pyramid, TriPeaks): which piles cover which. |
 | `lock_build_dir` | `boolean` | `false` | When `build.dir` is `either`, the first two-card pile in this group locks the build direction (up or down) for every pile in the group. |
 | `exclude_suit` | [Suit](#suit) \| `null` | — | Piles accept no card of this suit, and nothing may be built on one. |
+| `accept_when_same_index_empty` | `string` \| `null` | — | Pile `i` of this group accepts cards only while pile `i` of the named group is empty, except cards coming from that very pile (the groups must have the same pile count). |
 | `requires_same_index_non_empty` | `string` \| `null` | — | Cards may be added to pile `i` of this group only once pile `i` of the named group is non-empty (the groups must have the same pile count). |
 | `flip_after_prev_empty` | `boolean` | `false` | A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies). |
 | `flip_when_any_empty` | `string` \| `null` | — | A face-down top card turns up only while some pile of the named group is empty. |
@@ -124,6 +125,7 @@ One group of identical piles.
 | `requires_rank_on_prev` | `boolean` | `false` | Each pile after the first only accepts a card whose rank is already present on the previous pile in the group (when empty, it must match the previous pile's bottom card). |
 | `suit` | [Suit](#suit) \| `null` | — | Piles accept only cards of this suit. |
 | `supermove_complete_run` | `boolean` | `false` | With `moves: supermove`, also allow moving a complete suit-length built run regardless of empty cells and columns. |
+| `move_from_frontier` | [Frontier](#frontier) \| `null` | — | Cards may leave only the first or last non-empty pile of this group. |
 | `swap_bases` | [SwapBases](#swapbases) \| `null` | — | When set, moving from one pile of this group onto another may swap the two piles instead of building. |
 | `unique_suits` | `boolean` | `false` | No two non-empty piles in this group may share the same suit on their bottom card. |
 | `unrestricted_from` | `array` \| `null` | — | Cards coming from these groups are accepted onto empty or non-empty piles without checking `build` or `empty` rules (capacity limits still apply). |
@@ -453,6 +455,13 @@ Rules for choosing the foundation base rank on the opening move.
 | `deal_waste` | `boolean` | `false` | Immediately deal one card from the stock to the waste after the choice. |
 | `from` *(required)* | `string` | — | Group whose cards may be played to a foundation to choose the base rank. |
 | `refill_from_stock` | `boolean` | `false` | Immediately deal one card from the stock to the emptied source pile after the choice. |
+
+### Frontier {#frontier}
+
+Which pile of a group is the only one whose cards may move.
+
+- `"last"` — The last non-empty pile of the group.
+- `"first"` — The first non-empty pile of the group.
 
 ### SwapBases {#swapbases}
 

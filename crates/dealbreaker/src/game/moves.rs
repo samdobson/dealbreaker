@@ -372,6 +372,16 @@ impl Game {
                 return 0;
             }
         }
+        if let Some(fr) = grp.move_from_frontier {
+            let mut rest = grp.piles().filter(|&q| !s.piles[q as usize].is_empty());
+            let edge = match fr {
+                crate::rules::Frontier::Last => rest.next_back(),
+                crate::rules::Frontier::First => rest.next(),
+            };
+            if edge != Some(pile) {
+                return 0;
+            }
+        }
         if let Some(ref_gi) = grp.moves_when_same_index_empty {
             let ref_pile = self.groups[ref_gi as usize].start + (pile - grp.start);
             if !s.piles[ref_pile as usize].is_empty() {
@@ -875,6 +885,12 @@ impl Game {
         if let Some(ref_gi) = tg.requires_same_index_non_empty {
             let ref_pile = self.groups[ref_gi as usize].start + (to - tg.start);
             if s.piles[ref_pile as usize].is_empty() {
+                return false;
+            }
+        }
+        if let Some(ref_gi) = tg.accept_when_same_index_empty {
+            let ref_pile = self.groups[ref_gi as usize].start + (to - tg.start);
+            if from != ref_pile && !s.piles[ref_pile as usize].is_empty() {
                 return false;
             }
         }

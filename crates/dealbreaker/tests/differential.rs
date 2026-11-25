@@ -3168,3 +3168,60 @@ fn piles_built_win_checks_the_bottom_rank() {
     };
     check(r, 0..60);
 }
+
+#[test]
+fn accept_when_same_index_empty_gates_an_upper_row() {
+    // Upper piles take cards from lower piles, but a pile whose lower neighbour still holds cards
+    // takes only cards from that neighbour.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2]);
+    let mut upper = GroupRules::new("upper", PileKind::Tableau, 2)
+        .build(BuildBy::Any, Dir::Any)
+        .empty(EmptyRule::Any)
+        .moves(MoveUnit::Top)
+        .accepts_from(&["lower"])
+        .accept_when_same_index_empty("lower");
+    upper.empty_accepts_from = Some(vec!["lower".into()]);
+    let r = {
+        let mut r = Rules::new(
+            "mini-accept-when-empty",
+            pack,
+            vec![
+                upper,
+                GroupRules::new("lower", PileKind::Tableau, 2)
+                    .build(BuildBy::None, Dir::Any)
+                    .empty(EmptyRule::None)
+                    .moves(MoveUnit::Top),
+            ],
+            vec![DealStep::to("lower").counts(&[2, 2])],
+        );
+        r.win = WinRule::Count {
+            group: "upper".into(),
+            cards: 4,
+        };
+        r
+    };
+    check(r, 0..60);
+}
+
+#[test]
+fn move_from_frontier_lets_only_the_end_pile_move() {
+    // Cards leave only the last non-empty pile of the row.
+    let pack = Pack::new(&[Suit::Clubs, Suit::Hearts], &[1, 2, 3]);
+    let mut row = GroupRules::new("row", PileKind::Tableau, 3)
+        .build(BuildBy::Suit, Dir::Down)
+        .empty(EmptyRule::None)
+        .moves(MoveUnit::Top);
+    row.move_from_frontier = Some(Frontier::Last);
+    let r = Rules::new(
+        "mini-frontier",
+        pack,
+        vec![
+            GroupRules::new("foundation", PileKind::Foundation, 2)
+                .build(BuildBy::Suit, Dir::Up)
+                .max_cards(3),
+            row,
+        ],
+        vec![DealStep::to("row").counts(&[2, 2, 2])],
+    );
+    check(r, 0..60);
+}

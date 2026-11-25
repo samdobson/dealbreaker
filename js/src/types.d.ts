@@ -54,6 +54,7 @@ export type MoveUnit =
   | "whole"
   | "top_or_whole";
 
+export type Frontier = "last" | "first";
 export type SwapBases = "both_single" | "either_pile";
 
 export type Layout =
@@ -124,12 +125,14 @@ export interface GroupRules {
   refill_nearest?: boolean;
   require_valid_base?: boolean;
   swap_bases?: SwapBases;
+  move_from_frontier?: Frontier;
   supermove_complete_run?: boolean;
   unrestricted_from?: string[];
   lock_pile_dir?: boolean;
   flip_after_prev_empty?: boolean;
   flip_when_any_empty?: string;
   requires_same_index_non_empty?: string;
+  accept_when_same_index_empty?: string;
   exclude_suit?: Suit;
   freeze_when_built?: boolean;
   rank_sequence?: number[];

@@ -164,6 +164,10 @@ pub(crate) struct Group {
     pub moves_when_same_index_empty: Option<u16>,
     /// Cards may be added to pile `i` only once pile `i` of this group is non-empty.
     pub requires_same_index_non_empty: Option<u16>,
+    /// Pile `i` accepts cards (except from the same-index pile of this group) only while that pile is empty.
+    pub accept_when_same_index_empty: Option<u16>,
+    /// Cards may leave only the first or last non-empty pile.
+    pub move_from_frontier: Option<crate::rules::Frontier>,
     /// Only auto-flip the top card of a pile when it is the last remaining card.
     pub flip_only_last: bool,
     /// When a pile is one card shy of `max_cards`, its final card must come from the same-index
@@ -313,6 +317,8 @@ impl Group {
             || self.final_from_same_index.is_some()
             || self.moves_when_same_index_empty.is_some()
             || self.requires_same_index_non_empty.is_some()
+            || self.accept_when_same_index_empty.is_some()
+            || self.move_from_frontier.is_some()
             || self.flip_when_same_index_full.is_some()
             || self.flip_after_prev_empty
             || self.flip_when_any_empty.is_some()
@@ -371,6 +377,8 @@ impl Group {
             moves_when_any_empty: None,
             moves_when_same_index_empty: None,
             requires_same_index_non_empty: None,
+            accept_when_same_index_empty: None,
+            move_from_frontier: None,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,

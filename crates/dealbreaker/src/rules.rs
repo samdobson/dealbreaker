@@ -493,6 +493,13 @@ pub struct GroupRules {
     /// non-empty (the groups must have the same pile count).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requires_same_index_non_empty: Option<String>,
+    /// Pile `i` of this group accepts cards only while pile `i` of the named group is empty,
+    /// except cards coming from that very pile (the groups must have the same pile count).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accept_when_same_index_empty: Option<String>,
+    /// Cards may leave only the first or last non-empty pile of this group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub move_from_frontier: Option<Frontier>,
     /// Only automatically turn a pile's face-down top card face up when it is the sole card left
     /// in the pile.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -586,6 +593,18 @@ pub enum SwapBases {
     /// Swap two non-empty piles with different `empty` rules when their bottom cards differ in
     /// rank and at least one bottom card satisfies the other pile's `empty` rule.
     EitherPile,
+}
+
+/// Which pile of a group is the only one whose cards may move.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum Frontier {
+    /// The last non-empty pile of the group.
+    Last,
+    /// The first non-empty pile of the group.
+    First,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -711,6 +730,8 @@ impl GroupRules {
             moves_when_any_empty: None,
             moves_when_same_index_empty: None,
             requires_same_index_non_empty: None,
+            accept_when_same_index_empty: None,
+            move_from_frontier: None,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,
@@ -881,6 +902,11 @@ impl GroupRules {
 
     pub fn moves_when_any_empty(mut self, group: &str) -> Self {
         self.moves_when_any_empty = Some(group.to_string());
+        self
+    }
+
+    pub fn accept_when_same_index_empty(mut self, group: &str) -> Self {
+        self.accept_when_same_index_empty = Some(group.to_string());
         self
     }
 

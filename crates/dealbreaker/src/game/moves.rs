@@ -828,12 +828,15 @@ impl Game {
             return false;
         }
         let fgi = self.pile_group[from as usize];
-        if fgi != self.pile_group[to as usize] {
-            return false;
-        }
         let Some(mode) = self.groups[fgi as usize].swap_bases else {
             return false;
         };
+        if fgi != self.pile_group[to as usize]
+            && !(mode == SwapBases::Crossing
+                && self.groups[self.pile_group[to as usize] as usize].swap_bases == Some(mode))
+        {
+            return false;
+        }
         let src = &s.piles[from as usize];
         let dst = &s.piles[to as usize];
         if src.is_empty() || dst.is_empty() {
@@ -850,6 +853,15 @@ impl Game {
                     && dst.len() == 1
                     && self.empty_accepts(to, c0, s)
                     && self.empty_accepts(from, c1, s)
+            }
+            SwapBases::Crossing => {
+                let (af, at) = (self.rule(from).admits, self.rule(to).admits);
+                src.len() == 1
+                    && dst.len() == 1
+                    && af != at
+                    && at >> c0.face() & 1 != 0
+                    && af >> c1.face() & 1 != 0
+                    && at >> c1.face() & 1 == 0
             }
             SwapBases::EitherPile => {
                 self.rule(from).empty != self.rule(to).empty
@@ -1449,6 +1461,7 @@ impl Game {
                     None => false,
                     Some(SwapBases::BothSingle) => dst.len() == 1,
                     Some(SwapBases::EitherPile) => !dst_empty,
+                    Some(SwapBases::Crossing) => dst.len() == 1,
                 };
                 let mut from_mask = if dst_empty {
                     tg.empty_accepts_from
@@ -1457,6 +1470,13 @@ impl Game {
                 } | tg.unrestricted_from;
                 if swap_possible {
                     from_mask |= 1u64 << tgi;
+                    if tg.swap_bases == Some(SwapBases::Crossing) {
+                        for (gi, og) in self.groups.iter().enumerate() {
+                            if og.swap_bases == Some(SwapBases::Crossing) {
+                                from_mask |= 1u64 << gi;
+                            }
+                        }
+                    }
                 }
                 if let Some(ref_gi) = tg.final_from_same_index {
                     from_mask |= 1u64 << ref_gi;

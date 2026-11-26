@@ -743,6 +743,11 @@ pub enum SwapBases {
     /// Swap two non-empty piles with different `empty` rules when their bottom cards differ in
     /// rank and at least one bottom card satisfies the other pile's `empty` rule.
     EitherPile,
+    /// Swap two single-card piles of groups that both use this mode when the piles take
+    /// different kinds of card, each card is one the other pile takes, and the second card is
+    /// not one its own pile would take from the first's side (Hemispheres: a red card in the
+    /// black half swaps with a black card in the red half).
+    Crossing,
 }
 
 /// Which pile of a group is the only one whose cards may move.

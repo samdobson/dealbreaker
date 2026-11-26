@@ -42,6 +42,20 @@ impl Game {
             BuildBy::OtherSuit => under.suit() != over.suit(),
             BuildBy::SuitOrRank => under.suit() == over.suit() || under.rank() == over.rank(),
             BuildBy::SuitCycle => follows_in_cycle(&b.suit_cycle, under.suit(), over.suit()),
+            BuildBy::RankSuitColor => {
+                let (u, o) = (
+                    self.rank_idx[under.rank() as usize] as i16,
+                    self.rank_idx[over.rank() as usize] as i16,
+                );
+                let n = self.nranks as i16;
+                return if u == o {
+                    under.color() != over.color()
+                } else if under.suit() == over.suit() {
+                    (o - u).rem_euclid(n) == 1
+                } else {
+                    under.color() == over.color() && (u - o).rem_euclid(n) == 1
+                };
+            }
         };
         if !ok_suit || b.blocked_ranks.contains(&under.rank()) {
             return false;
@@ -1089,6 +1103,7 @@ impl Game {
                         BuildBy::SuitOrRank | BuildBy::SuitOrSameRank => {
                             top.suit() == card.suit() || top.rank() == card.rank()
                         }
+                        BuildBy::RankSuitColor => self.fits(&tr.build, top, card),
                         BuildBy::SuitCycle => {
                             follows_in_cycle(&tr.build.suit_cycle, top.suit(), card.suit())
                         }

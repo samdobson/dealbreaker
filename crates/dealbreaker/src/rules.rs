@@ -1314,6 +1314,10 @@ pub enum BuildBy {
     /// The suit that follows the one below in `Build::suit_cycle` (Following: spades, hearts,
     /// clubs, diamonds, and round again).
     SuitCycle,
+    /// A card goes on another of the same suit that is one rank below it, on one of the same
+    /// colour and another suit that is one rank above it, or on one of the same rank and the
+    /// other colour; ranks wrap round the pack (Sticko). `dir` is ignored.
+    RankSuitColor,
 }
 
 /// Rank direction from a card to the card placed on it.

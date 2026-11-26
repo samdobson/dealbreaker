@@ -102,6 +102,7 @@ pub(crate) struct CompiledChooseBase {
     pub refill_from_stock: bool,
     pub deal_waste: bool,
     pub free_moves: bool,
+    pub lock_mask: u64,
 }
 
 /// A compiled group.
@@ -137,6 +138,8 @@ pub(crate) struct Group {
     /// With `reach`: also accept from piles earlier in the group.
     pub reach_both_ways: bool,
     pub reach_grid: bool,
+    pub empty_needs_group_empty: Option<u16>,
+    pub accept_whole_from_group: bool,
     pub repeat_rank: Option<u16>,
     pub dropdown: bool,
     /// (source group, for each source pile the target index in this group or -1).
@@ -406,6 +409,8 @@ impl Group {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            empty_needs_group_empty: None,
+            accept_whole_from_group: false,
             repeat_rank: None,
             dropdown: false,
             from_pile_map: None,

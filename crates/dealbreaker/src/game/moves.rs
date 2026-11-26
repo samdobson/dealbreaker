@@ -477,6 +477,14 @@ impl Game {
     pub(crate) fn movable(&self, s: &State, pile: u16) -> usize {
         let cards = &s.piles[pile as usize];
         let Some(&top) = cards.last() else { return 0 };
+        if s.base_rank.is_none()
+            && self
+                .choose_base
+                .as_ref()
+                .is_some_and(|cb| cb.lock_mask >> self.pile_group[pile as usize] & 1 != 0)
+        {
+            return 0;
+        }
         if !top.is_face_up() {
             return usize::from(
                 self.group_of(pile).move_face_down_top && self.rule(pile).moves != MoveUnit::None,
@@ -1006,6 +1014,22 @@ impl Game {
                     && self.pile_group[from as usize] == fg2
                     && from - self.groups[fg2 as usize].start == f
             })
+        {
+            return false;
+        }
+        if dst.is_empty() && self.waste == Some(from) {
+            if let Some(gi) = tg.empty_needs_group_empty {
+                if self.groups[gi as usize]
+                    .piles()
+                    .any(|q| !s.piles[q as usize].is_empty())
+                {
+                    return false;
+                }
+            }
+        }
+        if tg.accept_whole_from_group
+            && self.pile_group[from as usize] == self.pile_group[to as usize]
+            && n != src.len()
         {
             return false;
         }
@@ -1960,7 +1984,14 @@ impl Game {
 
     /// Can the stock deal (or the waste be turned back) now?
     pub fn can_deal(&self, s: &State) -> bool {
-        if self.choose_base.as_ref().is_some_and(|cb| !cb.free_moves) && s.base_rank.is_none() {
+        if s.base_rank.is_none()
+            && self.choose_base.as_ref().is_some_and(|cb| {
+                !cb.free_moves
+                    || self.stock.as_ref().is_some_and(|st| {
+                        cb.lock_mask >> self.pile_group[st.pile as usize] & 1 != 0
+                    })
+            })
+        {
             return false;
         }
         if let Some(rd) = &self.redeal {

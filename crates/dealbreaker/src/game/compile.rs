@@ -478,6 +478,11 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             reach: g.reach.clone(),
             reach_both_ways: g.reach_both_ways,
             reach_grid: g.reach_grid,
+            empty_needs_group_empty: match &g.empty_needs_group_empty {
+                None => None,
+                Some(n) => Some(find_group(rules, n)?),
+            },
+            accept_whole_from_group: g.accept_whole_from_group,
             repeat_rank: g.repeat_rank,
             dropdown: g.dropdown,
             from_pile_map: match &g.from_pile_map {
@@ -1138,6 +1143,13 @@ impl Game {
                 refill_from_stock: cb.refill_from_stock,
                 deal_waste: cb.deal_waste,
                 free_moves: cb.free_moves,
+                lock_mask: {
+                    let mut m = 0u64;
+                    for n in &cb.lock_until_base {
+                        m |= 1u64 << find_group(&rules, n)?;
+                    }
+                    m
+                },
             }),
         };
         let simple_settle =

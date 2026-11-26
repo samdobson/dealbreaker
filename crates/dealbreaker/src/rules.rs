@@ -139,6 +139,10 @@ pub struct ChooseBase {
     /// A second group whose cards may also be played to a foundation to choose the base.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub also_from: Option<String>,
+    /// Groups whose cards cannot move (and, for the stock, cannot be dealt) until the base is
+    /// chosen, even with `free_moves`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lock_until_base: Vec<String>,
 }
 
 impl ChooseBase {
@@ -149,6 +153,7 @@ impl ChooseBase {
             deal_waste: false,
             free_moves: false,
             also_from: None,
+            lock_until_base: Vec::new(),
         }
     }
 }
@@ -451,6 +456,13 @@ pub struct GroupRules {
     /// piles reached are the four neighbours (Rectangular Rovers).
     #[serde(default, skip_serializing_if = "is_false")]
     pub reach_grid: bool,
+    /// Empty piles take cards from the waste only while every pile of this named group is empty
+    /// (Dutchess: an empty row takes a waste card once the reserves are gone).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_needs_group_empty: Option<String>,
+    /// Cards from piles of this same group are taken only as the whole pile (Dutchess).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub accept_whole_from_group: bool,
     /// A pile takes this many cards of one rank in a row, then goes on to the next rank of the
     /// pack, wrapping round (Four by Four). Use with `build: any/any` so nothing is ruled out
     /// before the pile itself is looked at.
@@ -902,6 +914,8 @@ impl GroupRules {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            empty_needs_group_empty: None,
+            accept_whole_from_group: false,
             repeat_rank: None,
             dropdown: false,
             from_pile_map: None,

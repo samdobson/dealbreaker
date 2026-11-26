@@ -1492,6 +1492,10 @@ pub struct StockRules {
     /// stock upside down, so the first card gathered is the first one dealt again.
     #[serde(default, skip_serializing_if = "is_false")]
     pub redeal_flip_stock: bool,
+    /// On redeal only gather the target group back into the stock (nothing is dealt); the stock
+    /// is played from its top (Puss in the Corner).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub redeal_gather_only: bool,
     /// When gathering a multi-pile target back into the stock on redeal, shuffle the gathered
     /// cards before dealing them out again.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -1569,6 +1573,7 @@ impl StockRules {
             deal_per_pile: false,
             redeal_reverse: false,
             redeal_flip_stock: false,
+            redeal_gather_only: false,
             redeal_shuffle: false,
             redeal_deal_all_alternating: false,
             deal_empty_first: false,

@@ -809,6 +809,7 @@ fn compile_stock(
                 deal_per_pile: sr.deal_per_pile,
                 redeal_reverse: sr.redeal_reverse,
                 redeal_flip_stock: sr.redeal_flip_stock,
+                redeal_gather_only: sr.redeal_gather_only,
                 redeal_shuffle: sr.redeal_shuffle,
                 redeal_deal_all_alternating: sr.redeal_deal_all_alternating,
                 deal_empty_first: sr.deal_empty_first,

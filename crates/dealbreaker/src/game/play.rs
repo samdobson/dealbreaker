@@ -220,7 +220,7 @@ impl Game {
         };
         for p in gather {
             while let Some(&top) = s.piles[p as usize].last() {
-                if top.is_face_up() {
+                if top.is_face_up() != (st.face_up || st.redeal_gather_only) {
                     self.push(
                         s,
                         j,
@@ -228,7 +228,7 @@ impl Game {
                             from: p,
                             to: st.pile,
                             count: 1,
-                            up: false,
+                            up: st.face_up || st.redeal_gather_only,
                         },
                     );
                 } else {
@@ -266,6 +266,10 @@ impl Game {
             || (s.redeals_used as usize) + 1 < st.piles_per_round.len()
         {
             self.push(s, j, Op::Redeal);
+        }
+        if st.redeal_gather_only {
+            self.settle(s, j);
+            return true;
         }
         if st.redeal_deal_all_alternating {
             self.deal_all_alternating(s, j, st);

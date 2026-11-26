@@ -1965,6 +1965,9 @@ impl Game {
         }
         let Some(st) = &self.stock else { return false };
         if !s.piles[st.pile as usize].is_empty() {
+            if st.redeal_gather_only {
+                return false;
+            }
             if !st.face_up
                 && s.piles[st.pile as usize]
                     .last()

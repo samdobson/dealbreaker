@@ -492,6 +492,7 @@ pub(crate) struct Stock {
     pub deal_per_pile: bool,
     pub redeal_reverse: bool,
     pub redeal_flip_stock: bool,
+    pub redeal_gather_only: bool,
     pub redeal_shuffle: bool,
     pub redeal_deal_all_alternating: bool,
     pub deal_empty_first: bool,

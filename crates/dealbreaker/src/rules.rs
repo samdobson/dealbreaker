@@ -132,6 +132,10 @@ pub struct ChooseBase {
     /// Immediately deal one card from the stock to the waste after the choice.
     #[serde(default)]
     pub deal_waste: bool,
+    /// Until the base is chosen, only foundation plays are restricted (to one card from `from`);
+    /// every other move and the stock stay open (Nine Across).
+    #[serde(default)]
+    pub free_moves: bool,
 }
 
 impl ChooseBase {
@@ -140,6 +144,7 @@ impl ChooseBase {
             from: group.to_string(),
             refill_from_stock: false,
             deal_waste: false,
+            free_moves: false,
         }
     }
 }
@@ -437,6 +442,18 @@ pub struct GroupRules {
     /// With `reach`: also accept from piles this many places before the destination pile.
     #[serde(default, skip_serializing_if = "is_false")]
     pub reach_both_ways: bool,
+    /// With `reach` on a grid layout: a distance of one place only counts within a row (so a pile
+    /// does not reach round the end of a row). With distances of one and the row length the
+    /// piles reached are the four neighbours (Rectangular Rovers).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub reach_grid: bool,
+    /// While no redeal has happened yet, these bans apply.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub first_round_bans: Vec<FirstRoundBan>,
+    /// For a win by rows on a group whose `empty` rule is not `after_left`: the rank each row
+    /// starts with (Rectangular Rovers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub row_start: Option<u8>,
     /// When a card is placed on a non-empty pile of this group, first move the destination pile's
     /// existing cards to this group's first pile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -604,6 +621,10 @@ pub struct GroupRules {
     /// (Elevens' reserves).
     #[serde(default, skip_serializing_if = "is_false")]
     pub unique_ranks: bool,
+    /// The bottom cards of this group's piles must always have different ranks forming one run
+    /// of consecutive ranks that may wrap round the pack (Triple Alliance's reserves).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub cyclic_ranks: bool,
     /// Every non-empty pile in this group must have the same suit on its bottom card as the
     /// others (Suit Elevens' reserves).
     #[serde(default, skip_serializing_if = "is_false")]
@@ -687,6 +708,21 @@ pub enum Frontier {
     Last,
     /// The first non-empty pile of the group.
     First,
+}
+
+/// Cards from some piles of a group may not go to some piles of this group until the stock or
+/// redeal has been used once (St. Helena's foundations).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct FirstRoundBan {
+    /// Piles (indices within the group that holds this ban) that refuse the cards.
+    pub to: Vec<u16>,
+    /// Group the refused cards come from.
+    pub from_group: String,
+    /// Piles (indices within `from_group`) whose cards are refused.
+    pub from: Vec<u16>,
 }
 
 /// Rules for some piles of a group that differ from the group's. Fields left out keep the
@@ -788,6 +824,9 @@ impl GroupRules {
             refill_count: None,
             reach: None,
             reach_both_ways: false,
+            reach_grid: false,
+            first_round_bans: Vec::new(),
+            row_start: None,
             replace_on_drop: None,
             compact: false,
             suit: None,
@@ -834,6 +873,7 @@ impl GroupRules {
             non_empty_max_accept: None,
             unique_suits: false,
             unique_ranks: false,
+            cyclic_ranks: false,
             same_suit_group: false,
             same_rank_group: false,
             clear_when_full: None,
@@ -1364,6 +1404,10 @@ pub struct StockRules {
     /// order.
     #[serde(default, skip_serializing_if = "is_false")]
     pub redeal_reverse: bool,
+    /// When gathering a multi-pile target back into the stock on redeal, turn the gathered
+    /// stock upside down, so the first card gathered is the first one dealt again.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub redeal_flip_stock: bool,
     /// When gathering a multi-pile target back into the stock on redeal, shuffle the gathered
     /// cards before dealing them out again.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -1436,6 +1480,7 @@ impl StockRules {
             final_piles: None,
             deal_per_pile: false,
             redeal_reverse: false,
+            redeal_flip_stock: false,
             redeal_shuffle: false,
             redeal_deal_all_alternating: false,
             deal_empty_first: false,

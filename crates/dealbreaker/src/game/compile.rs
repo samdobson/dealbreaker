@@ -229,6 +229,7 @@ fn compile_pile_rules(
         && !g.lock_pile_dir
         && !g.unique_suits
         && !g.unique_ranks
+        && !g.cyclic_ranks
         && !g.same_suit_group
         && !g.same_rank_group
         && g.rank_sequence.is_empty()
@@ -474,6 +475,20 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             hidden: false,
             reach: g.reach.clone(),
             reach_both_ways: g.reach_both_ways,
+            reach_grid: g.reach_grid,
+            first_round_bans: {
+                let mut v = Vec::new();
+                for b in &g.first_round_bans {
+                    let fg = find_group(rules, &b.from_group)?;
+                    for &t in &b.to {
+                        for &f in &b.from {
+                            v.push((t, fg, f));
+                        }
+                    }
+                }
+                v
+            },
+            row_start: g.row_start,
             replace_on_drop: None,
             compact: g.compact,
             requires_rank_on_prev: g.requires_rank_on_prev,
@@ -511,6 +526,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             rank_sequence: g.rank_sequence.clone(),
             unique_suits: g.unique_suits,
             unique_ranks: g.unique_ranks,
+            cyclic_ranks: g.cyclic_ranks,
             same_suit_group: g.same_suit_group,
             same_rank_group: g.same_rank_group,
             clear_when_full: g
@@ -775,6 +791,7 @@ fn compile_stock(
                 face_up: sr.face_up,
                 deal_per_pile: sr.deal_per_pile,
                 redeal_reverse: sr.redeal_reverse,
+                redeal_flip_stock: sr.redeal_flip_stock,
                 redeal_shuffle: sr.redeal_shuffle,
                 redeal_deal_all_alternating: sr.redeal_deal_all_alternating,
                 deal_empty_first: sr.deal_empty_first,
@@ -935,12 +952,16 @@ fn compile_win(
             let cols = g.columns.ok_or_else(|| {
                 RulesError(format!("win by rows needs {group:?} to have a grid layout"))
             })?;
-            let (EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first }) =
-                pile_rules[g.start as usize].empty
-            else {
-                return err(format!(
-                    "win by rows needs {group:?} to use the after_left or after_neighbor empty rule"
-                ));
+            let first = match pile_rules[g.start as usize].empty {
+                EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first } => first,
+                _ => match g.row_start {
+                    Some(first) => first,
+                    None => {
+                        return err(format!(
+                            "win by rows needs {group:?} to use the after_left or after_neighbor empty rule, or set row_start"
+                        ))
+                    }
+                },
             };
             let len = length.unwrap_or(cols - 1);
             if len > cols {
@@ -1087,6 +1108,7 @@ impl Game {
                 from_group: find_group(&rules, &cb.from)?,
                 refill_from_stock: cb.refill_from_stock,
                 deal_waste: cb.deal_waste,
+                free_moves: cb.free_moves,
             }),
         };
         let simple_settle =

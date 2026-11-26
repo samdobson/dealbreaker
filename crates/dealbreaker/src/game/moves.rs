@@ -117,6 +117,9 @@ impl Game {
         {
             return false;
         }
+        if g.cyclic_ranks && !self.cyclic_fits(g, pile, card.rank(), s) {
+            return false;
+        }
         if self.empty_is_open(pile, s) {
             return true;
         }
@@ -128,7 +131,7 @@ impl Game {
             EmptyRule::DealtBase => s.base_rank.is_none_or(|b| card.rank() == b),
             EmptyRule::DealtBaseOffset(o) => s
                 .base_rank
-                .is_none_or(|b| card.rank() == self.rank_from(b, *o)),
+                .is_some_and(|b| card.rank() == self.rank_from(b, *o)),
             EmptyRule::AfterLeft { .. }
             | EmptyRule::AfterNeighbor { .. }
             | EmptyRule::AfterPile { .. }
@@ -179,6 +182,13 @@ impl Game {
                 }
             }
         }
+        if g.cyclic_ranks {
+            for r in 1..14u8 {
+                if self.rank_faces[r as usize] != 0 && !self.cyclic_fits(g, pile, r, s) {
+                    real &= !self.rank_faces[r as usize];
+                }
+            }
+        }
         if g.unique_ranks || g.same_suit_group || g.same_rank_group {
             for p in g.piles() {
                 if p == pile {
@@ -213,7 +223,7 @@ impl Game {
             EmptyRule::DealtBase => s
                 .base_rank
                 .map_or(real, |b| real & self.rank_faces[b as usize]),
-            EmptyRule::DealtBaseOffset(o) => s.base_rank.map_or(real, |b| {
+            EmptyRule::DealtBaseOffset(o) => s.base_rank.map_or(0, |b| {
                 real & self.rank_faces[self.rank_from(b, *o) as usize]
             }),
             EmptyRule::AfterLeft { first } => {
@@ -791,6 +801,33 @@ impl Game {
         }
     }
 
+    /// Would the bottom cards of `g`'s other piles and a card of `rank` still form one run of
+    /// consecutive, different ranks (wrapping round the pack)?
+    fn cyclic_fits(&self, g: &crate::game::Group, pile: u16, rank: u8, s: &State) -> bool {
+        let n = self.nranks as i16;
+        let mut idx: Vec<i16> = g
+            .piles()
+            .filter(|&p| p != pile)
+            .filter_map(|p| s.piles[p as usize].first())
+            .filter(|c| !c.is_joker())
+            .map(|c| self.rank_idx[c.rank() as usize] as i16)
+            .collect();
+        idx.push(self.rank_idx[rank as usize] as i16);
+        idx.sort_unstable();
+        let k = idx.len() as i16;
+        if idx.windows(2).any(|w| w[0] == w[1]) {
+            return false;
+        }
+        if k <= 1 {
+            return true;
+        }
+        let mut max_gap = idx[0] + n - idx[k as usize - 1];
+        for w in idx.windows(2) {
+            max_gap = max_gap.max(w[1] - w[0]);
+        }
+        max_gap == n - k + 1
+    }
+
     /// Could `n` cards from the top of `from` go to `to`? Doesn't check the unit is movable.
     pub(crate) fn can_place(&self, s: &State, from: u16, to: u16, n: usize) -> bool {
         self.can_place_with_limit(s, from, to, n, None)
@@ -824,6 +861,7 @@ impl Game {
         if let Some(cb) = &self.choose_base {
             if s.base_rank.is_none()
                 && (fgi != cb.from_group || tg.kind != PileKind::Foundation || n != 1)
+                && (!cb.free_moves || tg.kind == PileKind::Foundation)
             {
                 return false;
             }
@@ -871,9 +909,24 @@ impl Game {
             if !reach.contains(&dist) {
                 return false;
             }
+            if tg.reach_grid && dist == 1 {
+                let cols = tg.columns.unwrap_or(tg.count);
+                if (from - tg.start) / cols != (to - tg.start) / cols {
+                    return false;
+                }
+            }
         }
         let src = &s.piles[from as usize];
         if tg.accept_only_when_empty && !dst.is_empty() {
+            return false;
+        }
+        if s.redeals_used == 0
+            && tg.first_round_bans.iter().any(|&(t, fg2, f)| {
+                to - tg.start == t
+                    && self.pile_group[from as usize] == fg2
+                    && from - self.groups[fg2 as usize].start == f
+            })
+        {
             return false;
         }
         if let Some(k) = tg.one_way_split {
@@ -1814,7 +1867,7 @@ impl Game {
 
     /// Can the stock deal (or the waste be turned back) now?
     pub fn can_deal(&self, s: &State) -> bool {
-        if self.choose_base.is_some() && s.base_rank.is_none() {
+        if self.choose_base.as_ref().is_some_and(|cb| !cb.free_moves) && s.base_rank.is_none() {
             return false;
         }
         if let Some(rd) = &self.redeal {

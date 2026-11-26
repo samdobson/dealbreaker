@@ -3630,6 +3630,32 @@ fn lower_rows_take_nothing_from_the_first_rows() {
 }
 
 #[test]
+fn base_chosen_by_the_first_foundation_play_leaves_other_moves_free() {
+    let mut r = mini_klondike(1, Some(1));
+    r.name = "mini nine across".into();
+    r.groups[2].empty = Some(EmptyRule::DealtBase);
+    r.groups[3].empty = Some(EmptyRule::DealtBaseOffset(-1));
+    let mut cb = ChooseBase::from("tableau");
+    cb.free_moves = true;
+    r.choose_base = Some(cb);
+    check(r, 0..40);
+}
+
+#[test]
+fn reserves_hold_a_run_of_consecutive_ranks() {
+    let mut r = mini_klondike(1, Some(1));
+    r.name = "mini triple alliance".into();
+    let mut res = GroupRules::new("reserve", PileKind::Reserve, 3)
+        .empty(EmptyRule::Any)
+        .moves(MoveUnit::None)
+        .accepts_from(&["tableau"]);
+    res.cyclic_ranks = true;
+    res.clear_when_full = Some("foundation".into());
+    r.groups.insert(4, res);
+    check(r, 0..40);
+}
+
+#[test]
 fn open_stock_drops_aces_by_itself() {
     let mut stock = GroupRules::new("stock", PileKind::Stock, 1).moves(MoveUnit::Top);
     stock.auto_foundation_rank = Some(1);

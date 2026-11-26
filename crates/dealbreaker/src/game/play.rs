@@ -244,6 +244,20 @@ impl Game {
                 }
             }
         }
+        if st.redeal_flip_stock {
+            let n = s.piles[st.pile as usize].len();
+            for i in 0..n / 2 {
+                self.push(
+                    s,
+                    j,
+                    Op::Swap {
+                        pile: st.pile,
+                        i: i as u16,
+                        j: (n - 1 - i) as u16,
+                    },
+                );
+            }
+        }
         if st.redeal_shuffle {
             self.shuffle_pile(s, j, st.pile);
         }
@@ -1343,7 +1357,9 @@ impl Game {
             if self.settle_refills(s, j, &emptied, &mut next_emptied) {
                 changed = true;
             }
-            if !(self.choose_base.is_some() && s.base_rank.is_none()) {
+            if !(self.choose_base.as_ref().is_some_and(|cb| !cb.free_moves)
+                && s.base_rank.is_none())
+            {
                 if let Some(st) = self.stock.as_ref().filter(|st| st.auto) {
                     let target = self.groups[st.target as usize].start;
                     if st.target_kind == PileKind::Waste
@@ -1450,7 +1466,7 @@ impl Game {
                     }
                     self.push(s, j, Op::Shift { from, to, count });
                     if let Some(cb) = &self.choose_base {
-                        if s.base_rank.is_none() {
+                        if s.base_rank.is_none() && self.group_of(to).kind == PileKind::Foundation {
                             let r = s.piles[to as usize].last().unwrap().rank();
                             self.push(s, j, Op::SetBaseRank(r));
                             if cb.refill_from_stock {
@@ -1699,7 +1715,7 @@ impl Game {
                     EmptyRule::AfterLeft { first } | EmptyRule::AfterNeighbor { first } => {
                         self.rank_faces[first as usize]
                     }
-                    _ => 0,
+                    _ => g.row_start.map_or(0, |k| self.rank_faces[k as usize]),
                 },
                 Some(set) => match &self.row_win_fits {
                     Some(fits) => {

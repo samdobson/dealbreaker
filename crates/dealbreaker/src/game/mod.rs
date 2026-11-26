@@ -100,6 +100,7 @@ pub(crate) struct CompiledChooseBase {
     pub from_group: u16,
     pub refill_from_stock: bool,
     pub deal_waste: bool,
+    pub free_moves: bool,
 }
 
 /// A compiled group.
@@ -134,6 +135,10 @@ pub(crate) struct Group {
     pub reach: Option<Vec<u16>>,
     /// With `reach`: also accept from piles earlier in the group.
     pub reach_both_ways: bool,
+    pub reach_grid: bool,
+    /// (target pile index in this group, source group, source pile index in that group) banned in the first round.
+    pub first_round_bans: Vec<(u16, u16, u16)>,
+    pub row_start: Option<u8>,
     /// When placing onto a non-empty pile of this group, move existing cards to this pile first.
     pub replace_on_drop: Option<u16>,
     /// Slide piles forward to close gaps after every move.
@@ -205,6 +210,7 @@ pub(crate) struct Group {
     /// No two non-empty piles in this group may share the same suit on their bottom card.
     pub unique_suits: bool,
     pub unique_ranks: bool,
+    pub cyclic_ranks: bool,
     pub same_suit_group: bool,
     pub same_rank_group: bool,
     /// Move every pile's cards to the first pile of this group once all piles hold a card.
@@ -384,6 +390,9 @@ impl Group {
             hidden: true,
             reach: None,
             reach_both_ways: false,
+            reach_grid: false,
+            first_round_bans: Vec::new(),
+            row_start: None,
             replace_on_drop: None,
             compact: false,
             requires_rank_on_prev: false,
@@ -421,6 +430,7 @@ impl Group {
             rank_sequence: Vec::new(),
             unique_suits: false,
             unique_ranks: false,
+            cyclic_ranks: false,
             same_suit_group: false,
             same_rank_group: false,
             clear_when_full: None,
@@ -460,6 +470,7 @@ pub(crate) struct Stock {
     pub face_up: bool,
     pub deal_per_pile: bool,
     pub redeal_reverse: bool,
+    pub redeal_flip_stock: bool,
     pub redeal_shuffle: bool,
     pub redeal_deal_all_alternating: bool,
     pub deal_empty_first: bool,

@@ -696,7 +696,7 @@ impl<'g, 'c> Ctx<'g, 'c> {
                     touch(to, count);
                 }
                 Op::Flip(p) => touch(p, 1),
-                Op::Redeal | Op::SetBaseRank(_) => {}
+                Op::Redeal | Op::SetBaseRank(_) | Op::SetLatch { .. } => {}
                 Op::Swap { pile, .. } => touch(pile, u16::MAX),
                 Op::SwapPiles(a, b) => touch(a, b),
             }

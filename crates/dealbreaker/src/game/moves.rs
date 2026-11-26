@@ -1731,6 +1731,9 @@ impl Game {
 
     pub(super) fn gen_removals(&self, s: &State, only: Option<u16>, out: &mut Vec<Move>) {
         for (ri, r) in self.removal.iter().enumerate() {
+            if r.needs_latch && s.base_rank.is_none() {
+                continue;
+            }
             let mut tops: Vec<(u16, Card)> = Vec::new();
             for (p, pile) in s.piles.iter().enumerate() {
                 let p = p as u16;

@@ -48,6 +48,7 @@ impl Game {
             }
             Op::Redeal => s.redeals_used += 1,
             Op::SetBaseRank(r) => s.base_rank = Some(r),
+            Op::SetLatch { now, .. } => s.base_rank = now.then_some(1),
             Op::Swap { pile, i, j } => s.piles[pile as usize].swap(i as usize, j as usize),
             Op::SwapPiles(a, b) => s.piles.swap(a as usize, b as usize),
         }
@@ -80,6 +81,7 @@ impl Game {
             Op::Flip(p) => self.do_op(s, Op::Flip(p)),
             Op::Redeal => s.redeals_used -= 1,
             Op::SetBaseRank(_) => s.base_rank = None,
+            Op::SetLatch { was, .. } => s.base_rank = was.then_some(1),
             Op::Swap { .. } => self.do_op(s, op),
             Op::SwapPiles(a, b) => s.piles.swap(a as usize, b as usize),
         }
@@ -1514,6 +1516,18 @@ impl Game {
                         self.push(s, j, Op::Flip(from));
                     }
                     self.push(s, j, Op::Shift { from, to, count });
+                    if let Some(lg) = self.latch_group {
+                        if self.stock_pile == Some(from) {
+                            let now = s.piles[from as usize].is_empty()
+                                || self.groups[lg as usize]
+                                    .piles()
+                                    .all(|q| !s.piles[q as usize].is_empty());
+                            let was = s.base_rank.is_some();
+                            if now != was {
+                                self.push(s, j, Op::SetLatch { was, now });
+                            }
+                        }
+                    }
                     if let Some(cb) = &self.choose_base {
                         if s.base_rank.is_none() && self.group_of(to).kind == PileKind::Foundation {
                             let r = s.piles[to as usize].last().unwrap().rank();
@@ -1580,6 +1594,17 @@ impl Game {
                     .piles()
                     .all(|p| s.piles[p as usize].is_empty())
             }),
+            Win::PilesEmpty(gi, piles, gs) => {
+                let start = self.groups[*gi as usize].start;
+                piles
+                    .iter()
+                    .all(|&i| s.piles[(start + i) as usize].is_empty())
+                    && gs.iter().all(|&g| {
+                        self.groups[g as usize]
+                            .piles()
+                            .all(|p| s.piles[p as usize].is_empty())
+                    })
+            }
             Win::AtMostPiles(gi, n) => {
                 self.groups[*gi as usize]
                     .piles()

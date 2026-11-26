@@ -88,6 +88,8 @@ pub(crate) enum Op {
     Redeal,
     /// Set `s.base_rank = Some(r)` (undo restores `None`).
     SetBaseRank(u8),
+    /// The latch (kept in `base_rank`) goes from `was` to `now`.
+    SetLatch { was: bool, now: bool },
     /// Swap two cards of a pile (shuffles are recorded as swaps, so they undo exactly).
     Swap { pile: u16, i: u16, j: u16 },
     /// Swap the entire contents of two piles.
@@ -558,12 +560,14 @@ pub(crate) struct Removal {
     /// Neighbour rule, with the grid group it applies to.
     pub adjacent: Option<(Adjacency, u16)>,
     pub exclude_ranks: Vec<u8>,
+    pub needs_latch: bool,
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum Win {
     AllOnFoundations,
     Empty(Vec<u16>),
+    PilesEmpty(u16, Vec<u16>, Vec<u16>),
     Count(u16, u16),
     /// Group, card count, groups that must be empty.
     CountAndEmpty(u16, u16, Vec<u16>),
@@ -643,6 +647,7 @@ pub struct Game {
     pub(crate) force_lower_of_suit: bool,
     pub(crate) waste: Option<u16>,
     pub(crate) choose_base: Option<CompiledChooseBase>,
+    pub(crate) latch_group: Option<u16>,
     pub(crate) hooks: Option<std::sync::Arc<dyn crate::hooks::Hooks>>,
     pub(crate) score: Option<crate::score::Score>,
 }

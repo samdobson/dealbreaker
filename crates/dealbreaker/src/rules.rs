@@ -94,6 +94,12 @@ pub struct Rules {
     /// move from this group to a foundation is legal, and its rank becomes the base rank.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub choose_base: Option<ChooseBase>,
+    /// A latch that a move from the stock pile resets: afterwards it is set if the stock is empty
+    /// or no pile of this group is empty, and clear otherwise. Removals with `needs_latch` work
+    /// only while it is set (Camelot: pairs come off only once the grid is full or the stock is
+    /// out, and the latch stays set until the next card is played from the stock).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latch_group: Option<String>,
     /// Cards put on top of the shuffled pack before dealing, in the order they are dealt
     /// (Royal Marriage: the queen of hearts first). Only for seeded deals.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -218,6 +224,7 @@ impl Rules {
             safe_autoplay: true,
             search: SearchHints::default(),
             choose_base: None,
+            latch_group: None,
             deck_first: Vec::new(),
             separate_decks: false,
             deck_last: Vec::new(),
@@ -1896,6 +1903,9 @@ pub struct RemovalRules {
     /// Cards of these ranks never take part in a removal (Aces Square's aces).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclude_ranks: Vec<u8>,
+    /// The removal works only while the rules' latch is set.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub needs_latch: bool,
 }
 
 impl RemovalRules {
@@ -1907,6 +1917,7 @@ impl RemovalRules {
             to: to.to_string(),
             adjacent: None,
             exclude_ranks: Vec::new(),
+            needs_latch: false,
         }
     }
 }
@@ -1980,6 +1991,13 @@ pub enum WinRule {
     AllOnFoundations,
     /// These groups are empty (Pyramid, Golf, TriPeaks: the tableau).
     Empty(Vec<String>),
+    /// These piles (indices within `group`) are empty and every group in `empty` is empty
+    /// (Camelot: the middle four cells and the stock).
+    PilesEmpty {
+        group: String,
+        piles: Vec<u16>,
+        empty: Vec<String>,
+    },
     /// A group holds at least this many cards (Aces Up: 48 discarded).
     Count { group: String, cards: u16 },
     /// A group holds at least this many cards and every group in `empty` is empty.

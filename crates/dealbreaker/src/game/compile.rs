@@ -928,6 +928,7 @@ fn compile_removals(rules: &Rules, groups: &[Group]) -> Result<Vec<Removal>, Rul
             to: groups[find_group(rules, &r.to)? as usize].start,
             adjacent,
             exclude_ranks: r.exclude_ranks.clone(),
+            needs_latch: r.needs_latch,
         });
     }
     Ok(removal)
@@ -947,6 +948,18 @@ fn compile_win(
         }
         WinRule::Empty(names) => Ok(Win::Empty(
             names
+                .iter()
+                .map(|n| find_group(rules, n))
+                .collect::<Result<_, _>>()?,
+        )),
+        WinRule::PilesEmpty {
+            group,
+            piles,
+            empty,
+        } => Ok(Win::PilesEmpty(
+            find_group(rules, group)?,
+            piles.clone(),
+            empty
                 .iter()
                 .map(|n| find_group(rules, n))
                 .collect::<Result<_, _>>()?,
@@ -1132,6 +1145,10 @@ impl Game {
             .map(|g| g.start);
         let compress_talon =
             can_compress_talon(&stock, waste, &groups, &pile_group, &pile_rules, &removal);
+        let latch_group = match &rules.latch_group {
+            None => None,
+            Some(n) => Some(find_group(&rules, n)?),
+        };
         let choose_base = match &rules.choose_base {
             None => None,
             Some(cb) => Some(CompiledChooseBase {
@@ -1189,6 +1206,7 @@ impl Game {
             force_lower_of_suit: false,
             waste,
             choose_base,
+            latch_group,
             hooks: None,
             score: None,
         };

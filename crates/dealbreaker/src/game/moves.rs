@@ -444,6 +444,18 @@ impl Game {
                 .all(|&c| s.piles[c as usize].is_empty())
     }
 
+    /// Interlock's drop-down: the whole of pile `from`, the only pile still covering `to`, moves
+    /// onto `to`.
+    fn dropdown_ok(&self, s: &State, from: u16, to: u16, n: usize) -> bool {
+        self.group_of(to).dropdown
+            && self.covered_by[to as usize].contains(&from)
+            && s.piles[from as usize].len() == n
+            && s.piles[to as usize].first().is_some_and(|c| c.is_face_up())
+            && self.covered_by[to as usize]
+                .iter()
+                .all(|&c| c == from || s.piles[c as usize].is_empty())
+    }
+
     /// How many cards from the top of `pile` form a unit that may move together (0 if none).
     pub(crate) fn movable(&self, s: &State, pile: u16) -> usize {
         let cards = &s.piles[pile as usize];
@@ -1014,7 +1026,7 @@ impl Game {
         {
             return false;
         }
-        if !self.available(s, to) {
+        if !self.available(s, to) && !self.dropdown_ok(s, from, to, n) {
             return false;
         }
         let card = src[src.len() - n];
@@ -1369,7 +1381,7 @@ impl Game {
                         continue;
                     }
                 }
-                if !self.available(s, to) {
+                if !self.available(s, to) && !tg.dropdown {
                     continue;
                 }
                 let swap_possible = match tg.swap_bases {

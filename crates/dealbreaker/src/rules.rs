@@ -451,6 +451,10 @@ pub struct GroupRules {
     /// piles reached are the four neighbours (Rectangular Rovers).
     #[serde(default, skip_serializing_if = "is_false")]
     pub reach_grid: bool,
+    /// With a `covers` layout: a pile covered by one pile only may take that whole pile at once
+    /// even while it is covered, if the cards build on it (Interlock's drop-down move).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub dropdown: bool,
     /// See [`FromPileMap`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_pile_map: Option<FromPileMap>,
@@ -893,6 +897,7 @@ impl GroupRules {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            dropdown: false,
             from_pile_map: None,
             clear_tops: None,
             first_round_bans: Vec::new(),

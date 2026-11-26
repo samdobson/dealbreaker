@@ -137,6 +137,7 @@ pub(crate) struct Group {
     /// With `reach`: also accept from piles earlier in the group.
     pub reach_both_ways: bool,
     pub reach_grid: bool,
+    pub dropdown: bool,
     /// (source group, for each source pile the target index in this group or -1).
     pub from_pile_map: Option<(u16, Vec<i16>)>,
     pub clear_tops: Option<(u16, u16)>,
@@ -404,6 +405,7 @@ impl Group {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            dropdown: false,
             from_pile_map: None,
             clear_tops: None,
             first_round_bans: Vec::new(),

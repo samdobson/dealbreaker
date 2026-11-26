@@ -25,6 +25,10 @@ fn main() {
             "hint-options.schema.json",
             schema::hint_options_schema_json(),
         ),
+        (
+            "grade-options.schema.json",
+            schema::grade_options_schema_json(),
+        ),
     ];
     for (name, mut content) in files {
         content.push('\n');

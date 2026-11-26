@@ -33,6 +33,7 @@
 //!   move, as the rules say.
 
 pub mod card;
+pub mod difficulty;
 pub mod game;
 pub mod hint;
 pub mod hooks;
@@ -46,6 +47,9 @@ mod score;
 pub mod solver;
 
 pub use card::{Card, Color, Suit};
+pub use difficulty::{
+    grade, grade_with_cancel, Difficulty, Grade, GradeOptions, GradeThresholds, ThresholdSource,
+};
 pub use game::{Action, Game, IllegalMove, IllegalStep, Move, PileRef, RulesError, State, Step};
 pub use hint::{hint, hint_with_cancel, Hint, HintOptions};
 pub use hooks::Hooks;

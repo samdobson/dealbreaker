@@ -3,6 +3,8 @@
 export * from "./types.js";
 
 import type {
+  Difficulty,
+  GradeOptions,
   Hint,
   HintOptions,
   InitInput,
@@ -64,6 +66,12 @@ export class Solver {
 
   /** Suggest a next step without peeking at face-down cards, or `null` if no win was found. */
   hint(state: StateData | string, options?: HintOptions | string): Hint | null;
+
+  /**
+   * Grade a deal as easy, medium or hard. Thresholds are calibrated per preset for the default
+   * budgets; unwinnable deals, and deals not won within the budget, are hard.
+   */
+  grade(state: StateData | string, options?: GradeOptions | string): Difficulty;
 
   /** Every legal single step in this position. */
   legalSteps(state: StateData | string): Step[];

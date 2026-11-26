@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GradeOptions",
+  "description": "Grading settings.",
+  "type": "object",
+  "properties": {
+    "max_states": {
+      "description": "Budget for the main search, in distinct positions. A deal not won within it is graded hard.",
+      "default": 500000,
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "probe_positions": {
+      "description": "Positions along the winning line at which every move is tried.",
+      "default": 10,
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "probe_states": {
+      "description": "Budget for each move tried, in distinct positions.",
+      "default": 3000,
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "thresholds": {
+      "description": "Cut-offs to use instead of the game's built-in ones.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/GradeThresholds"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "GradeThresholds": {
+      "description": "Score cut-offs between grades: a winnable deal scoring below `medium` is easy, below `hard` is medium, and otherwise hard.",
+      "type": "object",
+      "required": [
+        "hard",
+        "medium"
+      ],
+      "properties": {
+        "hard": {
+          "type": "number",
+          "format": "double"
+        },
+        "medium": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    }
+  }
+}

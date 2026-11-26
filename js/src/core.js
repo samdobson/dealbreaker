@@ -72,6 +72,10 @@ export function createBindings(wasm, ensureReady) {
       return JSON.parse(this.#inner.hint(toJson(state), toOptJson(options)));
     }
 
+    grade(state, options) {
+      return JSON.parse(this.#inner.grade(toJson(state), toOptJson(options)));
+    }
+
     legalSteps(state) {
       return JSON.parse(this.#inner.legalSteps(toJson(state)));
     }

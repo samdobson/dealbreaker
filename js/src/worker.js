@@ -96,6 +96,10 @@ export class WorkerSolver {
     return this.#call("hint", [state, options]);
   }
 
+  grade(state, options) {
+    return this.#call("grade", [state, options]);
+  }
+
   legalSteps(state) {
     return this.#call("legalSteps", [state]);
   }

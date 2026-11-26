@@ -92,6 +92,19 @@ char *dealbreaker_solver_hint(
     const DealbreakerCancel *cancel
 );
 
+/**
+ * Grade a position as easy, medium or hard. `options_json` (`{ "max_states", "probe_positions",
+ * "probe_states", "thresholds": { "medium", "hard" } }`, all optional) and `cancel` may be NULL.
+ * Returns JSON `{ "grade", "winnable", "score"?, "effort", "probes", "traps", "trap_rate",
+ * "steps", "thresholds", "source" }`, or NULL on error. Caller frees result.
+ */
+char *dealbreaker_solver_grade(
+    const DealbreakerSolver *solver,
+    const char *state_json,
+    const char *options_json,
+    const DealbreakerCancel *cancel
+);
+
 /** Return all legal steps as a JSON array, or NULL on error. Caller frees result. */
 char *dealbreaker_solver_legal_steps(const DealbreakerSolver *solver, const char *state_json);
 

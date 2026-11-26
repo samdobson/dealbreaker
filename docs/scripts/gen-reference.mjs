@@ -248,6 +248,7 @@ function genDataFormats() {
     { file: "step.schema.json", prefix: "step-", title: "Move / Action (`Step`)" },
     { file: "solve-options.schema.json", prefix: "solve-", title: "Search Options (`SolveOptions`)" },
     { file: "hint-options.schema.json", prefix: "hint-", title: "Hint Options (`HintOptions`)" },
+    { file: "grade-options.schema.json", prefix: "grade-", title: "Grade Options (`GradeOptions`)" },
   ];
 
   const parts = [

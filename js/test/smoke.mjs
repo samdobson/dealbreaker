@@ -45,6 +45,23 @@ test("FreeCell Microsoft #1 solves and replays via playStep", () => {
   }
 });
 
+test("grade classifies deals and honours custom thresholds", () => {
+  const fc = Solver.fromPreset("freecell");
+  try {
+    const state = fc.dealMicrosoft(1);
+    const d = fc.grade(state);
+    assert.ok(["easy", "medium", "hard"].includes(d.grade));
+    assert.equal(d.winnable, true);
+    assert.equal(d.source, "preset");
+    assert.ok(d.score > 0 && d.effort > 0 && d.probes > 0);
+    const easy = fc.grade(state, { thresholds: { medium: 1000, hard: 2000 } });
+    assert.equal(easy.grade, "easy");
+    assert.equal(easy.source, "custom");
+  } finally {
+    fc.free();
+  }
+});
+
 test("Solver round-trips Rules object and accepts raw JSON strings", () => {
   const k1 = Solver.fromPreset("klondike");
   const rules = k1.rules();

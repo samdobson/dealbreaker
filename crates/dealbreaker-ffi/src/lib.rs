@@ -11,8 +11,9 @@ use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use dealbreaker::{
-    hint, hint_with_cancel, maximize, maximize_with_cancel, microsoft_deal, presets, solve,
-    solve_with_cancel, Card, Game, HintOptions, Outcome, Rules, SolveOptions, State, Step,
+    grade, grade_with_cancel, hint, hint_with_cancel, maximize, maximize_with_cancel,
+    microsoft_deal, presets, solve, solve_with_cancel, Card, Game, GradeOptions, HintOptions,
+    Outcome, Rules, SolveOptions, State, Step,
 };
 use serde::Serialize;
 
@@ -373,6 +374,30 @@ pub unsafe extern "C" fn dealbreaker_solver_best(
     })
 }
 
+/// Grade a position as easy, medium or hard. `options_json` and `cancel` may be NULL.
+///
+/// # Safety
+/// `solver` must be valid; `state_json` must be valid NUL-terminated UTF-8; `options_json`
+/// must be NULL or valid NUL-terminated UTF-8; `cancel` must be NULL or valid.
+#[no_mangle]
+pub unsafe extern "C" fn dealbreaker_solver_grade(
+    solver: *const DealbreakerSolver,
+    state_json: *const c_char,
+    options_json: *const c_char,
+    cancel: *const DealbreakerCancel,
+) -> *mut c_char {
+    run_ptr(|| {
+        let game = solver_ref(solver)?;
+        let s = parse_state(game, read_str(state_json, "state_json")?)?;
+        let opts: GradeOptions = parse_opts(read_opt_str(options_json, "options_json")?)?;
+        let d = match cancel.as_ref() {
+            Some(c) => grade_with_cancel(game, &s, &opts, &c.flag),
+            None => grade(game, &s, &opts),
+        };
+        Ok(into_c_string(to_json(&d)))
+    })
+}
+
 /// Compute a fair hint without peeking at face-down cards. `options_json` and `cancel` may be NULL.
 ///
 /// # Safety
@@ -637,6 +662,35 @@ mod tests {
             assert!(last_err().is_some());
             let bad_card_c = CString::new(r#"["ZZ"]"#).unwrap();
             assert!(dealbreaker_solver_deal_ordered(fc, bad_card_c.as_ptr()).is_null());
+            assert!(last_err().is_some());
+
+            // Grade a FreeCell deal, with and without custom thresholds.
+            let ms1_c = CString::new(take_str(dealbreaker_solver_deal_microsoft(fc, 1))).unwrap();
+            let g: serde_json::Value = serde_json::from_str(&take_str(dealbreaker_solver_grade(
+                fc,
+                ms1_c.as_ptr(),
+                ptr::null(),
+                ptr::null(),
+            )))
+            .unwrap();
+            assert_eq!(g["winnable"], true);
+            assert_eq!(g["source"], "preset");
+            assert!(["easy", "medium", "hard"].contains(&g["grade"].as_str().unwrap()));
+            let all_hard = CString::new(r#"{"thresholds":{"medium":0,"hard":0}}"#).unwrap();
+            let g: serde_json::Value = serde_json::from_str(&take_str(dealbreaker_solver_grade(
+                fc,
+                ms1_c.as_ptr(),
+                all_hard.as_ptr(),
+                ptr::null(),
+            )))
+            .unwrap();
+            assert_eq!(g["grade"], "hard");
+            assert_eq!(g["source"], "custom");
+            let bad_opts = CString::new(r#"{"probe_states":"x"}"#).unwrap();
+            assert!(
+                dealbreaker_solver_grade(fc, ms1_c.as_ptr(), bad_opts.as_ptr(), ptr::null())
+                    .is_null()
+            );
             assert!(last_err().is_some());
 
             // Hint on visible FreeCell deal.

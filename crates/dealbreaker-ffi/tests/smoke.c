@@ -25,6 +25,11 @@ int main(void) {
     assert(hint != NULL);
     assert(strstr(hint, "\"step\"") != NULL);
 
+    char *graded = dealbreaker_solver_grade(solver, deal, NULL, NULL);
+    assert(graded != NULL);
+    assert(strstr(graded, "\"grade\"") != NULL);
+    dealbreaker_string_free(graded);
+
     DealbreakerCancel *cancel = dealbreaker_cancel_new();
     assert(cancel != NULL);
     dealbreaker_cancel_trigger(cancel);

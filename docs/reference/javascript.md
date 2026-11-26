@@ -43,6 +43,7 @@ One game's compiled rules. Create once, reuse across many positions.
 | `best(state: StateData \| string, options?: SolveOptions \| string): MaxResult` | For games played for points: find the line of play that ends with the most points. |
 | `score(state: StateData \| string): number \| null` | Points for a position, or `null` for games not played for points. |
 | `hint(state: StateData \| string, options?: HintOptions \| string): Hint \| null` | Suggest a next step without peeking at face-down cards, or `null` if no win was found. |
+| `grade(state: StateData \| string, options?: GradeOptions \| string): Difficulty` | Grade a deal as easy, medium or hard. Thresholds are calibrated per preset for the default budgets; unwinnable deals, and deals not won within the budget, are hard. |
 | `legalSteps(state: StateData \| string): Step[]` | Every legal single step in this position. |
 | `playStep(state: StateData \| string, step: Step \| string): StateData` | Play one step and return the resulting position. Throws if the step is illegal. |
 | `isWon(state: StateData \| string): boolean` | Whether the position is won. |
@@ -67,6 +68,7 @@ Call `terminate()` to stop the worker and cancel any in-flight search.
 | `best(state: StateData \| string, options?: SolveOptions \| string): Promise<MaxResult>` |  |
 | `score(state: StateData \| string): Promise<number \| null>` |  |
 | `hint(state: StateData \| string, options?: HintOptions \| string): Promise<Hint \| null>` |  |
+| `grade(state: StateData \| string, options?: GradeOptions \| string): Promise<Difficulty>` |  |
 | `legalSteps(state: StateData \| string): Promise<Step[]>` |  |
 | `playStep(state: StateData \| string, step: Step \| string): Promise<StateData>` |  |
 | `isWon(state: StateData \| string): Promise<boolean>` |  |
@@ -137,6 +139,46 @@ export interface Hint {
   wins: number;
   samples: number;
   score?: number;
+}
+
+export interface GradeThresholds {
+  /** Winnable deals scoring below this are easy. */
+  medium: number;
+  /** Winnable deals scoring below this (and at least `medium`) are medium; the rest are hard. */
+  hard: number;
+}
+
+export interface GradeOptions {
+  /** Main search budget in distinct positions (default 500000). */
+  max_states?: number;
+  /** Positions along the winning line at which every move is tried (default 10). */
+  probe_positions?: number;
+  /** Budget for each move tried (default 3000). */
+  probe_states?: number;
+  /** Cut-offs to use instead of the game's built-in ones. */
+  thresholds?: GradeThresholds;
+}
+
+export type Grade = "easy" | "medium" | "hard";
+
+export interface Difficulty {
+  grade: Grade;
+  /** `true`: won; `false`: proven unwinnable; `null`: budget ran out. Only `true` can be easy or medium. */
+  winnable: boolean | null;
+  /** `log2(1 + effort) + 10 * trap_rate`, for winnable deals. */
+  score?: number;
+  /** Distinct positions the main search visited. */
+  effort: number;
+  /** Moves tried along the winning line. */
+  probes: number;
+  /** Moves tried that the solver couldn't win from within the probe budget. */
+  traps: number;
+  trap_rate: number;
+  /** Length of the winning line found, in single steps (0 if none). */
+  steps: number;
+  thresholds: GradeThresholds;
+  /** `preset`: calibrated for this game; `custom`: from options; `generic`: no calibration for this game. */
+  source: "preset" | "custom" | "generic";
 }
 
 export interface PresetInfo {

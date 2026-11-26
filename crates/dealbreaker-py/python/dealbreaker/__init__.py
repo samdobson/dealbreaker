@@ -10,6 +10,8 @@ from ._dealbreaker import CancelToken, _Solver, format_step_json, presets_json
 __all__ = [
     "CancelToken",
     "DealStep",
+    "Difficulty",
+    "GradeThresholds",
     "HintResult",
     "MaxResult",
     "MoveStep",
@@ -99,6 +101,35 @@ class HintResult(_HintResultOptional):
     step: Step
     wins: int
     samples: int
+
+
+class GradeThresholds(TypedDict):
+    """Score cut-offs: below ``medium`` is easy, below ``hard`` is medium, otherwise hard."""
+
+    medium: float
+    hard: float
+
+
+class _DifficultyOptional(TypedDict, total=False):
+    score: float
+
+
+class Difficulty(_DifficultyOptional):
+    """Result returned by :meth:`Solver.grade`.
+
+    ``winnable`` is ``True`` (won), ``False`` (proven unwinnable) or ``None`` (budget ran out);
+    anything but ``True`` is graded ``"hard"``. ``score`` is present for winnable deals.
+    """
+
+    grade: Literal["easy", "medium", "hard"]
+    winnable: bool | None
+    effort: int
+    probes: int
+    traps: int
+    trap_rate: float
+    steps: int
+    thresholds: GradeThresholds
+    source: Literal["preset", "custom", "generic"]
 
 
 def _as_json(value: Mapping[str, Any] | str) -> str:
@@ -220,6 +251,33 @@ class Solver:
                 timeout_ms=timeout_ms,
                 autoplay=autoplay,
                 shorten=shorten,
+                cancel=cancel,
+            )
+        )
+
+    def grade(
+        self,
+        state: StateData | Mapping[str, Any] | str,
+        *,
+        max_states: int = 500_000,
+        probe_positions: int = 10,
+        probe_states: int = 3_000,
+        thresholds: tuple[float, float] | None = None,
+        cancel: CancelToken | None = None,
+    ) -> Difficulty:
+        """Grade a deal as ``"easy"``, ``"medium"`` or ``"hard"``. Releases the GIL.
+
+        Built-in thresholds are calibrated for each preset with the default budgets; pass
+        ``thresholds=(medium, hard)`` to use your own (e.g. from ``dealbreaker grade --calibrate``).
+        Unwinnable deals, and deals not won within ``max_states``, are graded ``"hard"``.
+        """
+        return json.loads(
+            self._inner.grade_json(
+                _as_json(state),
+                max_states=max_states,
+                probe_positions=probe_positions,
+                probe_states=probe_states,
+                thresholds=thresholds,
                 cancel=cancel,
             )
         )

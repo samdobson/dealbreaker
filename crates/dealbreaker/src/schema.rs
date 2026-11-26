@@ -6,7 +6,7 @@
 
 use schemars::schema::RootSchema;
 
-use crate::{HintOptions, Rules, SolveOptions, StateData, Step};
+use crate::{GradeOptions, HintOptions, Rules, SolveOptions, StateData, Step};
 
 /// JSON Schema for [`Rules`] (custom game definitions).
 pub fn rules_schema() -> RootSchema {
@@ -31,6 +31,16 @@ pub fn solve_options_schema() -> RootSchema {
 /// JSON Schema for [`HintOptions`].
 pub fn hint_options_schema() -> RootSchema {
     schemars::schema_for!(HintOptions)
+}
+
+/// JSON Schema for [`GradeOptions`].
+pub fn grade_options_schema() -> RootSchema {
+    schemars::schema_for!(GradeOptions)
+}
+
+/// Pretty-printed JSON Schema for [`GradeOptions`].
+pub fn grade_options_schema_json() -> String {
+    serde_json::to_string_pretty(&grade_options_schema()).expect("schema serializes")
 }
 
 /// Pretty-printed JSON Schema for [`Rules`].

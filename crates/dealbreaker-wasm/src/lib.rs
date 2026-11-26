@@ -12,8 +12,8 @@
 //! Positions and steps use the formats documented in the core crate (`StateData`, `Step`).
 
 use dealbreaker::{
-    hint, maximize, microsoft_deal, presets, solve, Card, Game, HintOptions, Outcome, Rules,
-    SolveOptions, State, Step,
+    grade, hint, maximize, microsoft_deal, presets, solve, Card, Game, GradeOptions, HintOptions,
+    Outcome, Rules, SolveOptions, State, Step,
 };
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -160,6 +160,16 @@ impl Solver {
         Ok(to_json(&hint(&self.game, &s, &opts)))
     }
 
+    /// Grade a deal as easy, medium or hard. `options_json` is optional:
+    /// `{ "max_states": 500000, "probe_positions": 10, "probe_states": 3000,
+    /// "thresholds": { "medium": 9.1, "hard": 12.0 } }`. Returns `{ grade, winnable, score?,
+    /// effort, probes, traps, trap_rate, steps, thresholds, source }`.
+    pub fn grade(&self, state_json: &str, options_json: Option<String>) -> Result<String, JsError> {
+        let s = self.state(state_json)?;
+        let opts: GradeOptions = parse_opts(options_json)?;
+        Ok(to_json(&grade(&self.game, &s, &opts)))
+    }
+
     /// Every legal step, as a JSON array.
     #[wasm_bindgen(js_name = legalSteps)]
     pub fn legal_steps(&self, state_json: &str) -> Result<String, JsError> {
@@ -246,6 +256,20 @@ mod tests {
             )
             .unwrap();
         assert!(h.contains("\"wins\":1"), "{h}");
+
+        let g: serde_json::Value =
+            serde_json::from_str(&fc.grade(&fc.deal_microsoft(1).unwrap(), None).unwrap()).unwrap();
+        assert_eq!(g["winnable"], true);
+        assert_eq!(g["source"], "preset");
+        let g: serde_json::Value = serde_json::from_str(
+            &fc.grade(
+                &fc.deal_microsoft(1).unwrap(),
+                Some(r#"{"thresholds":{"medium":1000,"hard":2000}}"#.into()),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(g["grade"], "easy");
 
         let ps = Solver {
             game: Game::new(presets::poker_squares()).unwrap(),

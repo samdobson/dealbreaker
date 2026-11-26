@@ -32,6 +32,17 @@ Result returned by :meth:`Solver.best`.
 
 Result returned by :meth:`Solver.hint`.
 
+## `class GradeThresholds`
+
+Score cut-offs: below `medium` is easy, below `hard` is medium, otherwise hard.
+
+## `class Difficulty`
+
+Result returned by :meth:`Solver.grade`.
+
+`winnable` is `True` (won), `False` (proven unwinnable) or `None` (budget ran out);
+anything but `True` is graded `"hard"`. `score` is present for winnable deals.
+
 ## Module Functions
 
 ### `presets() -> list[PresetInfo]`
@@ -88,6 +99,14 @@ Find the highest-scoring line in a points game. Releases the GIL.
 ### `hint(state: StateData | Mapping[str, Any] | str, *, samples: int = 16, seed: int = 0, max_states: int = 100000, strategy: Literal['auto', 'depth_first', 'depth-first', 'dfs', 'best_first', 'best-first', 'bfs'] = 'auto', timeout_ms: int | None = None, autoplay: bool = True, shorten: bool = True, cancel: CancelToken | None = None) -> HintResult | None`
 
 Suggest a next step without peeking at face-down cards. Releases the GIL.
+
+### `grade(state: StateData | Mapping[str, Any] | str, *, max_states: int = 500000, probe_positions: int = 10, probe_states: int = 3000, thresholds: tuple[float, float] | None = None, cancel: CancelToken | None = None) -> Difficulty`
+
+Grade a deal as `"easy"`, `"medium"` or `"hard"`. Releases the GIL.
+
+Built-in thresholds are calibrated for each preset with the default budgets; pass
+`thresholds=(medium, hard)` to use your own (e.g. from `dealbreaker grade --calibrate`).
+Unwinnable deals, and deals not won within `max_states`, are graded `"hard"`.
 
 ### `legal_steps(state: StateData | Mapping[str, Any] | str) -> list[Step]`
 

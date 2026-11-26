@@ -7,6 +7,12 @@ releases. Build values with their constructors (`Rules::new`, `GroupRules::new`,
 give `match`es on rule enums a wildcard arm. Changes to search heuristics or preset tuning may
 change which solution is found and how fast, never a verdict ("unsolvable" stays a proof).
 
+## Unreleased
+
+### Added
+
+- Difficulty grading: `dealbreaker::grade` (and `grade_with_cancel`) rates any position easy, medium or hard from solver effort and the share of trap moves along the winning line, with thresholds calibrated for every preset. Unwinnable deals, and deals not won within the budget, are graded hard and flagged by `winnable`. Exposed as the CLI `grade` command (with `--seeds` and `--calibrate` for batches and custom games) and `serve` `grade` requests, Python `Solver.grade`, JavaScript `Solver.grade` / `WorkerSolver.grade`, and C `dealbreaker_solver_grade`.
+
 ## 1.3.0
 
 ### Bindings, Distribution & Documentation

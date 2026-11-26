@@ -3,6 +3,8 @@
 export * from "./types.js";
 
 import type {
+  Difficulty,
+  GradeOptions,
   Hint,
   HintOptions,
   MaxResult,
@@ -30,6 +32,7 @@ export class WorkerSolver {
   best(state: StateData | string, options?: SolveOptions | string): Promise<MaxResult>;
   score(state: StateData | string): Promise<number | null>;
   hint(state: StateData | string, options?: HintOptions | string): Promise<Hint | null>;
+  grade(state: StateData | string, options?: GradeOptions | string): Promise<Difficulty>;
   legalSteps(state: StateData | string): Promise<Step[]>;
   playStep(state: StateData | string, step: Step | string): Promise<StateData>;
   isWon(state: StateData | string): Promise<boolean>;

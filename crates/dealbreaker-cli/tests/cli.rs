@@ -323,3 +323,119 @@ fn serve_handles_unknown_hint_cards_and_errors() {
     assert_eq!(lines[2]["id"], "q");
     assert_eq!(lines[2]["ok"], true);
 }
+
+#[test]
+fn grade_single_deal_many_deals_and_serve() {
+    let bin = env!("CARGO_BIN_EXE_dealbreaker");
+    let run = |args: &[&str]| {
+        let out = Command::new(bin).args(args).output().unwrap();
+        (
+            out.status.code(),
+            String::from_utf8_lossy(&out.stdout).into_owned(),
+            String::from_utf8_lossy(&out.stderr).into_owned(),
+        )
+    };
+
+    let (code, out, _) = run(&["grade", "freecell", "--ms", "1"]);
+    assert_eq!(code, Some(0));
+    assert!(
+        ["easy (", "medium (", "hard ("]
+            .iter()
+            .any(|g| out.starts_with(g)),
+        "{out}"
+    );
+
+    let (code, out, _) = run(&["grade", "freecell", "--ms", "1", "--json"]);
+    assert_eq!(code, Some(0));
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["game"], "FreeCell");
+    assert_eq!(v["winnable"], true);
+    assert_eq!(v["source"], "preset");
+
+    let (code, out, _) = run(&[
+        "grade",
+        "freecell",
+        "--ms",
+        "1",
+        "--thresholds",
+        "0,0",
+        "--json",
+    ]);
+    assert_eq!(code, Some(0));
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["grade"], "hard");
+    assert_eq!(v["source"], "custom");
+
+    let (code, out, _) = run(&[
+        "grade",
+        "freecell",
+        "--seeds",
+        "1..6",
+        "--calibrate",
+        "--jobs",
+        "2",
+        "--json",
+        "--verbose",
+    ]);
+    assert_eq!(code, Some(0));
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["deals"], 6);
+    assert_eq!(v["preset"], "freecell");
+    assert_eq!(v["grades"].as_array().unwrap().len(), 6);
+    assert_eq!(
+        v["easy"].as_u64().unwrap() + v["medium"].as_u64().unwrap() + v["hard"].as_u64().unwrap(),
+        6
+    );
+
+    let (code, out, _) = run(&["grade", "elevens", "--seeds", "1..3"]);
+    assert_eq!(code, Some(0));
+    assert!(out.contains("3 hard"), "{out}");
+
+    for bad in [
+        &["grade", "freecell", "--thresholds", "5"][..],
+        &["grade", "freecell", "--thresholds", "9,3"],
+        &["grade", "freecell", "--calibrate"],
+        &["grade", "freecell", "--seeds", "1..2", "--seed", "3"],
+        &[
+            "grade",
+            "freecell",
+            "--seeds",
+            "1..2",
+            "--calibrate",
+            "--thresholds",
+            "1,2",
+        ],
+        &["grade", "freecell", "--samples", "2"],
+    ] {
+        let (code, _, err) = run(bad);
+        assert_eq!(code, Some(2), "{bad:?}");
+        assert!(err.starts_with("error:"), "{bad:?}: {err}");
+    }
+
+    let mut child = Command::new(bin)
+        .args(["serve", "freecell"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    {
+        let stdin = child.stdin.as_mut().unwrap();
+        let deal = run(&["deal", "freecell", "--ms", "1"]).1;
+        let deal: serde_json::Value = serde_json::from_str(&deal).unwrap();
+        writeln!(stdin, r#"{{"id":1,"cmd":"grade","state":{deal}}}"#).unwrap();
+        writeln!(
+            stdin,
+            r#"{{"id":2,"cmd":"grade","state":{deal},"options":{{"thresholds":{{"medium":1000,"hard":2000}}}}}}"#
+        )
+        .unwrap();
+        writeln!(stdin, r#"{{"id":3,"cmd":"grade"}}"#).unwrap();
+    }
+    let output = child.wait_with_output().unwrap();
+    let lines: Vec<serde_json::Value> = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(lines[0]["difficulty"]["winnable"], true);
+    assert_eq!(lines[1]["difficulty"]["grade"], "easy");
+    assert_eq!(lines[2]["ok"], false);
+}

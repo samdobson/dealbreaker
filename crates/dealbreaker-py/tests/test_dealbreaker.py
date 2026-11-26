@@ -63,6 +63,21 @@ def test_hint_and_scored_best():
     assert len(best["steps"]) > 0
 
 
+def test_grade():
+    fc = Solver.from_preset("freecell")
+    state = fc.deal_microsoft(1)
+    d = fc.grade(state)
+    assert d["grade"] in ("easy", "medium", "hard")
+    assert d["winnable"] is True
+    assert d["source"] == "preset"
+    assert d["score"] > 0 and d["probes"] > 0
+    assert fc.grade(state, thresholds=(1000.0, 2000.0))["grade"] == "easy"
+    assert fc.grade(state, thresholds=(0.0, 0.0))["grade"] == "hard"
+    # A budget too small to win: graded hard, winnability unknown.
+    tiny = fc.grade(state, max_states=1)
+    assert tiny["grade"] == "hard" and tiny["winnable"] is None and "score" not in tiny
+
+
 def test_concurrent_threads_release_gil():
     fc = Solver.from_preset("freecell")
     deals = [fc.deal_microsoft(n) for n in (1, 2, 3, 4)]

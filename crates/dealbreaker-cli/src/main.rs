@@ -4,9 +4,10 @@ use std::io::{self, BufRead, Write};
 use std::process::ExitCode;
 use std::time::Instant;
 
+use dealbreaker::difficulty::{self, GradeThresholds};
 use dealbreaker::{
-    hint, maximize, microsoft_deal, presets, solve, Card, Game, HintOptions, Outcome, Rules,
-    SearchHints, SolveOptions, State, StateData, Step, Strategy,
+    grade, hint, maximize, microsoft_deal, presets, solve, Card, Difficulty, Game, GradeOptions,
+    HintOptions, Outcome, Rules, SearchHints, SolveOptions, State, StateData, Step, Strategy,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -23,6 +24,8 @@ USAGE:
     dealbreaker hint  <GAME> [DEAL] [SEARCH] [--samples N] [--json]
     dealbreaker replay <GAME> [DEAL] --steps FILE [--legal] [--json]
     dealbreaker best  <GAME> [DEAL] [SEARCH] [--json]
+    dealbreaker grade <GAME> [DEAL] [GRADE] [--json]
+    dealbreaker grade <GAME> --seeds A..B [--microsoft] [--jobs N] [--calibrate] [GRADE] [--json] [--verbose]
     dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [--jobs N] [SEARCH] [--json] [--verbose]
     dealbreaker serve <GAME> [--search JSON]
     dealbreaker --version
@@ -34,8 +37,12 @@ the position after each one; `--legal` adds every legal step at each position.
 
 `best` finds the highest score for games played for points; `bench --best` reports scores.
 
+`grade` rates a deal easy, medium or hard (unwinnable deals are hard). With `--seeds`, it
+grades many deals and reports how they spread; `--calibrate` also fits thresholds to them, a
+third of the winnable deals per grade, and grades with those.
+
 `serve` loads GAME once, reads one JSON request per line from stdin (`deal`, `solve`, `best`,
-`hint`, `legal_steps`, `play_step`, `validate`, `is_won`, `score`, `rules`, `quit`), and writes
+`hint`, `grade`, `legal_steps`, `play_step`, `validate`, `is_won`, `score`, `rules`, `quit`), and writes
 one JSON response line per request to stdout.
 
 GAME is a preset id (see `list`), a path to a rules JSON file, or `-` for stdin.
@@ -53,6 +60,12 @@ SEARCH:
     --no-shorten      don't shorten winning lines (faster when only solvability matters)
     --search JSON     override the game's search hints, e.g. '{\"blocker_weight\": 4}'
                       (speed only: verdicts never change)
+
+GRADE:
+    --max-states N        main search budget (default 500000)
+    --probe-positions N   positions along the winning line where every move is tried (default 10)
+    --probe-states N      budget for each move tried (default 3000)
+    --thresholds M,H      score cut-offs: below M easy, below H medium (default: the game's own)
 ";
 
 fn main() -> ExitCode {
@@ -78,6 +91,9 @@ const VALUE_FLAGS: &[&str] = &[
     "--samples",
     "--search",
     "--steps",
+    "--probe-positions",
+    "--probe-states",
+    "--thresholds",
 ];
 
 const BOOL_FLAGS: &[&str] = &[
@@ -88,6 +104,7 @@ const BOOL_FLAGS: &[&str] = &[
     "--microsoft",
     "--best",
     "--verbose",
+    "--calibrate",
     "--help",
     "-h",
     "--version",
@@ -258,6 +275,60 @@ fn search_opts(a: &Args) -> Result<SolveOptions, String> {
         o.shorten = false;
     }
     Ok(o)
+}
+
+fn grade_opts(a: &Args) -> Result<GradeOptions, String> {
+    let mut o = GradeOptions::default();
+    if let Some(n) = a.num("--max-states")? {
+        o.max_states = n;
+    }
+    if let Some(n) = a.num("--probe-positions")? {
+        o.probe_positions = n;
+    }
+    if let Some(n) = a.num("--probe-states")? {
+        o.probe_states = n;
+    }
+    if let Some(t) = a.get("--thresholds") {
+        let (m, h) = t
+            .split_once(',')
+            .and_then(|(m, h)| Some((m.trim().parse().ok()?, h.trim().parse().ok()?)))
+            .ok_or_else(|| format!("--thresholds wants M,H (two numbers), got {t}"))?;
+        if m > h {
+            return Err(format!("--thresholds: {m} is above {h}"));
+        }
+        o.thresholds = Some(GradeThresholds::new(m, h));
+    }
+    Ok(o)
+}
+
+fn seed_range(a: &Args) -> Result<Vec<u64>, String> {
+    let range = a.get("--seeds").unwrap_or("1..100");
+    let (lo, hi) = range
+        .split_once("..")
+        .and_then(|(l, h)| Some((l.parse::<u64>().ok()?, h.parse::<u64>().ok()?)))
+        .ok_or_else(|| format!("--seeds wants A..B, got {range}"))?;
+    Ok((lo..=hi).collect())
+}
+
+/// One line describing a grade.
+fn describe(d: &Difficulty) -> String {
+    let why = match d.winnable {
+        Some(true) => format!(
+            "score {:.2}: effort {} states, {} of {} moves tried are traps, {} steps",
+            d.score.unwrap_or(0.0),
+            d.effort,
+            d.traps,
+            d.probes,
+            d.steps
+        ),
+        Some(false) => format!("unwinnable ({} states)", d.effort),
+        None => format!("no win found in {} states", d.effort),
+    };
+    format!("{} ({why})", d.grade)
+}
+
+fn grade_json(d: &Difficulty) -> serde_json::Value {
+    serde_json::to_value(d).unwrap()
 }
 
 fn run(argv: &[String]) -> Result<(), String> {
@@ -532,6 +603,152 @@ fn run(argv: &[String]) -> Result<(), String> {
                     },
                     r.states
                 );
+            }
+        }
+        "grade" => {
+            const GRADE_FLAGS: &[&str] = &[
+                "--seed",
+                "--ms",
+                "--state",
+                "--seeds",
+                "--microsoft",
+                "--jobs",
+                "--calibrate",
+                "--max-states",
+                "--probe-positions",
+                "--probe-states",
+                "--thresholds",
+                "--search",
+                "--json",
+                "--verbose",
+            ];
+            a.check_allowed("grade", GRADE_FLAGS)?;
+            let spec = game_arg()?;
+            if spec == "-" && a.get("--state") == Some("-") {
+                return Err("cannot read both game rules and --state from stdin".into());
+            }
+            let g = load_game(spec, &a)?;
+            let mut o = grade_opts(&a)?;
+            if !a.has("--seeds") {
+                for f in ["--microsoft", "--jobs", "--calibrate", "--verbose"] {
+                    if a.has(f) {
+                        return Err(format!("{f} needs --seeds"));
+                    }
+                }
+                let s = load_deal(&g, &a)?;
+                let t = Instant::now();
+                let d = grade(&g, &s, &o);
+                let secs = t.elapsed().as_secs_f64();
+                if a.has("--json") {
+                    let mut out = grade_json(&d);
+                    out["game"] = serde_json::json!(g.name());
+                    out["seconds"] = serde_json::json!(secs);
+                    println!("{}", serde_json::to_string_pretty(&out).unwrap());
+                } else {
+                    println!("{} ({secs:.3}s)", describe(&d));
+                }
+                return Ok(());
+            }
+            for f in ["--seed", "--ms", "--state"] {
+                if a.has(f) {
+                    return Err(format!("{f} can't be combined with --seeds"));
+                }
+            }
+            if a.has("--calibrate") && o.thresholds.is_some() {
+                return Err("--calibrate and --thresholds can't be combined".into());
+            }
+            let seeds = seed_range(&a)?;
+            let ms = a.has("--microsoft");
+            let t = Instant::now();
+            let graded = run_bench(&seeds, a.num::<usize>("--jobs")?, |&seed| {
+                let s = if ms {
+                    g.deal_ordered(&microsoft_deal(seed as u32))
+                        .map_err(|e| e.to_string())?
+                } else {
+                    g.deal(seed)
+                };
+                Ok::<_, String>(grade(&g, &s, &o))
+            })?
+            .into_iter()
+            .collect::<Result<Vec<Difficulty>, String>>()?;
+            let secs = t.elapsed().as_secs_f64();
+            let cal = if a.has("--calibrate") {
+                let c = difficulty::calibrate(&graded)
+                    .ok_or("--calibrate: none of the deals was won")?;
+                o.thresholds = Some(c.thresholds);
+                Some(c)
+            } else {
+                None
+            };
+            // Regrade from the scores (thresholds may have changed).
+            let graded: Vec<Difficulty> = graded
+                .into_iter()
+                .map(|mut d| {
+                    if let Some(t) = o.thresholds {
+                        d.thresholds = t;
+                        d.source = dealbreaker::ThresholdSource::Custom;
+                        if let Some(sc) = d.score {
+                            d.grade = t.grade(sc);
+                        }
+                    }
+                    d
+                })
+                .collect();
+            let count = |gr: dealbreaker::Grade| graded.iter().filter(|d| d.grade == gr).count();
+            let unwinnable = graded.iter().filter(|d| d.winnable == Some(false)).count();
+            let unknown = graded.iter().filter(|d| d.winnable.is_none()).count();
+            let (easy, medium, hard) = (
+                count(dealbreaker::Grade::Easy),
+                count(dealbreaker::Grade::Medium),
+                count(dealbreaker::Grade::Hard),
+            );
+            let thresholds = o.thresholds.or(graded.first().map(|d| d.thresholds));
+            if a.has("--json") {
+                let mut out = serde_json::json!({
+                    "game": g.name(),
+                    "preset": difficulty::preset_id(&g),
+                    "deals": graded.len(),
+                    "easy": easy, "medium": medium, "hard": hard,
+                    "unwinnable": unwinnable, "unknown": unknown,
+                    "thresholds": thresholds,
+                    "seconds": secs,
+                });
+                if a.has("--verbose") {
+                    out["grades"] = graded
+                        .iter()
+                        .zip(&seeds)
+                        .map(|(d, seed)| {
+                            let mut v = grade_json(d);
+                            v["seed"] = serde_json::json!(seed);
+                            v
+                        })
+                        .collect();
+                }
+                println!("{}", serde_json::to_string_pretty(&out).unwrap());
+            } else {
+                if a.has("--verbose") {
+                    for (d, seed) in graded.iter().zip(&seeds) {
+                        println!("{seed}: {}", describe(d));
+                    }
+                }
+                let n = graded.len().max(1) as f64;
+                let pct = |k: usize| 100.0 * k as f64 / n;
+                println!(
+                    "{}: {} deals: {easy} easy ({:.0}%), {medium} medium ({:.0}%), {hard} hard \
+                     ({:.0}%; {unwinnable} unwinnable, {unknown} not won in budget); {:.3}s/deal",
+                    g.name(),
+                    graded.len(),
+                    pct(easy),
+                    pct(medium),
+                    pct(hard),
+                    secs / n,
+                );
+                if let (Some(c), Some(t)) = (cal, thresholds) {
+                    println!(
+                        "calibrated from {} winnable deals: --thresholds {:.2},{:.2}",
+                        c.winnable, t.medium, t.hard
+                    );
+                }
             }
         }
         "bench" if a.has("--best") => {
@@ -918,6 +1135,15 @@ fn handle_serve_line(game: &Game, line: &str) -> (serde_json::Value, bool) {
                 None => HintOptions::default(),
             };
             Ok(serde_json::json!({ "ok": true, "hint": hint(game, &s, &opts) }))
+        })(),
+        "grade" => (|| {
+            let s = parse_state(obj)?;
+            let opts: GradeOptions = match obj.get("options") {
+                Some(v) => serde_json::from_value(v.clone())
+                    .map_err(|e| format!("invalid options: {e}"))?,
+                None => GradeOptions::default(),
+            };
+            Ok(serde_json::json!({ "ok": true, "difficulty": grade(game, &s, &opts) }))
         })(),
         other => Err(format!("unknown cmd {other:?}")),
     };

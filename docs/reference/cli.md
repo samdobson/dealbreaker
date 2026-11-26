@@ -20,6 +20,8 @@ USAGE:
     dealbreaker hint  <GAME> [DEAL] [SEARCH] [--samples N] [--json]
     dealbreaker replay <GAME> [DEAL] --steps FILE [--legal] [--json]
     dealbreaker best  <GAME> [DEAL] [SEARCH] [--json]
+    dealbreaker grade <GAME> [DEAL] [GRADE] [--json]
+    dealbreaker grade <GAME> --seeds A..B [--microsoft] [--jobs N] [--calibrate] [GRADE] [--json] [--verbose]
     dealbreaker bench <GAME> --seeds A..B [--microsoft] [--best] [--jobs N] [SEARCH] [--json] [--verbose]
     dealbreaker serve <GAME> [--search JSON]
     dealbreaker --version
@@ -31,8 +33,12 @@ the position after each one; `--legal` adds every legal step at each position.
 
 `best` finds the highest score for games played for points; `bench --best` reports scores.
 
+`grade` rates a deal easy, medium or hard (unwinnable deals are hard). With `--seeds`, it
+grades many deals and reports how they spread; `--calibrate` also fits thresholds to them, a
+third of the winnable deals per grade, and grades with those.
+
 `serve` loads GAME once, reads one JSON request per line from stdin (`deal`, `solve`, `best`,
-`hint`, `legal_steps`, `play_step`, `validate`, `is_won`, `score`, `rules`, `quit`), and writes
+`hint`, `grade`, `legal_steps`, `play_step`, `validate`, `is_won`, `score`, `rules`, `quit`), and writes
 one JSON response line per request to stdout.
 
 GAME is a preset id (see `list`), a path to a rules JSON file, or `-` for stdin.
@@ -50,6 +56,12 @@ SEARCH:
     --no-shorten      don't shorten winning lines (faster when only solvability matters)
     --search JSON     override the game's search hints, e.g. '{"blocker_weight": 4}'
                       (speed only: verdicts never change)
+
+GRADE:
+    --max-states N        main search budget (default 500000)
+    --probe-positions N   positions along the winning line where every move is tried (default 10)
+    --probe-states N      budget for each move tried (default 3000)
+    --thresholds M,H      score cut-offs: below M easy, below H medium (default: the game's own)
 ```
 
 ## JSONL Stdio Server (`dealbreaker serve`)

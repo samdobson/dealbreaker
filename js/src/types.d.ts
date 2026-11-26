@@ -364,6 +364,46 @@ export interface Hint {
   score?: number;
 }
 
+export interface GradeThresholds {
+  /** Winnable deals scoring below this are easy. */
+  medium: number;
+  /** Winnable deals scoring below this (and at least `medium`) are medium; the rest are hard. */
+  hard: number;
+}
+
+export interface GradeOptions {
+  /** Main search budget in distinct positions (default 500000). */
+  max_states?: number;
+  /** Positions along the winning line at which every move is tried (default 10). */
+  probe_positions?: number;
+  /** Budget for each move tried (default 3000). */
+  probe_states?: number;
+  /** Cut-offs to use instead of the game's built-in ones. */
+  thresholds?: GradeThresholds;
+}
+
+export type Grade = "easy" | "medium" | "hard";
+
+export interface Difficulty {
+  grade: Grade;
+  /** `true`: won; `false`: proven unwinnable; `null`: budget ran out. Only `true` can be easy or medium. */
+  winnable: boolean | null;
+  /** `log2(1 + effort) + 10 * trap_rate`, for winnable deals. */
+  score?: number;
+  /** Distinct positions the main search visited. */
+  effort: number;
+  /** Moves tried along the winning line. */
+  probes: number;
+  /** Moves tried that the solver couldn't win from within the probe budget. */
+  traps: number;
+  trap_rate: number;
+  /** Length of the winning line found, in single steps (0 if none). */
+  steps: number;
+  thresholds: GradeThresholds;
+  /** `preset`: calibrated for this game; `custom`: from options; `generic`: no calibration for this game. */
+  source: "preset" | "custom" | "generic";
+}
+
 export interface PresetInfo {
   id: string;
   name: string;

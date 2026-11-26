@@ -9,7 +9,7 @@ use std::sync::{
 };
 
 use dealbreaker::{
-    hint, hint_with_cancel, maximize, maximize_with_cancel, microsoft_deal, presets, solve,
+    grade, grade_with_cancel, hint, hint_with_cancel, GradeOptions, GradeThresholds, maximize, maximize_with_cancel, microsoft_deal, presets, solve,
     solve_with_cancel, Card, Game, HintOptions, Outcome, Rules, SolveOptions, State, Step,
     Strategy,
 };
@@ -260,6 +260,38 @@ impl NativeSolver {
                 None => hint(game, &s, &opts),
             };
             to_json(&h)
+        });
+        Ok(out)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (state_json, max_states=500_000, probe_positions=10, probe_states=3_000, thresholds=None, cancel=None))]
+    fn grade_json(
+        &self,
+        py: Python<'_>,
+        state_json: &str,
+        max_states: u64,
+        probe_positions: u32,
+        probe_states: u64,
+        thresholds: Option<(f64, f64)>,
+        cancel: Option<&Bound<'_, CancelToken>>,
+    ) -> PyResult<String> {
+        let s = self.parse_state(state_json)?;
+        let mut opts = GradeOptions::default()
+            .max_states(max_states)
+            .probe_positions(probe_positions)
+            .probe_states(probe_states);
+        if let Some((m, h)) = thresholds {
+            opts = opts.thresholds(GradeThresholds::new(m, h));
+        }
+        let flag = cancel.map(|c| Arc::clone(&c.borrow().flag));
+        let game = &self.game;
+        let out = py.detach(|| {
+            let d = match &flag {
+                Some(f) => grade_with_cancel(game, &s, &opts, f),
+                None => grade(game, &s, &opts),
+            };
+            to_json(&d)
         });
         Ok(out)
     }

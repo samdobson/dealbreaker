@@ -100,3 +100,23 @@ Search strategy.
 - `"depth_first"` — Depth-first, heuristic ordering. Can prove unsolvability.
 - `"best_first"` — Best-first by heuristic. Can also prove unsolvability, at a higher memory cost.
 - `"auto"` — Best-first for a share of the budget, then depth-first with the rest.
+
+## Grade Options (`GradeOptions`)
+
+Grading settings.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `max_states` | `integer` | `500000` | Budget for the main search, in distinct positions. A deal not won within it is graded hard. |
+| `probe_positions` | `integer` | `10` | Positions along the winning line at which every move is tried. |
+| `probe_states` | `integer` | `3000` | Budget for each move tried, in distinct positions. |
+| `thresholds` | [GradeThresholds](#grade-gradethresholds) \| `null` | — | Cut-offs to use instead of the game's built-in ones. |
+
+### GradeThresholds {#grade-gradethresholds}
+
+Score cut-offs between grades: a winnable deal scoring below `medium` is easy, below `hard` is medium, and otherwise hard.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `hard` *(required)* | `number` | — |  |
+| `medium` *(required)* | `number` | — |  |

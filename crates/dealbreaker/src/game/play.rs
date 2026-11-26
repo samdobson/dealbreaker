@@ -1017,6 +1017,11 @@ impl Game {
             let tp = self.groups[tg as usize].start + idx;
             return s.piles[tp as usize].len() >= self.rule(tp).max_cards as usize;
         }
+        if let Some(n) = g.flip_when_all_at_most {
+            if g.piles().any(|q| s.piles[q as usize].len() > n as usize) {
+                return false;
+            }
+        }
         if g.flip_after_prev_empty && p > g.start && !s.piles[p as usize - 1].is_empty() {
             return false;
         }
@@ -1389,6 +1394,30 @@ impl Game {
                                 }
                             }
                         }
+                    }
+                }
+            }
+            for g in self.groups.iter().filter(|g| g.clear_tops.is_some()) {
+                let (to_g, sum) = g.clear_tops.unwrap();
+                if g.piles().all(|p| !s.piles[p as usize].is_empty()) {
+                    let total: u16 = g
+                        .piles()
+                        .map(|p| u16::from(s.piles[p as usize].last().unwrap().rank()))
+                        .sum();
+                    if total == sum {
+                        let to = self.groups[to_g as usize].start;
+                        for p in g.piles() {
+                            self.push(
+                                s,
+                                j,
+                                Op::Shift {
+                                    from: p,
+                                    to,
+                                    count: 1,
+                                },
+                            );
+                        }
+                        changed = true;
                     }
                 }
             }

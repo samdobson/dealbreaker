@@ -240,6 +240,7 @@ fn compile_pile_rules(
         && (!build.wrap || max_cards <= pack.nranks as u16)
         && build.blocked_ranks.is_empty()
         && build.gap_ranks.is_empty()
+        && build.extra_pairs.is_empty()
         && matches!(
             empty,
             EmptyRule::Rank(_) | EmptyRule::DealtBase | EmptyRule::DealtBaseOffset(_)
@@ -476,6 +477,10 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             reach: g.reach.clone(),
             reach_both_ways: g.reach_both_ways,
             reach_grid: g.reach_grid,
+            clear_tops: match &g.clear_tops {
+                None => None,
+                Some(c) => Some((find_group(rules, &c.to)?, c.sum)),
+            },
             first_round_bans: {
                 let mut v = Vec::new();
                 for b in &g.first_round_bans {
@@ -495,6 +500,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             match_longest_rank: g.match_longest_rank,
             accept_only_when_empty: g.accept_only_when_empty,
             accept_when_stock_empty: g.accept_when_stock_empty,
+            accept_when_waste_empty: g.accept_when_waste_empty,
             compact_face_up: g.compact_face_up,
             refill_largest: g.refill_largest,
             refill_on_empty: g.refill_on_empty,
@@ -507,6 +513,11 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             accept_when_same_index_empty,
             move_from_frontier: g.move_from_frontier,
             empty_open_after_bases: g.empty_open_after_bases,
+            empty_open_when_full: match &g.empty_open_when_full {
+                None => None,
+                Some(name) => Some(find_group(rules, name)?),
+            },
+            empty_needs_first_full: g.empty_needs_first_full,
             flip_only_last: g.flip_only_last,
             final_from_same_index,
             lock_build_dir: g.lock_build_dir,
@@ -548,6 +559,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             refill_first_face_down: g.refill_first_face_down,
             flip_when_same_index_full,
             flip_after_prev_empty: g.flip_after_prev_empty,
+            flip_when_all_at_most: g.flip_when_all_at_most,
             flip_when_any_empty,
         };
         grp.symmetric = g.layout.is_none()
@@ -1309,6 +1321,7 @@ impl Game {
                     && pr.build.dir == Dir::Any
                     && pr.build.blocked_ranks.is_empty()
                     && pr.build.gap_ranks.is_empty()
+                    && pr.build.extra_pairs.is_empty()
                     && pr.empty == EmptyRule::Any
                     && pr.empty_suit.is_none()
                     && pr.max_cards == u16::MAX

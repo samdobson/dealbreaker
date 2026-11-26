@@ -136,6 +136,7 @@ pub(crate) struct Group {
     /// With `reach`: also accept from piles earlier in the group.
     pub reach_both_ways: bool,
     pub reach_grid: bool,
+    pub clear_tops: Option<(u16, u16)>,
     /// (target pile index in this group, source group, source pile index in that group) banned in the first round.
     pub first_round_bans: Vec<(u16, u16, u16)>,
     pub row_start: Option<u8>,
@@ -151,6 +152,7 @@ pub(crate) struct Group {
     pub accept_only_when_empty: bool,
     /// Accept cards only when the stock pile is empty.
     pub accept_when_stock_empty: bool,
+    pub accept_when_waste_empty: bool,
     /// Shift the movable face-up run from the next pile into an emptied pile.
     pub compact_face_up: bool,
     /// Pick the largest pile when refilling from a multi-pile group.
@@ -175,6 +177,8 @@ pub(crate) struct Group {
     pub move_from_frontier: Option<crate::rules::Frontier>,
     /// Empty piles accept any card once this many piles start with the `empty` rank.
     pub empty_open_after_bases: Option<u16>,
+    pub empty_open_when_full: Option<u16>,
+    pub empty_needs_first_full: bool,
     /// Only auto-flip the top card of a pile when it is the last remaining card.
     pub flip_only_last: bool,
     /// When a pile is one card shy of `max_cards`, its final card must come from the same-index
@@ -230,6 +234,7 @@ pub(crate) struct Group {
     pub flip_when_same_index_full: Option<u16>,
     /// A face-down top turns up only once the previous pile is empty.
     pub flip_after_prev_empty: bool,
+    pub flip_when_all_at_most: Option<u16>,
     /// A face-down top turns up only while some pile of this group is empty.
     pub flip_when_any_empty: Option<u16>,
 }
@@ -343,6 +348,8 @@ impl Group {
             || self.accept_when_same_index_empty.is_some()
             || self.move_from_frontier.is_some()
             || self.empty_open_after_bases.is_some()
+            || self.empty_open_when_full.is_some()
+            || self.empty_needs_first_full
             || self.flip_when_same_index_full.is_some()
             || self.flip_after_prev_empty
             || self.flip_when_any_empty.is_some()
@@ -354,6 +361,7 @@ impl Group {
     /// True if moves to or from this group are gated on the stock being empty.
     pub(crate) fn depends_on_stock_empty(&self) -> bool {
         self.accept_when_stock_empty
+            || self.accept_when_waste_empty
             || self.moves_when_stock_empty
             || self.no_build_single_while_stock
     }
@@ -364,9 +372,11 @@ impl Group {
             || self.compact_face_up
             || !self.refill_from.is_empty()
             || self.clear_when_full.is_some()
+            || self.clear_tops.is_some()
             || self.auto_foundation_rank.is_some()
             || self.flip_when_same_index_full.is_some()
             || self.flip_after_prev_empty
+            || self.flip_when_all_at_most.is_some()
             || self.flip_when_any_empty.is_some()
             || self.flip_when_dealt_out
     }
@@ -391,6 +401,7 @@ impl Group {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            clear_tops: None,
             first_round_bans: Vec::new(),
             row_start: None,
             replace_on_drop: None,
@@ -399,6 +410,7 @@ impl Group {
             match_longest_rank: false,
             accept_only_when_empty: false,
             accept_when_stock_empty: false,
+            accept_when_waste_empty: false,
             compact_face_up: false,
             refill_largest: false,
             refill_on_empty: false,
@@ -411,6 +423,8 @@ impl Group {
             accept_when_same_index_empty: None,
             move_from_frontier: None,
             empty_open_after_bases: None,
+            empty_open_when_full: None,
+            empty_needs_first_full: false,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,
@@ -444,6 +458,7 @@ impl Group {
             refill_first_face_down: false,
             flip_when_same_index_full: None,
             flip_after_prev_empty: false,
+            flip_when_all_at_most: None,
             flip_when_any_empty: None,
         }
     }

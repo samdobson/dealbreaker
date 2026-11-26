@@ -447,6 +447,9 @@ pub struct GroupRules {
     /// piles reached are the four neighbours (Rectangular Rovers).
     #[serde(default, skip_serializing_if = "is_false")]
     pub reach_grid: bool,
+    /// See [`ClearTops`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clear_tops: Option<ClearTops>,
     /// While no redeal has happened yet, these bans apply.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub first_round_bans: Vec<FirstRoundBan>,
@@ -503,6 +506,10 @@ pub struct GroupRules {
     /// Accept cards only when the stock pile is empty.
     #[serde(default, skip_serializing_if = "is_false")]
     pub accept_when_stock_empty: bool,
+    /// Accept cards only when the waste pile is empty as well (with `accept_when_stock_empty`:
+    /// Zodiac's foundations wait until the whole deal is played).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub accept_when_waste_empty: bool,
     /// When a pile in this group becomes empty, shift the movable face-up run from the next pile
     /// into it, leaving any face-down cards behind.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -546,6 +553,14 @@ pub struct GroupRules {
     /// that rank, empty piles accept any card (Scorpion Towers).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub empty_open_after_bases: Option<u16>,
+    /// Empty piles take any card once the first pile of the named group is full (The Plot: once
+    /// the first foundation holds a whole suit the empty rows are open).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub empty_open_when_full: Option<String>,
+    /// Empty piles of this group take nothing until the group's first pile is full (The Plot's
+    /// foundations after the first).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub empty_needs_first_full: bool,
     /// Only automatically turn a pile's face-down top card face up when it is the sole card left
     /// in the pile.
     #[serde(default, skip_serializing_if = "is_false")]
@@ -680,6 +695,10 @@ pub struct GroupRules {
     /// first pile always qualifies).
     #[serde(default, skip_serializing_if = "is_false")]
     pub flip_after_prev_empty: bool,
+    /// Only turn a face-down top card up once every pile of this group holds at most this many
+    /// cards (Striptease: the turned card waits until the reserves are down to two).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flip_when_all_at_most: Option<u16>,
     /// A face-down top card turns up only while some pile of the named group is empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flip_when_any_empty: Option<String>,
@@ -708,6 +727,26 @@ pub enum Frontier {
     Last,
     /// The first non-empty pile of the group.
     First,
+}
+
+/// When every pile of the group holds a card and the top cards' ranks (ace 1 ... king 13) add
+/// up to `sum`, each top card goes to the `to` group (Ninety-One).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct ClearTops {
+    pub to: String,
+    pub sum: u16,
+}
+
+impl ClearTops {
+    pub fn new(to: &str, sum: u16) -> ClearTops {
+        ClearTops {
+            to: to.to_string(),
+            sum,
+        }
+    }
 }
 
 /// Cards from some piles of a group may not go to some piles of this group until the stock or
@@ -825,6 +864,7 @@ impl GroupRules {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            clear_tops: None,
             first_round_bans: Vec::new(),
             row_start: None,
             replace_on_drop: None,
@@ -842,6 +882,7 @@ impl GroupRules {
             empty_max_accept: None,
             accept_only_when_empty: false,
             accept_when_stock_empty: false,
+            accept_when_waste_empty: false,
             compact_face_up: false,
             refill_largest: false,
             refill_on_empty: false,
@@ -854,6 +895,8 @@ impl GroupRules {
             accept_when_same_index_empty: None,
             move_from_frontier: None,
             empty_open_after_bases: None,
+            empty_open_when_full: None,
+            empty_needs_first_full: false,
             flip_only_last: false,
             final_from_same_index: None,
             lock_build_dir: false,
@@ -887,6 +930,7 @@ impl GroupRules {
             refill_first_face_down: false,
             flip_when_same_index_full: None,
             flip_after_prev_empty: false,
+            flip_when_all_at_most: None,
             flip_when_any_empty: None,
         }
     }
@@ -1144,6 +1188,10 @@ pub struct Build {
     /// (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub gap_ranks: Vec<u8>,
+    /// Pairs of ranks that also build on each other, in either order, whatever the direction
+    /// (Striptease: jack and king).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extra_pairs: Vec<(u8, u8)>,
     /// With `by: suit_cycle`: the suits in the order they follow each other.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub suit_cycle: Vec<Suit>,
@@ -1194,6 +1242,7 @@ impl Default for Build {
             step: 1,
             blocked_ranks: Vec::new(),
             gap_ranks: Vec::new(),
+            extra_pairs: Vec::new(),
             suit_cycle: Vec::new(),
         }
     }

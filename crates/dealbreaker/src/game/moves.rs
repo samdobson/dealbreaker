@@ -46,6 +46,11 @@ impl Game {
         if !ok_suit || b.blocked_ranks.contains(&under.rank()) {
             return false;
         }
+        if b.extra_pairs.iter().any(|&(a, c)| {
+            (under.rank() == a && over.rank() == c) || (under.rank() == c && over.rank() == a)
+        }) {
+            return true;
+        }
         let (u, o) = (
             self.rank_idx[under.rank() as usize],
             self.rank_idx[over.rank() as usize],
@@ -120,6 +125,9 @@ impl Game {
         if g.cyclic_ranks && !self.cyclic_fits(g, pile, card.rank(), s) {
             return false;
         }
+        if g.empty_needs_first_full && !self.first_pile_full(self.pile_group[pile as usize], s) {
+            return false;
+        }
         if self.empty_is_open(pile, s) {
             return true;
         }
@@ -140,8 +148,18 @@ impl Game {
     }
 
     /// Whether `empty_open_after_bases` has opened the empty piles of `pile`'s group to any card.
+    fn first_pile_full(&self, gi: u16, s: &State) -> bool {
+        let first = self.groups[gi as usize].start;
+        s.piles[first as usize].len() >= self.rule(first).max_cards as usize
+    }
+
     fn empty_is_open(&self, pile: u16, s: &State) -> bool {
         let g = self.group_of(pile);
+        if g.empty_open_when_full
+            .is_some_and(|gi| self.first_pile_full(gi, s))
+        {
+            return true;
+        }
         let (Some(need), EmptyRule::Rank(k)) = (g.empty_open_after_bases, &self.rule(pile).empty)
         else {
             return false;
@@ -181,6 +199,9 @@ impl Game {
                     }
                 }
             }
+        }
+        if g.empty_needs_first_full && !self.first_pile_full(self.pile_group[pile as usize], s) {
+            return 0;
         }
         if g.cyclic_ranks {
             for r in 1..14u8 {
@@ -938,6 +959,10 @@ impl Game {
             }
         }
         if tg.require_valid_base && !dst.is_empty() && !self.empty_accepts(to, dst[0], s) {
+            return false;
+        }
+        if tg.accept_when_waste_empty && self.waste.is_some_and(|w| !s.piles[w as usize].is_empty())
+        {
             return false;
         }
         if tg.accept_when_stock_empty

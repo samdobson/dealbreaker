@@ -2201,29 +2201,6 @@
           "additionalProperties": false
         },
         {
-          "description": "As `shuffle`, but every card is dealt face down except the top card of a pile that gets at least two (Fascination Fan: the dealing goes round in three passes, the last face up).",
-          "type": "object",
-          "required": [
-            "shuffle_top_up"
-          ],
-          "properties": {
-            "shuffle_top_up": {
-              "type": "object",
-              "required": [
-                "per_pile"
-              ],
-              "properties": {
-                "per_pile": {
-                  "type": "integer",
-                  "format": "uint16",
-                  "minimum": 0.0
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
           "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap straight after each sequence (Montana).",
           "type": "string",
           "enum": [
@@ -2259,13 +2236,6 @@
           ]
         },
         {
-          "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap at the last column of each row.",
-          "type": "string",
-          "enum": [
-            "grid_shuffle_end_gaps"
-          ]
-        },
-        {
           "description": "Move each pile's bottom card to its top (Crescent).",
           "type": "string",
           "enum": [
@@ -2280,13 +2250,6 @@
           ]
         },
         {
-          "description": "Gather as `deal_rows`, then deal row by row where each row starts one pile further right than the last: the first row to every pile, the next to all but the first, and so on (Usk).",
-          "type": "string",
-          "enum": [
-            "deal_staircase"
-          ]
-        },
-        {
           "description": "On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group starting at pile `k` and wrapping around.",
           "type": "string",
           "enum": [
@@ -2298,6 +2261,43 @@
           "type": "string",
           "enum": [
             "shuffle_redeal"
+          ]
+        },
+        {
+          "description": "As `shuffle`, but every card is dealt face down except the top card of a pile that gets at least two (Fascination Fan: the dealing goes round in three passes, the last face up).",
+          "type": "object",
+          "required": [
+            "shuffle_top_up"
+          ],
+          "properties": {
+            "shuffle_top_up": {
+              "type": "object",
+              "required": [
+                "per_pile"
+              ],
+              "properties": {
+                "per_pile": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap at the last column of each row.",
+          "type": "string",
+          "enum": [
+            "grid_shuffle_end_gaps"
+          ]
+        },
+        {
+          "description": "Gather as `deal_rows`, then deal row by row where each row starts one pile further right than the last: the first row to every pile, the next to all but the first, and so on (Usk).",
+          "type": "string",
+          "enum": [
+            "deal_staircase"
           ]
         }
       ]
@@ -2365,78 +2365,6 @@
           "additionalProperties": false
         },
         {
-          "description": "Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).",
-          "type": "object",
-          "required": [
-            "pairs_sum_same_suit"
-          ],
-          "properties": {
-            "pairs_sum_same_suit": {
-              "type": "object",
-              "required": [
-                "total"
-              ],
-              "properties": {
-                "total": {
-                  "type": "integer",
-                  "format": "uint8",
-                  "minimum": 0.0
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "description": "Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1, Neptune: 1), counting ace as 1 and king as 13 with no wrap.",
-          "type": "object",
-          "required": [
-            "rank_distance"
-          ],
-          "properties": {
-            "rank_distance": {
-              "type": "object",
-              "required": [
-                "distances"
-              ],
-              "properties": {
-                "distances": {
-                  "type": "array",
-                  "items": {
-                    "type": "integer",
-                    "format": "uint8",
-                    "minimum": 0.0
-                  }
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "description": "Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).",
-          "type": "object",
-          "required": [
-            "pairs_sum_other_suit"
-          ],
-          "properties": {
-            "pairs_sum_other_suit": {
-              "type": "object",
-              "required": [
-                "total"
-              ],
-              "properties": {
-                "total": {
-                  "type": "integer",
-                  "format": "uint8",
-                  "minimum": 0.0
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
           "description": "Remove a playable card when another playable card is of the same suit and higher in the pack's rank order (Aces Up).",
           "type": "string",
           "enum": [
@@ -2448,13 +2376,6 @@
           "type": "string",
           "enum": [
             "same_rank"
-          ]
-        },
-        {
-          "description": "Remove two playable cards of the same suit.",
-          "type": "string",
-          "enum": [
-            "same_suit"
           ]
         },
         {
@@ -2581,6 +2502,85 @@
                     "format": "uint8",
                     "minimum": 0.0
                   }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1, Neptune: 1), counting ace as 1 and king as 13 with no wrap.",
+          "type": "object",
+          "required": [
+            "rank_distance"
+          ],
+          "properties": {
+            "rank_distance": {
+              "type": "object",
+              "required": [
+                "distances"
+              ],
+              "properties": {
+                "distances": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "uint8",
+                    "minimum": 0.0
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).",
+          "type": "object",
+          "required": [
+            "pairs_sum_other_suit"
+          ],
+          "properties": {
+            "pairs_sum_other_suit": {
+              "type": "object",
+              "required": [
+                "total"
+              ],
+              "properties": {
+                "total": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Remove two playable cards of the same suit.",
+          "type": "string",
+          "enum": [
+            "same_suit"
+          ]
+        },
+        {
+          "description": "Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).",
+          "type": "object",
+          "required": [
+            "pairs_sum_same_suit"
+          ],
+          "properties": {
+            "pairs_sum_same_suit": {
+              "type": "object",
+              "required": [
+                "total"
+              ],
+              "properties": {
+                "total": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
                 }
               }
             }

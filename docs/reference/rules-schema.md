@@ -335,16 +335,16 @@ How a redeal deals the gathered cards.
 
 - `{ "regroup": ... }` (`object`) — Keep the cards in order and deal them back `per_pile` at a time to each pile in turn, starting from the first pile's top cards (Cruel). Fewer piles may end up in use. If there are more cards than `per_pile` for every pile, the surplus is shared out: each pile gets an equal part and the first few one more.
 - `{ "shuffle": ... }` (`object`) — Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie), sharing out any surplus as for [`RedealHow::Regroup`].
-- `{ "shuffle_top_up": ... }` (`object`) — As `shuffle`, but every card is dealt face down except the top card of a pile that gets at least two (Fascination Fan: the dealing goes round in three passes, the last face up).
 - `"grid_shuffle"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap straight after each sequence (Montana).
 - `{ "compact": ... }` (`object`) — Close the gaps: slide the cards forward in reading order, then fill the empty places at the end from `refill_from`'s top card, turned face up (Monte Carlo).
 - `"grid_shuffle_random_gaps"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving the gaps at random positions among the non-sequence slots.
-- `"grid_shuffle_end_gaps"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap at the last column of each row.
 - `"rotate_bottom"` — Move each pile's bottom card to its top (Crescent).
 - `"deal_rows"` — Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.
-- `"deal_staircase"` — Gather as `deal_rows`, then deal row by row where each row starts one pile further right than the last: the first row to every pile, the next to all but the first, and so on (Usk).
 - `"redistribute_pile"` — On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group starting at pile `k` and wrapping around.
 - `"shuffle_redeal"` — Gather all cards of the group, shuffle them, and replay the group's opening deal steps.
+- `{ "shuffle_top_up": ... }` (`object`) — As `shuffle`, but every card is dealt face down except the top card of a pile that gets at least two (Fascination Fan: the dealing goes round in three passes, the last face up).
+- `"grid_shuffle_end_gaps"` — Grid games: leave each row's built sequence in place, shuffle every other card, and deal them back leaving one gap at the last column of each row.
+- `"deal_staircase"` — Gather as `deal_rows`, then deal row by row where each row starts one pile further right than the last: the first row to every pile, the next to all but the first, and so on (Usk).
 
 ### DealStep {#dealstep}
 
@@ -396,17 +396,17 @@ Card-removal mechanics.
 Jokers are wild in removals: a joker pairs with any card (another joker too) and stands for any one rank of a set. `lower_of_suit` ignores them.
 
 - `{ "pairs_sum": ... }` (`object`) — Remove two playable cards whose ranks add up to `total` (Pyramid: 13), or one card whose rank is listed in `alone` (Pyramid: kings).
-- `{ "pairs_sum_same_suit": ... }` (`object`) — Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
-- `{ "rank_distance": ... }` (`object`) — Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1, Neptune: 1), counting ace as 1 and king as 13 with no wrap.
-- `{ "pairs_sum_other_suit": ... }` (`object`) — Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).
 - `"lower_of_suit"` — Remove a playable card when another playable card is of the same suit and higher in the pack's rank order (Aces Up).
 - `"same_rank"` — Remove two playable cards of the same rank (Nestor, Simple Pairs).
-- `"same_suit"` — Remove two playable cards of the same suit.
 - `{ "rank_set": ... }` (`object`) — Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).
 - `{ "reach_suit_or_rank": ... }` (`object`) — Remove two playable cards in the same group whose pile indices differ by one of `distances`, when they match in suit or rank.
 - `{ "between_match": ... }` (`object`) — Remove `1..=max_len` consecutive non-empty piles in a group when the piles immediately before and after the run match in suit or rank.
 - `{ "contiguous_sum_multiple": ... }` (`object`) — Remove `1..=max_len` consecutive non-empty piles in a group when the sum of their ranks is a multiple of `divisor`.
 - `{ "same_rank_in": ... }` (`object`) — Remove two playable cards of the same rank when that rank is listed in `ranks`.
+- `{ "rank_distance": ... }` (`object`) — Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1, Neptune: 1), counting ace as 1 and king as 13 with no wrap.
+- `{ "pairs_sum_other_suit": ... }` (`object`) — Remove two playable cards of different suits whose ranks add up to `total` (Exit's queen and king).
+- `"same_suit"` — Remove two playable cards of the same suit.
+- `{ "pairs_sum_same_suit": ... }` (`object`) — Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
 
 ### Adjacency {#adjacency}
 

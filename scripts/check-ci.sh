@@ -21,6 +21,13 @@ cargo test -p dealbreaker --lib --features schema
 echo "[check-ci] test --lib --features parallel..."
 cargo test -p dealbreaker --lib --features parallel
 
+if cargo semver-checks --version >/dev/null 2>&1; then
+  echo "[check-ci] cargo semver-checks (dealbreaker)..."
+  cargo semver-checks --package dealbreaker
+else
+  echo "[check-ci] skipping semver check (install with: cargo install cargo-semver-checks --locked)"
+fi
+
 echo "[check-ci] rustdoc (-D warnings)..."
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 

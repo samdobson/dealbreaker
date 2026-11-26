@@ -1675,9 +1675,6 @@ pub enum RedealHow {
     /// Shuffle the gathered cards, then deal `per_pile` to each pile in turn (La Belle Lucie),
     /// sharing out any surplus as for [`RedealHow::Regroup`].
     Shuffle { per_pile: u16 },
-    /// As `shuffle`, but every card is dealt face down except the top card of a pile that gets at
-    /// least two (Fascination Fan: the dealing goes round in three passes, the last face up).
-    ShuffleTopUp { per_pile: u16 },
     /// Grid games: leave each row's built sequence in place, shuffle every other card, and
     /// deal them back leaving one gap straight after each sequence (Montana).
     GridShuffle,
@@ -1690,22 +1687,25 @@ pub enum RedealHow {
     /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
     /// them back leaving the gaps at random positions among the non-sequence slots.
     GridShuffleRandomGaps,
-    /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
-    /// them back leaving one gap at the last column of each row.
-    GridShuffleEndGaps,
     /// Move each pile's bottom card to its top (Crescent).
     RotateBottom,
     /// Gather piles left-to-right (reversing each pile) and deal all cards back row-by-row.
     DealRows,
-    /// Gather as `deal_rows`, then deal row by row where each row starts one pile further right
-    /// than the last: the first row to every pile, the next to all but the first, and so on
-    /// (Usk).
-    DealStaircase,
     /// On redeal `k` (0-indexed), pick up pile `k` and deal its cards one-by-one across the group
     /// starting at pile `k` and wrapping around.
     RedistributePile,
     /// Gather all cards of the group, shuffle them, and replay the group's opening deal steps.
     ShuffleRedeal,
+    /// As `shuffle`, but every card is dealt face down except the top card of a pile that gets at
+    /// least two (Fascination Fan: the dealing goes round in three passes, the last face up).
+    ShuffleTopUp { per_pile: u16 },
+    /// Grid games: leave each row's built sequence in place, shuffle every other card, and deal
+    /// them back leaving one gap at the last column of each row.
+    GridShuffleEndGaps,
+    /// Gather as `deal_rows`, then deal row by row where each row starts one pile further right
+    /// than the last: the first row to every pile, the next to all but the first, and so on
+    /// (Usk).
+    DealStaircase,
 }
 
 /// One step of the opening deal.
@@ -1950,21 +1950,11 @@ pub enum RemovalKind {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         alone: Vec<u8>,
     },
-    /// Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
-    PairsSumSameSuit { total: u8 },
-    /// Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1,
-    /// Neptune: 1), counting ace as 1 and king as 13 with no wrap.
-    RankDistance { distances: Vec<u8> },
-    /// Remove two playable cards of different suits whose ranks add up to `total` (Exit's
-    /// queen and king).
-    PairsSumOtherSuit { total: u8 },
     /// Remove a playable card when another playable card is of the same suit and higher in the
     /// pack's rank order (Aces Up).
     LowerOfSuit,
     /// Remove two playable cards of the same rank (Nestor, Simple Pairs).
     SameRank,
-    /// Remove two playable cards of the same suit.
-    SameSuit,
     /// Remove playable cards whose ranks are exactly this set, together (Elevens' J-Q-K).
     RankSet { ranks: Vec<u8> },
     /// Remove two playable cards in the same group whose pile indices differ by one of
@@ -1978,6 +1968,16 @@ pub enum RemovalKind {
     ContiguousSumMultiple { divisor: u8, max_len: u8 },
     /// Remove two playable cards of the same rank when that rank is listed in `ranks`.
     SameRankIn { ranks: Vec<u8> },
+    /// Remove two playable cards whose ranks differ by one of `distances` (Cheops: 0 or 1,
+    /// Neptune: 1), counting ace as 1 and king as 13 with no wrap.
+    RankDistance { distances: Vec<u8> },
+    /// Remove two playable cards of different suits whose ranks add up to `total` (Exit's
+    /// queen and king).
+    PairsSumOtherSuit { total: u8 },
+    /// Remove two playable cards of the same suit.
+    SameSuit,
+    /// Remove two playable cards of the same suit whose ranks add up to `total` (Suit Elevens).
+    PairsSumSameSuit { total: u8 },
 }
 
 /// When the game is won.

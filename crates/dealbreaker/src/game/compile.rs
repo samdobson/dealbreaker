@@ -920,6 +920,7 @@ fn compile_removals(rules: &Rules, groups: &[Group]) -> Result<Vec<Removal>, Rul
             from,
             to: groups[find_group(rules, &r.to)? as usize].start,
             adjacent,
+            exclude_ranks: r.exclude_ranks.clone(),
         });
     }
     Ok(removal)

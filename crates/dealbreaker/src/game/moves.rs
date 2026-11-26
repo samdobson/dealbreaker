@@ -1657,7 +1657,7 @@ impl Game {
                     continue;
                 }
                 if let Some(&c) = pile.last() {
-                    if c.is_face_up() {
+                    if c.is_face_up() && !r.exclude_ranks.contains(&c.rank()) {
                         tops.push((p, c));
                     }
                 }

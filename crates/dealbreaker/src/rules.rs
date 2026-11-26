@@ -1859,6 +1859,9 @@ pub struct RemovalRules {
     /// Cards must be neighbours in their grid (all from one grid group).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub adjacent: Option<Adjacency>,
+    /// Cards of these ranks never take part in a removal (Aces Square's aces).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude_ranks: Vec<u8>,
 }
 
 impl RemovalRules {
@@ -1869,6 +1872,7 @@ impl RemovalRules {
             from: from.iter().map(|s| s.to_string()).collect(),
             to: to.to_string(),
             adjacent: None,
+            exclude_ranks: Vec::new(),
         }
     }
 }

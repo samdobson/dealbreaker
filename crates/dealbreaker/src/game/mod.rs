@@ -550,6 +550,7 @@ pub(crate) struct Removal {
     pub to: u16,
     /// Neighbour rule, with the grid group it applies to.
     pub adjacent: Option<(Adjacency, u16)>,
+    pub exclude_ranks: Vec<u8>,
 }
 
 #[derive(Clone, Debug)]

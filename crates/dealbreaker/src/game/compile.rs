@@ -1118,6 +1118,10 @@ impl Game {
             None => None,
             Some(cb) => Some(CompiledChooseBase {
                 from_group: find_group(&rules, &cb.from)?,
+                also_from_group: match &cb.also_from {
+                    None => None,
+                    Some(n) => Some(find_group(&rules, n)?),
+                },
                 refill_from_stock: cb.refill_from_stock,
                 deal_waste: cb.deal_waste,
                 free_moves: cb.free_moves,

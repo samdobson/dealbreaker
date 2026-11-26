@@ -136,6 +136,9 @@ pub struct ChooseBase {
     /// every other move and the stock stay open (Nine Across).
     #[serde(default)]
     pub free_moves: bool,
+    /// A second group whose cards may also be played to a foundation to choose the base.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub also_from: Option<String>,
 }
 
 impl ChooseBase {
@@ -145,6 +148,7 @@ impl ChooseBase {
             refill_from_stock: false,
             deal_waste: false,
             free_moves: false,
+            also_from: None,
         }
     }
 }

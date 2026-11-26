@@ -881,7 +881,9 @@ impl Game {
         let fgi = self.pile_group[from as usize];
         if let Some(cb) = &self.choose_base {
             if s.base_rank.is_none()
-                && (fgi != cb.from_group || tg.kind != PileKind::Foundation || n != 1)
+                && ((fgi != cb.from_group && Some(fgi) != cb.also_from_group)
+                    || tg.kind != PileKind::Foundation
+                    || n != 1)
                 && (!cb.free_moves || tg.kind == PileKind::Foundation)
             {
                 return false;

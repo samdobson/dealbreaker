@@ -98,6 +98,7 @@ pub(crate) enum Op {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct CompiledChooseBase {
     pub from_group: u16,
+    pub also_from_group: Option<u16>,
     pub refill_from_stock: bool,
     pub deal_waste: bool,
     pub free_moves: bool,

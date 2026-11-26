@@ -1334,13 +1334,17 @@ impl Game {
                 .filter(|g| g.auto_foundation_rank.is_some())
             {
                 let rank = g.auto_foundation_rank.unwrap();
-                for p in g.piles() {
-                    while let Some(&c) = s.piles[p as usize].last() {
+                // One card goes at a time, and the search starts again from the first pile.
+                'again: loop {
+                    for p in g.piles() {
+                        let Some(&c) = s.piles[p as usize].last() else {
+                            continue;
+                        };
                         if !(c.is_face_up() && (rank == 0 || c.rank() == rank)) {
-                            break;
+                            continue;
                         }
-                        let Some(f) = self.find_foundation(s, c) else {
-                            break;
+                        let Some(f) = self.find_foundation_from(s, c, Some(p)) else {
+                            continue;
                         };
                         self.push(
                             s,
@@ -1352,7 +1356,9 @@ impl Game {
                             },
                         );
                         changed = true;
+                        continue 'again;
                     }
+                    break;
                 }
             }
             if self.settle_compact(s, j) {

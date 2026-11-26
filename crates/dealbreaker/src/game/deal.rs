@@ -105,6 +105,16 @@ impl Game {
 
     /// First foundation pile that currently accepts `c` (used by card-dependent deal steps).
     pub(super) fn find_foundation(&self, s: &State, c: Card) -> Option<u16> {
+        self.find_foundation_from(s, c, None)
+    }
+
+    /// As `find_foundation`, for a card that comes from pile `from`.
+    pub(super) fn find_foundation_from(
+        &self,
+        s: &State,
+        c: Card,
+        from: Option<u16>,
+    ) -> Option<u16> {
         for g in self
             .groups
             .iter()
@@ -114,6 +124,9 @@ impl Game {
                 let pile = &s.piles[p as usize];
                 let tr = self.rule(p);
                 if pile.len() >= tr.max_cards as usize || tr.complete_runs {
+                    continue;
+                }
+                if from.is_some_and(|f| !self.pile_map_allows(g, f, p)) {
                     continue;
                 }
                 let ok = if !g.rank_sequence.is_empty() {
@@ -407,8 +420,9 @@ impl Game {
                     }
                 };
                 let rows = counts.iter().copied().max().unwrap_or(0);
-                let allow_short = !step.drain_foundations
-                    && (step.auto_foundation || step.divert_ranks.is_some());
+                let allow_short = step.stop_when_out
+                    || (!step.drain_foundations
+                        && (step.auto_foundation || step.divert_ranks.is_some()));
                 'deal_rows: for r in 0..rows {
                     for (i, &p) in piles.iter().enumerate() {
                         if counts[i] > r {
@@ -460,7 +474,7 @@ impl Game {
                                             .as_ref()
                                             .is_none_or(|rs| rs.contains(&c.rank()))
                                     {
-                                        if let Some(f) = self.find_foundation(&s, c) {
+                                        if let Some(f) = self.find_foundation_from(&s, c, Some(p)) {
                                             s.piles[p as usize].pop();
                                             s.piles[f as usize].push(c);
                                             moved = true;

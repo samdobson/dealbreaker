@@ -477,6 +477,10 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             reach: g.reach.clone(),
             reach_both_ways: g.reach_both_ways,
             reach_grid: g.reach_grid,
+            from_pile_map: match &g.from_pile_map {
+                None => None,
+                Some(m) => Some((find_group(rules, &m.group)?, m.to.clone())),
+            },
             clear_tops: match &g.clear_tops {
                 None => None,
                 Some(c) => Some((find_group(rules, &c.to)?, c.sum)),

@@ -822,6 +822,20 @@ impl Game {
         }
     }
 
+    /// Does `tg`'s `from_pile_map` let pile `from` send cards to pile `to`?
+    pub(crate) fn pile_map_allows(&self, tg: &crate::game::Group, from: u16, to: u16) -> bool {
+        match &tg.from_pile_map {
+            Some((fg, map)) if self.pile_group[from as usize] == *fg => {
+                let want = map
+                    .get((from - self.groups[*fg as usize].start) as usize)
+                    .copied()
+                    .unwrap_or(-1);
+                want < 0 || want as u16 == to - tg.start
+            }
+            _ => true,
+        }
+    }
+
     /// Would the bottom cards of `g`'s other piles and a card of `rank` still form one run of
     /// consecutive, different ranks (wrapping round the pack)?
     fn cyclic_fits(&self, g: &crate::game::Group, pile: u16, rank: u8, s: &State) -> bool {
@@ -950,6 +964,9 @@ impl Game {
                     && from - self.groups[fg2 as usize].start == f
             })
         {
+            return false;
+        }
+        if !self.pile_map_allows(tg, from, to) {
             return false;
         }
         if let Some(k) = tg.one_way_split {

@@ -451,6 +451,9 @@ pub struct GroupRules {
     /// piles reached are the four neighbours (Rectangular Rovers).
     #[serde(default, skip_serializing_if = "is_false")]
     pub reach_grid: bool,
+    /// See [`FromPileMap`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_pile_map: Option<FromPileMap>,
     /// See [`ClearTops`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clear_tops: Option<ClearTops>,
@@ -753,6 +756,28 @@ impl ClearTops {
     }
 }
 
+/// Which pile of this group a pile of `group` may send cards to (Rittenhouse's foundations).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct FromPileMap {
+    /// Group the cards come from.
+    pub group: String,
+    /// For each pile of that group, the only pile of this group it may send cards to, or -1 for
+    /// any.
+    pub to: Vec<i16>,
+}
+
+impl FromPileMap {
+    pub fn new(group: &str, to: &[i16]) -> FromPileMap {
+        FromPileMap {
+            group: group.to_string(),
+            to: to.to_vec(),
+        }
+    }
+}
+
 /// Cards from some piles of a group may not go to some piles of this group until the stock or
 /// redeal has been used once (St. Helena's foundations).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -868,6 +893,7 @@ impl GroupRules {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            from_pile_map: None,
             clear_tops: None,
             first_round_bans: Vec::new(),
             row_start: None,
@@ -1710,6 +1736,9 @@ pub struct DealStep {
     /// accepting foundation (restricted to `divert_ranks` if set).
     #[serde(default, skip_serializing_if = "is_false")]
     pub drain_foundations: bool,
+    /// The deal may run out of cards part-way through a round (the last round is short).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub stop_when_out: bool,
     /// With `rest`: send each card to the selected pile its rank or suit names instead of dealing
     /// round-robin (Lady of the Manor's reserves by rank, Four Colours' rows by suit).
     #[serde(default, skip_serializing_if = "Option::is_none")]

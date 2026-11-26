@@ -286,7 +286,7 @@ fn maximize_inner(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_
         };
     }
     if opts.strategy == Strategy::DepthFirst {
-        let p = ctx.bounded_dfs(start, lo + 1, u32::MAX, budget, false);
+        let p = ctx.bounded_dfs(start, lo.saturating_add(1), u32::MAX, budget, false);
         let (score, moves) = p.found.unwrap_or((lo, line));
         return MaxResult {
             score,
@@ -302,7 +302,7 @@ fn maximize_inner(game: &Game, start: &State, opts: &SolveOptions, stop: Stop<'_
     let mut slack = 1u32;
     while states < budget && !stop.is_stopped_now() {
         let mut ctx = Ctx::new(game, opts, stop);
-        let p = ctx.bounded_dfs(start, lo + 1, slack, budget - states, false);
+        let p = ctx.bounded_dfs(start, lo.saturating_add(1), slack, budget - states, false);
         states += p.states;
         if let Some((v, m)) = p.found {
             lo = v;

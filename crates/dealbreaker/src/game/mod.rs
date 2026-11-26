@@ -497,6 +497,7 @@ pub(crate) struct Stock {
     pub deal_empty_first: bool,
     pub divert_ranks: Vec<u8>,
     pub final_split_to: Option<u16>,
+    pub final_also_to: Option<u16>,
     pub require_no_empty_group: Option<u16>,
     pub require_group_empty: Option<u16>,
     pub auto_for_empty: Option<u16>,

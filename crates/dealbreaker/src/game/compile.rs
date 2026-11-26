@@ -814,6 +814,10 @@ fn compile_stock(
                 deal_empty_first: sr.deal_empty_first,
                 divert_ranks: sr.divert_ranks.clone(),
                 final_split_to,
+                final_also_to: match &sr.final_also_to {
+                    None => None,
+                    Some(n) => Some(find_group(rules, n)?),
+                },
                 require_no_empty_group,
                 require_group_empty,
                 auto_for_empty,

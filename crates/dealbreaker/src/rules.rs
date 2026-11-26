@@ -1517,6 +1517,10 @@ pub struct StockRules {
     /// and the last card remaining in the stock is turned face up.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub final_split_to: Option<String>,
+    /// When exactly as many cards are left as the target and this group have piles together,
+    /// the deal also puts one card on each pile of this group (Baroness's last seven cards).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_also_to: Option<String>,
     /// The stock may not deal while any pile of this named group is empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub require_no_empty_group: Option<String>,
@@ -1571,6 +1575,7 @@ impl StockRules {
             divert_ranks: Vec::new(),
             piles_per_round: Vec::new(),
             final_split_to: None,
+            final_also_to: None,
             require_no_empty_group: None,
             require_group_empty: None,
             auto_for_empty: None,

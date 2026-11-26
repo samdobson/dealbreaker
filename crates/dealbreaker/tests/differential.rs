@@ -3590,6 +3590,46 @@ fn stock_skips_built_king_piles() {
 }
 
 #[test]
+fn waste_feeds_foundations_and_emptied_rows() {
+    // Q.C.-style: every waste card a foundation takes goes there; a move that empties a row
+    // deals once from the stock, and the row takes the card if it stays in the waste.
+    let mut r = mini_klondike(1, Some(1));
+    r.name = "mini q.c.".into();
+    r.groups[1].auto_foundation_rank = Some(0);
+    r.groups[3] = r.groups[3]
+        .clone()
+        .empty(EmptyRule::Any)
+        .build(BuildBy::Suit, Dir::Down)
+        .refill_from(&["waste"])
+        .refill_on_empty();
+    let st = r.stock.as_mut().unwrap();
+    st.auto = true;
+    st.auto_for_empty = Some("tableau".into());
+    check(r, 0..40);
+}
+
+#[test]
+fn blind_rows_take_anything_on_a_face_down_card() {
+    let mut r = mini_klondike(1, Some(1));
+    r.name = "mini blind".into();
+    r.groups[3].no_flip = true;
+    r.groups[3].accept_on_face_down = true;
+    r.groups[3].move_face_down_top = true;
+    r.groups[3].empty = Some(EmptyRule::Any);
+    check(r, 0..40);
+}
+
+#[test]
+fn lower_rows_take_nothing_from_the_first_rows() {
+    let mut r = mini_klondike(1, Some(1));
+    r.name = "mini club".into();
+    r.groups[3].empty = Some(EmptyRule::Any);
+    r.groups[3].one_way_split = Some(1);
+    r.groups[3].moves = Some(MoveUnit::Top);
+    check(r, 0..40);
+}
+
+#[test]
 fn open_stock_drops_aces_by_itself() {
     let mut stock = GroupRules::new("stock", PileKind::Stock, 1).moves(MoveUnit::Top);
     stock.auto_foundation_rank = Some(1);

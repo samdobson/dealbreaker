@@ -418,7 +418,9 @@ impl Game {
         let cards = &s.piles[pile as usize];
         let Some(&top) = cards.last() else { return 0 };
         if !top.is_face_up() {
-            return 0;
+            return usize::from(
+                self.group_of(pile).move_face_down_top && self.rule(pile).moves != MoveUnit::None,
+            );
         }
         if let Some(n) = self.hooks.as_ref().and_then(|h| h.movable(self, s, pile)) {
             return n.min(cards.len());
@@ -874,6 +876,14 @@ impl Game {
         if tg.accept_only_when_empty && !dst.is_empty() {
             return false;
         }
+        if let Some(k) = tg.one_way_split {
+            if self.pile_group[from as usize] == self.pile_group[to as usize]
+                && to - tg.start >= k
+                && from - tg.start < k
+            {
+                return false;
+            }
+        }
         if tg.require_valid_base && !dst.is_empty() && !self.empty_accepts(to, dst[0], s) {
             return false;
         }
@@ -923,7 +933,9 @@ impl Game {
                     tr.build.dir == Dir::Same,
                 );
         }
-        let ok = if unrestricted {
+        let ok = if unrestricted
+            || (tg.accept_on_face_down && dst.last().is_some_and(|c| !c.is_face_up()))
+        {
             true
         } else if !tg.rank_sequence.is_empty() {
             let Some(&want_rank) = tg.rank_sequence.get(dst.len()) else {

@@ -1307,27 +1307,8 @@ impl Game {
         }
         let mut emptied: Vec<u16> = initial_emptied.to_vec();
         let max_iters = s.piles.len().saturating_mul(16).max(256);
-        for _ in 0..max_iters {
-            let mut changed = self.settle_compact(s, j);
-            let mut next_emptied: Vec<u16> = Vec::new();
-            if self.settle_refills(s, j, &emptied, &mut next_emptied) {
-                changed = true;
-            }
-            if !(self.choose_base.is_some() && s.base_rank.is_none()) {
-                if let Some(st) = self.stock.as_ref().filter(|st| st.auto) {
-                    let target = self.groups[st.target as usize].start;
-                    if st.target_kind == PileKind::Waste
-                        && s.piles[target as usize].is_empty()
-                        && !s.piles[st.pile as usize].is_empty()
-                    {
-                        let n = st
-                            .deal_count(s.redeals_used)
-                            .min(s.piles[st.pile as usize].len() as u16);
-                        self.deal_from_stock(s, j, st.pile, target, n);
-                        changed = true;
-                    }
-                }
-            }
+        for iter in 0..max_iters {
+            let mut changed = false;
             for g in self
                 .groups
                 .iter()
@@ -1336,7 +1317,7 @@ impl Game {
                 let rank = g.auto_foundation_rank.unwrap();
                 for p in g.piles() {
                     while let Some(&c) = s.piles[p as usize].last() {
-                        if !(c.is_face_up() && c.rank() == rank) {
+                        if !(c.is_face_up() && (rank == 0 || c.rank() == rank)) {
                             break;
                         }
                         let Some(f) = self.find_foundation(s, c) else {
@@ -1352,6 +1333,46 @@ impl Game {
                             },
                         );
                         changed = true;
+                    }
+                }
+            }
+            if self.settle_compact(s, j) {
+                changed = true;
+            }
+            let mut next_emptied: Vec<u16> = Vec::new();
+            if self.settle_refills(s, j, &emptied, &mut next_emptied) {
+                changed = true;
+            }
+            if !(self.choose_base.is_some() && s.base_rank.is_none()) {
+                if let Some(st) = self.stock.as_ref().filter(|st| st.auto) {
+                    let target = self.groups[st.target as usize].start;
+                    if st.target_kind == PileKind::Waste
+                        && s.piles[target as usize].is_empty()
+                        && !s.piles[st.pile as usize].is_empty()
+                        && st.auto_for_empty.is_none_or(|gi| {
+                            iter == 0
+                                && emptied.iter().any(|&q| {
+                                    self.pile_group[q as usize] == gi
+                                        && s.piles[q as usize].is_empty()
+                                })
+                        })
+                    {
+                        let n = st
+                            .deal_count(s.redeals_used)
+                            .min(s.piles[st.pile as usize].len() as u16);
+                        self.deal_from_stock(s, j, st.pile, target, n);
+                        changed = true;
+                        if let Some(gi) = st.auto_for_empty {
+                            // The emptied piles are then refilled from what this deal left.
+                            for &q in &emptied {
+                                if self.pile_group[q as usize] == gi
+                                    && s.piles[q as usize].is_empty()
+                                    && !next_emptied.contains(&q)
+                                {
+                                    next_emptied.push(q);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1419,6 +1440,13 @@ impl Game {
                                 },
                             );
                         }
+                    }
+                    if self.group_of(from).move_face_down_top
+                        && s.piles[from as usize]
+                            .last()
+                            .is_some_and(|c| !c.is_face_up())
+                    {
+                        self.push(s, j, Op::Flip(from));
                     }
                     self.push(s, j, Op::Shift { from, to, count });
                     if let Some(cb) = &self.choose_base {

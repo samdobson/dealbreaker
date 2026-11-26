@@ -197,6 +197,9 @@ pub(crate) struct Group {
     pub exclude_suit: Option<crate::card::Suit>,
     /// A full, fully built pile may not be moved from.
     pub freeze_when_built: bool,
+    pub accept_on_face_down: bool,
+    pub one_way_split: Option<u16>,
+    pub move_face_down_top: bool,
     /// Fixed rank sequence required by pile depth.
     pub rank_sequence: Vec<u8>,
     /// No two non-empty piles in this group may share the same suit on their bottom card.
@@ -339,6 +342,7 @@ impl Group {
             || self.flip_when_any_empty.is_some()
             || self.refill_same_index
             || self.refill_nearest
+            || self.one_way_split.is_some()
     }
 
     /// True if moves to or from this group are gated on the stock being empty.
@@ -411,6 +415,9 @@ impl Group {
             lock_pile_dir: false,
             exclude_suit: None,
             freeze_when_built: false,
+            accept_on_face_down: false,
+            one_way_split: None,
+            move_face_down_top: false,
             rank_sequence: Vec::new(),
             unique_suits: false,
             unique_ranks: false,
@@ -460,6 +467,7 @@ pub(crate) struct Stock {
     pub final_split_to: Option<u16>,
     pub require_no_empty_group: Option<u16>,
     pub require_group_empty: Option<u16>,
+    pub auto_for_empty: Option<u16>,
     pub skip_built_from: Option<u8>,
     pub max_deals: Option<u32>,
     pub skip_run_with_rank: Option<u8>,
@@ -491,6 +499,7 @@ impl Stock {
         self.require_no_empty
             || self.require_no_empty_group.is_some()
             || self.require_group_empty.is_some()
+            || self.auto_for_empty.is_some()
             || self.skip_built_from.is_some()
             || self.max_deals.is_some()
             || self.skip_run_with_rank.is_some()

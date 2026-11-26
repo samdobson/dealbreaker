@@ -577,6 +577,17 @@ pub struct GroupRules {
     /// A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it.
     #[serde(default, skip_serializing_if = "is_false")]
     pub freeze_when_built: bool,
+    /// A pile whose top card is face down takes any cards at all (Blind Patience).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub accept_on_face_down: bool,
+    /// Piles of this group from this index on take nothing from the piles of this group before it
+    /// (Club: the three top rows never give to the lower eight).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub one_way_split: Option<u16>,
+    /// A face-down top card may be moved: it turns face up as it goes (Blind Patience, where the
+    /// player turns a card over by hand and then plays it).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub move_face_down_top: bool,
     /// Fixed sequence of ranks required at each pile depth (index 0 for the bottom card, index 1
     /// for the second, etc.). Replaces the rank check of `empty` and `build.dir`; `build.by`,
     /// `suit`, `empty_suit`, `color`, and `max_cards` still apply.
@@ -611,7 +622,8 @@ pub struct GroupRules {
     pub clear_same_rank: bool,
     /// Whenever the top card of a pile of this group is face up and of this rank (1 = ace), play
     /// it to the first foundation that takes it, whatever that foundation's other conditions
-    /// (Strategy +: aces leave the talon by themselves).
+    /// (Strategy +: aces leave the talon by themselves). Rank 0 means any rank (Q.C.: every waste
+    /// card that fits a foundation goes there).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub auto_foundation_rank: Option<u8>,
     /// A face-down top card is turned up only once the stock and the waste are both empty
@@ -815,6 +827,9 @@ impl GroupRules {
             unrestricted_from: None,
             lock_pile_dir: false,
             freeze_when_built: false,
+            accept_on_face_down: false,
+            one_way_split: None,
+            move_face_down_top: false,
             rank_sequence: Vec::new(),
             non_empty_max_accept: None,
             unique_suits: false,
@@ -1381,6 +1396,12 @@ pub struct StockRules {
     /// reserves).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub require_group_empty: Option<String>,
+    /// With `auto`: deal to the empty waste by itself only right after a move empties a pile of
+    /// this named group, once, and let that pile (with a `refill_on_empty` refill from the waste)
+    /// take the card if it stays (Q.C.: a card that fits a foundation goes there, and the row
+    /// stays empty).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_for_empty: Option<String>,
     /// A deal passes over every target pile that is a whole built run from this rank (1 = ace)
     /// down to its last card, face up (Churchill: finished king piles). Nothing deals when
     /// every pile is passed over.
@@ -1423,6 +1444,7 @@ impl StockRules {
             final_split_to: None,
             require_no_empty_group: None,
             require_group_empty: None,
+            auto_for_empty: None,
             skip_built_from: None,
             max_deals: None,
             skip_run_with_rank: None,

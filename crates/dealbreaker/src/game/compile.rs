@@ -295,6 +295,7 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
         sr.require_no_empty
             || sr.require_no_empty_group.is_some()
             || sr.require_group_empty.is_some()
+            || sr.auto_for_empty.is_some()
             || sr.skip_built_from.is_some()
             || sr.skip_run_with_rank.is_some()
             || sr.skip_empty
@@ -504,6 +505,9 @@ fn compile_groups(rules: &Rules, pack: &CompiledPack) -> Result<CompiledGroups, 
             lock_pile_dir: g.lock_pile_dir,
             exclude_suit: g.exclude_suit,
             freeze_when_built: g.freeze_when_built,
+            accept_on_face_down: g.accept_on_face_down,
+            one_way_split: g.one_way_split,
+            move_face_down_top: g.move_face_down_top,
             rank_sequence: g.rank_sequence.clone(),
             unique_suits: g.unique_suits,
             unique_ranks: g.unique_ranks,
@@ -724,6 +728,10 @@ fn compile_stock(
                 None => None,
                 Some(name) => Some(find_group(rules, name)?),
             };
+            let auto_for_empty = match &sr.auto_for_empty {
+                None => None,
+                Some(name) => Some(find_group(rules, name)?),
+            };
             if sr.skip_empty && (sr.require_no_empty || sr.first_empty) {
                 return err(
                     "stock skip_empty can't be combined with require_no_empty or first_empty",
@@ -774,6 +782,7 @@ fn compile_stock(
                 final_split_to,
                 require_no_empty_group,
                 require_group_empty,
+                auto_for_empty,
                 skip_built_from: sr.skip_built_from,
                 max_deals: sr.max_deals,
                 skip_run_with_rank: sr.skip_run_with_rank,

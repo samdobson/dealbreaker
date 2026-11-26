@@ -60,6 +60,9 @@ impl Game {
         if !ok_suit || b.blocked_ranks.contains(&under.rank()) {
             return false;
         }
+        if b.extra_over.contains(&(under.rank(), over.rank())) {
+            return true;
+        }
         if b.extra_pairs.iter().any(|&(a, c)| {
             (under.rank() == a && over.rank() == c) || (under.rank() == c && over.rank() == a)
         }) {

@@ -1233,6 +1233,10 @@ pub struct Build {
     /// (Striptease: jack and king).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extra_pairs: Vec<(u8, u8)>,
+    /// `(under, over)` rank pairs that also build, in that order only, whatever the direction
+    /// (Napoleon's Tomb: a six goes on an ace).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extra_over: Vec<(u8, u8)>,
     /// With `by: suit_cycle`: the suits in the order they follow each other.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub suit_cycle: Vec<Suit>,
@@ -1284,6 +1288,7 @@ impl Default for Build {
             blocked_ranks: Vec::new(),
             gap_ranks: Vec::new(),
             extra_pairs: Vec::new(),
+            extra_over: Vec::new(),
             suit_cycle: Vec::new(),
         }
     }

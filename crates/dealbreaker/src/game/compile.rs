@@ -241,6 +241,7 @@ fn compile_pile_rules(
         && build.blocked_ranks.is_empty()
         && build.gap_ranks.is_empty()
         && build.extra_pairs.is_empty()
+        && build.extra_over.is_empty()
         && matches!(
             empty,
             EmptyRule::Rank(_) | EmptyRule::DealtBase | EmptyRule::DealtBaseOffset(_)
@@ -1338,6 +1339,7 @@ impl Game {
                     && pr.build.blocked_ranks.is_empty()
                     && pr.build.gap_ranks.is_empty()
                     && pr.build.extra_pairs.is_empty()
+                    && pr.build.extra_over.is_empty()
                     && pr.empty == EmptyRule::Any
                     && pr.empty_suit.is_none()
                     && pr.max_cards == u16::MAX

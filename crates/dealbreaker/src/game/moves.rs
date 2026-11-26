@@ -834,6 +834,20 @@ impl Game {
         }
     }
 
+    /// Four by Four: may `card` go on `pile` (whose top is `top`) when each rank comes `n` times?
+    pub(crate) fn repeat_ok(&self, pile: &[Card], top: Card, card: Card, n: u16) -> bool {
+        let run = pile
+            .iter()
+            .rev()
+            .take_while(|c| c.rank() == top.rank())
+            .count();
+        if run < n as usize {
+            card.rank() == top.rank()
+        } else {
+            card.rank() == self.rank_from(top.rank(), 1)
+        }
+    }
+
     /// Does `tg`'s `from_pile_map` let pile `from` send cards to pile `to`?
     pub(crate) fn pile_map_allows(&self, tg: &crate::game::Group, from: u16, to: u16) -> bool {
         match &tg.from_pile_map {
@@ -1046,6 +1060,11 @@ impl Game {
             || (tg.accept_on_face_down && dst.last().is_some_and(|c| !c.is_face_up()))
         {
             true
+        } else if let Some(n) = tg.repeat_rank {
+            match dst.last() {
+                None => self.empty_accepts(to, card, s),
+                Some(&top) => top.is_face_up() && self.repeat_ok(dst, top, card, n),
+            }
         } else if !tg.rank_sequence.is_empty() {
             let Some(&want_rank) = tg.rank_sequence.get(dst.len()) else {
                 return false;

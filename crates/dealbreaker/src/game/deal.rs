@@ -142,9 +142,13 @@ impl Game {
                 } else {
                     match pile.last() {
                         None => self.empty_accepts(p, c, s),
-                        Some(&top) => {
-                            top.is_face_up() && tr.fits[top.face() as usize] >> c.face() & 1 != 0
-                        }
+                        Some(&top) => match g.repeat_rank {
+                            Some(n) => top.is_face_up() && self.repeat_ok(pile, top, c, n),
+                            None => {
+                                top.is_face_up()
+                                    && tr.fits[top.face() as usize] >> c.face() & 1 != 0
+                            }
+                        },
                     }
                 };
                 if ok {

@@ -451,6 +451,11 @@ pub struct GroupRules {
     /// piles reached are the four neighbours (Rectangular Rovers).
     #[serde(default, skip_serializing_if = "is_false")]
     pub reach_grid: bool,
+    /// A pile takes this many cards of one rank in a row, then goes on to the next rank of the
+    /// pack, wrapping round (Four by Four). Use with `build: any/any` so nothing is ruled out
+    /// before the pile itself is looked at.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repeat_rank: Option<u16>,
     /// With a `covers` layout: a pile covered by one pile only may take that whole pile at once
     /// even while it is covered, if the cards build on it (Interlock's drop-down move).
     #[serde(default, skip_serializing_if = "is_false")]
@@ -897,6 +902,7 @@ impl GroupRules {
             reach: None,
             reach_both_ways: false,
             reach_grid: false,
+            repeat_rank: None,
             dropdown: false,
             from_pile_map: None,
             clear_tops: None,

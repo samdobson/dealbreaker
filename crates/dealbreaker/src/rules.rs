@@ -1551,6 +1551,11 @@ pub struct DealStep {
     /// (Colours: a 2 and a 4 of one colour, a 3 and a 5 of the other).
     #[serde(default, skip_serializing_if = "is_false")]
     pub alternate_colors: bool,
+    /// With `divert_ranks` or `auto_foundation`: a card sent to a foundation does not use up its
+    /// turn; the same pile gets the next card instead (Dieppe: cards go to the foundations until
+    /// one does not fit, and that one goes to the row).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub retry_after_divert: bool,
     /// With `ranks`: take only the first card of each listed rank, in the listed order
     /// (Calculation's A, 2, 3, 4).
     #[serde(default, skip_serializing_if = "is_false")]

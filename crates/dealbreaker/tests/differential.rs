@@ -3937,3 +3937,28 @@ fn suit_cycle_builds() {
         0..60,
     );
 }
+
+#[test]
+fn retry_after_divert_gives_the_pile_the_next_card() {
+    let mut step = DealStep::to("tableau").each(2);
+    step.auto_foundation = true;
+    step.retry_after_divert = true;
+    check(
+        Rules::new(
+            "mini dieppe deal",
+            Pack::new(&[Suit::Spades, Suit::Hearts], &[1, 2, 3, 4]),
+            vec![
+                GroupRules::new("foundation", PileKind::Foundation, 2)
+                    .build(BuildBy::Suit, Dir::Up)
+                    .pile(PileOverride::on(&[0]).suit(Suit::Spades))
+                    .pile(PileOverride::on(&[1]).suit(Suit::Hearts)),
+                GroupRules::new("tableau", PileKind::Tableau, 2)
+                    .build(BuildBy::Any, Dir::Down)
+                    .moves(MoveUnit::Top)
+                    .empty(EmptyRule::Any),
+            ],
+            vec![step, DealStep::to("tableau").rest()],
+        ),
+        0..40,
+    );
+}

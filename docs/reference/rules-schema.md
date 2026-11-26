@@ -345,6 +345,7 @@ Cards come off the shuffled pack in order. With `count` or `counts`, they are de
 | `piles` | `array` \| `null` | — | Piles of the group to deal to (indices). Default: all. |
 | `ranks` | `array` \| `null` | — | Take every card of these ranks out of the pack and put one on each selected pile in turn (Beleaguered Castle's aces). |
 | `rest` | `boolean` | — | Deal every remaining card, round-robin over the selected piles. |
+| `retry_after_divert` | `boolean` | — | With `divert_ranks` or `auto_foundation`: a card sent to a foundation does not use up its turn; the same pile gets the next card instead (Dieppe: cards go to the foundations until one does not fit, and that one goes to the row). |
 | `route` | [DealRoute](#dealroute) \| `null` | — | With `rest`: send each card to the selected pile its rank or suit names instead of dealing round-robin (Lady of the Manor's reserves by rank, Four Colours' rows by suit). |
 | `set_base` | `boolean` | — | The first card this step deals sets the base rank for [`EmptyRule::DealtBase`]. |
 | `skip_ranks` | `integer`[] | — | Cards of these ranks met while dealing this step are passed over and put at the bottom of the pack instead (Doublets' kings). |

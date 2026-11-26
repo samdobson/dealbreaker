@@ -615,6 +615,10 @@
           "description": "Deal every remaining card, round-robin over the selected piles.",
           "type": "boolean"
         },
+        "retry_after_divert": {
+          "description": "With `divert_ranks` or `auto_foundation`: a card sent to a foundation does not use up its turn; the same pile gets the next card instead (Dieppe: cards go to the foundations until one does not fit, and that one goes to the row).",
+          "type": "boolean"
+        },
         "route": {
           "description": "With `rest`: send each card to the selected pile its rank or suit names instead of dealing round-robin (Lady of the Manor's reserves by rank, Four Colours' rows by suit).",
           "anyOf": [

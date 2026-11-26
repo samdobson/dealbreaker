@@ -426,13 +426,27 @@ impl Game {
                                 }
                                 return err("deal: ran out of cards");
                             };
-                            if !step.drain_foundations {
-                                if let Some(f) = self.divert_target(&s, step, c) {
-                                    put(&mut s, f, c);
-                                    continue;
+                            let mut c = c;
+                            loop {
+                                if !step.drain_foundations {
+                                    if let Some(f) = self.divert_target(&s, step, c) {
+                                        put(&mut s, f, c);
+                                        if step.retry_after_divert {
+                                            let Some(n) = deck.pop_front() else {
+                                                if allow_short {
+                                                    break 'deal_rows;
+                                                }
+                                                return err("deal: ran out of cards");
+                                            };
+                                            c = n;
+                                            continue;
+                                        }
+                                        break;
+                                    }
                                 }
+                                put(&mut s, p, c);
+                                break;
                             }
-                            put(&mut s, p, c);
                         }
                     }
                     if step.drain_foundations {

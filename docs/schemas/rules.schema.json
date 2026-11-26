@@ -61,6 +61,13 @@
         "$ref": "#/definitions/GroupRules"
       }
     },
+    "latch_group": {
+      "description": "A latch that a move from the stock pile resets: afterwards it is set if the stock is empty or no pile of this group is empty, and clear otherwise. Removals with `needs_latch` work only while it is set (Camelot: pairs come off only once the grid is full or the stock is out, and the latch stays set until the next card is played from the stock).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "name": {
       "description": "Human-readable name, e.g. \"FreeCell\".",
       "type": "string"
@@ -183,6 +190,48 @@
             }
           ]
         },
+        "extra_over": {
+          "description": "`(under, over)` rank pairs that also build, in that order only, whatever the direction (Napoleon's Tomb: a six goes on an ace).",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              },
+              {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
+        "extra_pairs": {
+          "description": "Pairs of ranks that also build on each other, in either order, whatever the direction (Striptease: jack and king).",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              },
+              {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
         "gap_ranks": {
           "description": "With a stripped pack: ranks that are not adjacent to the pack rank just below them (an ace-and-7-to-king pack: `[7]`). Applies to `step` 1 builds.",
           "type": "array",
@@ -277,6 +326,13 @@
           "enum": [
             "suit_cycle"
           ]
+        },
+        {
+          "description": "A card goes on another of the same suit that is one rank below it, on one of the same colour and another suit that is one rank above it, or on one of the same rank and the other colour; ranks wrap round the pack (Sticko). `dir` is ignored.",
+          "type": "string",
+          "enum": [
+            "rank_suit_color"
+          ]
         }
       ]
     },
@@ -307,8 +363,20 @@
         "from"
       ],
       "properties": {
+        "also_from": {
+          "description": "A second group whose cards may also be played to a foundation to choose the base.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "deal_waste": {
           "description": "Immediately deal one card from the stock to the waste after the choice.",
+          "default": false,
+          "type": "boolean"
+        },
+        "free_moves": {
+          "description": "Until the base is chosen, only foundation plays are restricted (to one card from `from`); every other move and the stock stay open (Nine Across).",
           "default": false,
           "type": "boolean"
         },
@@ -316,10 +384,36 @@
           "description": "Group whose cards may be played to a foundation to choose the base rank.",
           "type": "string"
         },
+        "lock_until_base": {
+          "description": "Groups whose cards cannot move (and, for the stock, cannot be dealt) until the base is chosen, even with `free_moves`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "refill_from_stock": {
           "description": "Immediately deal one card from the stock to the emptied source pile after the choice.",
           "default": false,
           "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ClearTops": {
+      "description": "When every pile of the group holds a card and the top cards' ranks (ace 1 ... king 13) add up to `sum`, each top card goes to the `to` group (Ninety-One).",
+      "type": "object",
+      "required": [
+        "sum",
+        "to"
+      ],
+      "properties": {
+        "sum": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "to": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -652,6 +746,10 @@
           "format": "uint8",
           "minimum": 0.0
         },
+        "stop_when_out": {
+          "description": "The deal may run out of cards part-way through a round (the last round is short).",
+          "type": "boolean"
+        },
         "to": {
           "description": "Target group.",
           "type": "string"
@@ -879,6 +977,63 @@
         }
       ]
     },
+    "FirstRoundBan": {
+      "description": "Cards from some piles of a group may not go to some piles of this group until the stock or redeal has been used once (St. Helena's foundations).",
+      "type": "object",
+      "required": [
+        "from",
+        "from_group",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "description": "Piles (indices within `from_group`) whose cards are refused.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0.0
+          }
+        },
+        "from_group": {
+          "description": "Group the refused cards come from.",
+          "type": "string"
+        },
+        "to": {
+          "description": "Piles (indices within the group that holds this ban) that refuse the cards.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0.0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "FromPileMap": {
+      "description": "Which pile of this group a pile of `group` may send cards to (Rittenhouse's foundations).",
+      "type": "object",
+      "required": [
+        "group",
+        "to"
+      ],
+      "properties": {
+        "group": {
+          "description": "Group the cards come from.",
+          "type": "string"
+        },
+        "to": {
+          "description": "For each pile of that group, the only pile of this group it may send cards to, or -1 for any.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int16"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "Frontier": {
       "description": "Which pile of a group is the only one whose cards may move.",
       "oneOf": [
@@ -906,6 +1061,10 @@
         "name"
       ],
       "properties": {
+        "accept_on_face_down": {
+          "description": "A pile whose top card is face down takes any cards at all (Blind Patience).",
+          "type": "boolean"
+        },
         "accept_only_when_empty": {
           "description": "Accept cards only when the destination pile is empty (even if `build` is set for moving runs).",
           "type": "boolean"
@@ -921,6 +1080,14 @@
           "description": "Accept cards only when the stock pile is empty.",
           "type": "boolean"
         },
+        "accept_when_waste_empty": {
+          "description": "Accept cards only when the waste pile is empty as well (with `accept_when_stock_empty`: Zodiac's foundations wait until the whole deal is played).",
+          "type": "boolean"
+        },
+        "accept_whole_from_group": {
+          "description": "Cards from piles of this same group are taken only as the whole pile (Dutchess).",
+          "type": "boolean"
+        },
         "accepts_from": {
           "description": "Only cards coming from these groups are accepted (default: any group).",
           "type": [
@@ -932,7 +1099,7 @@
           }
         },
         "auto_foundation_rank": {
-          "description": "Whenever the top card of a pile of this group is face up and of this rank (1 = ace), play it to the first foundation that takes it, whatever that foundation's other conditions (Strategy +: aces leave the talon by themselves).",
+          "description": "Whenever the top card of a pile of this group is face up and of this rank (1 = ace), play it to the first foundation that takes it, whatever that foundation's other conditions (Strategy +: aces leave the talon by themselves). Rank 0 means any rank (Q.C.: every waste card that fits a foundation goes there).",
           "type": [
             "integer",
             "null"
@@ -954,6 +1121,17 @@
         "clear_same_rank": {
           "description": "With `clear_when_full`: clear only when every pile's bottom card has the same rank (Foursome's four reserves).",
           "type": "boolean"
+        },
+        "clear_tops": {
+          "description": "See [`ClearTops`].",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ClearTops"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "clear_when_full": {
           "description": "As soon as every pile of this group holds a card, move all their cards to the first pile of the named group (Elevens' reserves going to the discard).",
@@ -994,6 +1172,14 @@
           "format": "uint16",
           "minimum": 0.0
         },
+        "cyclic_ranks": {
+          "description": "The bottom cards of this group's piles must always have different ranks forming one run of consecutive ranks that may wrap round the pack (Triple Alliance's reserves).",
+          "type": "boolean"
+        },
+        "dropdown": {
+          "description": "With a `covers` layout: a pile covered by one pile only may take that whole pile at once even while it is covered, if the cards build on it (Interlock's drop-down move).",
+          "type": "boolean"
+        },
         "empty": {
           "description": "What an empty pile accepts. Default: foundations take the pack's first rank; tableaux and cells take any card; reserves, stock and waste take none.",
           "anyOf": [
@@ -1024,6 +1210,17 @@
           "format": "uint16",
           "minimum": 0.0
         },
+        "empty_needs_first_full": {
+          "description": "Empty piles of this group take nothing until the group's first pile is full (The Plot's foundations after the first).",
+          "type": "boolean"
+        },
+        "empty_needs_group_empty": {
+          "description": "Empty piles take cards from the waste only while every pile of this named group is empty (Dutchess: an empty row takes a waste card once the reserves are gone).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "empty_open_after_bases": {
           "description": "With an `empty` rule of one rank: once this many piles of the group start with a card of that rank, empty piles accept any card (Scorpion Towers).",
           "type": [
@@ -1032,6 +1229,13 @@
           ],
           "format": "uint16",
           "minimum": 0.0
+        },
+        "empty_open_when_full": {
+          "description": "Empty piles take any card once the first pile of the named group is full (The Plot: once the first foundation holds a whole suit the empty rows are open).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "empty_suit": {
           "description": "Empty piles accept only cards of this suit (non-empty piles follow `build` as usual).",
@@ -1062,6 +1266,13 @@
             "null"
           ]
         },
+        "first_round_bans": {
+          "description": "While no redeal has happened yet, these bans apply.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FirstRoundBan"
+          }
+        },
         "flip_after_prev_empty": {
           "description": "A face-down top card turns up only once the previous pile of this group is empty (the first pile always qualifies).",
           "type": "boolean"
@@ -1069,6 +1280,15 @@
         "flip_only_last": {
           "description": "Only automatically turn a pile's face-down top card face up when it is the sole card left in the pile.",
           "type": "boolean"
+        },
+        "flip_when_all_at_most": {
+          "description": "Only turn a face-down top card up once every pile of this group holds at most this many cards (Striptease: the turned card waits until the reserves are down to two).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
         },
         "flip_when_any_empty": {
           "description": "A face-down top card turns up only while some pile of the named group is empty.",
@@ -1091,6 +1311,17 @@
         "freeze_when_built": {
           "description": "A pile holding `max_cards` cards that all follow its build rule is closed: no card may be moved from it.",
           "type": "boolean"
+        },
+        "from_pile_map": {
+          "description": "See [`FromPileMap`].",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FromPileMap"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "kind": {
           "$ref": "#/definitions/PileKind"
@@ -1154,6 +1385,10 @@
           "format": "uint16",
           "minimum": 0.0
         },
+        "move_face_down_top": {
+          "description": "A face-down top card may be moved: it turns face up as it goes (Blind Patience, where the player turns a card over by hand and then plays it).",
+          "type": "boolean"
+        },
         "move_from_frontier": {
           "description": "Cards may leave only the first or last non-empty pile of this group.",
           "anyOf": [
@@ -1215,6 +1450,15 @@
           "format": "uint16",
           "minimum": 0.0
         },
+        "one_way_split": {
+          "description": "Piles of this group from this index on take nothing from the piles of this group before it (Club: the three top rows never give to the lower eight).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
         "piles": {
           "description": "Different rules for particular piles of the group (Calculation's foundations, each building by a different step from a different base).",
           "type": "array",
@@ -1245,6 +1489,10 @@
         },
         "reach_both_ways": {
           "description": "With `reach`: also accept from piles this many places before the destination pile.",
+          "type": "boolean"
+        },
+        "reach_grid": {
+          "description": "With `reach` on a grid layout: a distance of one place only counts within a row (so a pile does not reach round the end of a row). With distances of one and the row length the piles reached are the four neighbours (Rectangular Rovers).",
           "type": "boolean"
         },
         "refill_count": {
@@ -1290,6 +1538,15 @@
             "null"
           ]
         },
+        "repeat_rank": {
+          "description": "A pile takes this many cards of one rank in a row, then goes on to the next rank of the pack, wrapping round (Four by Four). Use with `build: any/any` so nothing is ruled out before the pile itself is looked at.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        },
         "replace_on_drop": {
           "description": "When a card is placed on a non-empty pile of this group, first move the destination pile's existing cards to this group's first pile.",
           "type": [
@@ -1315,6 +1572,15 @@
             "string",
             "null"
           ]
+        },
+        "row_start": {
+          "description": "For a win by rows on a group whose `empty` rule is not `after_left`: the rank each row starts with (Rectangular Rovers).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
         },
         "run_len": {
           "description": "With `complete_runs`: how many cards make a complete run (default: the number of ranks). Simplex: four of a kind.",
@@ -2343,6 +2609,15 @@
             }
           ]
         },
+        "exclude_ranks": {
+          "description": "Cards of these ranks never take part in a removal (Aces Square's aces).",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
         "from": {
           "description": "Groups whose playable top cards may be removed.",
           "type": "array",
@@ -2352,6 +2627,10 @@
         },
         "kind": {
           "$ref": "#/definitions/RemovalKind"
+        },
+        "needs_latch": {
+          "description": "The removal works only while the rules' latch is set.",
+          "type": "boolean"
         },
         "to": {
           "description": "Group (its first pile) the removed cards go to.",
@@ -2451,6 +2730,13 @@
           "description": "Deal by itself whenever the waste is empty (and the stock isn't).",
           "type": "boolean"
         },
+        "auto_for_empty": {
+          "description": "With `auto`: deal to the empty waste by itself only right after a move empties a pile of this named group, once, and let that pile (with a `refill_on_empty` refill from the waste) take the card if it stays (Q.C.: a card that fits a foundation goes there, and the row stays empty).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "count": {
           "description": "Cards per deal (or rounds per deal for multi-pile targets).",
           "type": "integer",
@@ -2486,6 +2772,13 @@
         "face_up": {
           "description": "Keep the top card of the stock turned face up so it may be played or removed directly.",
           "type": "boolean"
+        },
+        "final_also_to": {
+          "description": "When exactly as many cards are left as the target and this group have piles together, the deal also puts one card on each pile of this group (Baroness's last seven cards).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "final_piles": {
           "description": "For a multi-pile target: when the remaining stock has at most `final_piles.len()` cards, deal one card to each of these piles of `to` (indices within the group) instead of `piles`.",
@@ -2556,6 +2849,14 @@
         },
         "redeal_deal_all_alternating": {
           "description": "On a multi-pile stock redeal, deal all gathered cards back out in rows alternating face-up and face-down (ending face-up), honoring `divert_ranks`.",
+          "type": "boolean"
+        },
+        "redeal_flip_stock": {
+          "description": "When gathering a multi-pile target back into the stock on redeal, turn the gathered stock upside down, so the first card gathered is the first one dealt again.",
+          "type": "boolean"
+        },
+        "redeal_gather_only": {
+          "description": "On redeal only gather the target group back into the stock (nothing is dealt); the stock is played from its top (Puss in the Corner).",
           "type": "boolean"
         },
         "redeal_reverse": {
@@ -2649,6 +2950,13 @@
           "enum": [
             "either_pile"
           ]
+        },
+        {
+          "description": "Swap two single-card piles of groups that both use this mode when the piles take different kinds of card, each card is one the other pile takes, and the second card is not one its own pile would take from the first's side (Hemispheres: a red card in the black half swaps with a black card in the red half).",
+          "type": "string",
+          "enum": [
+            "crossing"
+          ]
         }
       ]
     },
@@ -2673,6 +2981,43 @@
               "type": "array",
               "items": {
                 "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "These piles (indices within `group`) are empty and every group in `empty` is empty (Camelot: the middle four cells and the stock).",
+          "type": "object",
+          "required": [
+            "piles_empty"
+          ],
+          "properties": {
+            "piles_empty": {
+              "type": "object",
+              "required": [
+                "empty",
+                "group",
+                "piles"
+              ],
+              "properties": {
+                "empty": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "group": {
+                  "type": "string"
+                },
+                "piles": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "uint16",
+                    "minimum": 0.0
+                  }
+                }
               }
             }
           },
